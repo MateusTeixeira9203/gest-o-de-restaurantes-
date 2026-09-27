@@ -1,9 +1,8 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { type AnchorHTMLAttributes, useEffect, useState } from "react";
 import {
   ArrowLeft, ArrowRight, Bell, Boxes, Check, ChefHat, ChevronRight, CircleDollarSign, Clock3,
   CookingPot, Copy, CreditCard, Download, Eye, EyeOff, FileBarChart, LayoutDashboard, LockKeyhole, LogOut,
@@ -24,6 +23,13 @@ const TABLE_STATUS: Record<TableStatus, { label: string; cls: string }> = {
 const ORDER_STATUS: Record<OrderStatus, string> = { pending: "Pendente", confirmed: "Novo", preparing: "Preparando", ready: "Pronto", delivered: "Entregue", completed: "Concluído", cancelled: "Cancelado" };
 const CATEGORIES = ["Todos", "Pizzas", "Pastéis", "Massas", "Bebidas", "Açaí", "Sorvetes"];
 const paymentMethods: PaymentMethod[] = ["Pix", "Dinheiro", "Débito", "Crédito"];
+
+// Let the Worker serve route transitions as full navigations. This avoids
+// relying on a client-router transition before hydration has completed.
+type NativeLinkProps = AnchorHTMLAttributes<HTMLAnchorElement> & { href: string };
+function Link({ href, ...props }: NativeLinkProps) {
+  return <a href={href} {...props} />;
+}
 
 function Topbar({ title, subtitle, back = "/operacao", action }: { title: string; subtitle?: string; back?: string; action?: React.ReactNode }) {
   return <header className="topbar"><div className="flex min-w-0 items-center gap-3"><Link href={back} className="icon-button" aria-label="Voltar"><ArrowLeft size={19} /></Link><div className="min-w-0"><h1 className="truncate text-xl font-semibold tracking-tight sm:text-2xl">{title}</h1>{subtitle && <p className="mt-0.5 truncate text-sm text-neutral-500">{subtitle}</p>}</div></div>{action}</header>;
