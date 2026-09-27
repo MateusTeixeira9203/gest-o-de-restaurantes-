@@ -1,0 +1,46 @@
+"use client";
+
+import Link from "next/link";
+import { ArrowRight, ChefHat, CircleDollarSign, LayoutDashboard, UtensilsCrossed } from "lucide-react";
+
+const areas = [
+  { href: "/operacao/garcom", label: "Garçom", note: "Mesas e comandas", icon: UtensilsCrossed, tone: "lime" },
+  { href: "/operacao/cozinha", label: "Cozinha", note: "Fila de produção", icon: ChefHat, tone: "amber" },
+  { href: "/operacao/caixa", label: "Caixa", note: "Contas e pagamentos", icon: CircleDollarSign, tone: "blue" },
+  { href: "/gestao", label: "Gestão", note: "Indicadores e controle", icon: LayoutDashboard, tone: "violet" },
+];
+
+export default function Home() {
+  return (
+    <main className="min-h-screen bg-[#11120f] px-5 py-6 text-white sm:px-8 sm:py-8">
+      <div className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-6xl flex-col rounded-[2rem] border border-white/10 bg-[#171814] p-6 shadow-2xl shadow-black/30 sm:p-10">
+        <header className="flex items-center justify-between border-b border-white/10 pb-6">
+          <div className="flex items-center gap-3">
+            <span className="grid h-10 w-10 place-items-center rounded-xl bg-[#d7ff55] text-[#171814]"><UtensilsCrossed size={19} strokeWidth={2.3} /></span>
+            <div><p className="text-lg font-semibold tracking-tight">Restaurante</p><p className="text-xs text-white/45">Operação integrada</p></div>
+          </div>
+          <Link href="/menu" className="rounded-full border border-white/15 px-4 py-2 text-sm font-medium text-white/75 transition hover:bg-white/10 hover:text-white">Abrir cardápio</Link>
+        </header>
+
+        <section className="flex flex-1 flex-col justify-center py-12 sm:py-16">
+          <div className="mb-10 max-w-xl">
+            <span className="mb-5 inline-flex items-center gap-2 rounded-full border border-[#d7ff55]/20 bg-[#d7ff55]/10 px-3 py-1.5 text-xs font-semibold text-[#d7ff55]"><span className="h-1.5 w-1.5 rounded-full bg-[#d7ff55]" /> Operação aberta</span>
+            <h1 className="text-4xl font-semibold leading-[1.05] tracking-[-0.045em] sm:text-6xl">Onde você vai trabalhar agora?</h1>
+            <p className="mt-4 text-base leading-relaxed text-white/50 sm:text-lg">Escolha uma área para entrar. Garçom, cozinha e caixa têm acesso direto.</p>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {areas.map(({ href, label, note, icon: Icon, tone }) => (
+              <Link key={href} href={href} className="group rounded-2xl border border-white/10 bg-white/[0.035] p-5 transition duration-200 hover:-translate-y-0.5 hover:border-white/20 hover:bg-white/[0.07]">
+                <div className={`icon-tile icon-${tone}`}><Icon size={20} /></div>
+                <div className="mt-8 flex items-end justify-between gap-3"><div><h2 className="text-lg font-semibold">{label}</h2><p className="mt-1 text-sm text-white/45">{note}</p></div><ArrowRight className="text-white/30 transition group-hover:translate-x-1 group-hover:text-white" size={19} /></div>
+              </Link>
+            ))}
+          </div>
+        </section>
+
+        <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-5 text-xs text-white/35"><span>15 mesas configuradas</span><span>Dados sincronizados neste dispositivo</span></footer>
+      </div>
+    </main>
+  );
+}
