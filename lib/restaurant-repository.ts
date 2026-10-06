@@ -307,7 +307,7 @@ export async function cancelOrder(orderId: string) {
       await client.query("UPDATE inventory_items SET quantity = quantity + $2, updated_at = now() WHERE id = $1", [movement.inventory_item_id, returned]);
       await client.query("INSERT INTO inventory_movements (restaurant_id, inventory_item_id, type, quantity_delta, order_id, note) VALUES ($1,$2,'cancellation_return',$3,$4,$5)", [order.rows[0].restaurant_id, movement.inventory_item_id, returned, orderId, "Estorno por cancelamento"]);
     }
-    await client.query("UPDATE kitchen_tickets SET status = 'cancelled', updated_at = now() WHERE order_id = $1 AND status <> 'ready'", [orderId]);
+    await client.query("UPDATE kitchen_tickets SET status = 'cancelled', updated_at = now() WHERE order_id = $1 AND status <> 'cancelled'", [orderId]);
     await client.query("INSERT INTO order_events (order_id, event_type, actor_role) VALUES ($1,'order_cancelled','staff')", [orderId]);
     return { id: orderId };
   });
