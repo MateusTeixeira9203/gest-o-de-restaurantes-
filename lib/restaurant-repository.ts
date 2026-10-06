@@ -1,3 +1,4 @@
+import { randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
 import type { PoolClient } from "pg";
 import { query, transaction } from "@/lib/database";
 
@@ -9,6 +10,9 @@ type VariantRow = { id: string; product_id: string; name: string; price_cents: n
 type AddonRow = { id: string; product_id: string; name: string; price_cents: number };
 type InventoryItemRow = { id: string; name: string; category: string; unit: "un" | "g" | "kg" | "ml" | "L"; quantity: string; minimum_quantity: string; average_cost_cents: string; active: boolean };
 type RecipeRow = { variant_id: string; inventory_item_id: string; quantity: string; item_name?: string; available_quantity?: string; active?: boolean };
+type StaffMemberRow = { id: string; name: string; role: "manager" | "waiter" | "kitchen" | "cashier"; pin_salt: string; pin_hash: string; active: boolean; created_at: string; updated_at: string };
+export type StaffMember = Omit<StaffMemberRow, "pin_salt" | "pin_hash">;
+export type StaffMemberRole = StaffMember["role"];
 
 export type PublicMenuProduct = {
   id: string;
@@ -66,6 +70,14 @@ function inventoryItem(row: InventoryItemRow): InventoryItem {
 }
 
 const cents = (price: number) => Math.round(price * 100);
+
+function hashPin(pin: string, salt: string) {
+  return scryptSync(pin, salt, 64).toString("hex");
+}
+
+function validPin(pin: string) {
+  return /^\d{4,6}$/.test(pin);
+}
 
 async function restaurant(client?: PoolClient): Promise<RestaurantRow> {
   const result = client
@@ -429,4 +441,65 @@ export async function replaceVariantRecipe(input: { variantId: string; component
     for (const component of input.components) await client.query("INSERT INTO product_recipe_components (variant_id, inventory_item_id, quantity) VALUES ($1,$2,$3)", [input.variantId, component.itemId, component.quantity]);
     return { variantId: input.variantId, components: input.components };
   });
+}
+
+function staffMember(row: StaffMemberRow): StaffMember {
+  return { id: row.id, name: row.name, role: row.role, active: row.active, created_at: row.created_at, updated_at: row.updated_at };
+}
+
+export async function listStaffMembers(activeOnly = false): Promise<StaffMember[]> {
+  const current = await restaurant();
+  const result = await query<StaffMemberRow>(
+    `SELECT id, name, role, pin_salt, pin_hash, active, created_at, updated_at FROM staff_members
+     WHERE restaurant_id = $1 ${activeOnly ? "AND active" : ""} ORDER BY active DESC, name`,
+    [current.id],
+  );
+  return result.rows.map(staffMember);
+}
+
+export async function authenticateStaffMember(name: string, pin: string) {
+  if (!validPin(pin)) return null;
+  const current = await restaurant();
+  const result = await query<StaffMemberRow>(
+    "SELECT id, name, role, pin_salt, pin_hash, active, created_at, updated_at FROM staff_members WHERE restaurant_id = $1 AND lower(name) = lower($2) AND active",
+    [current.id, name.trim()],
+  );
+  const member = result.rows[0];
+  if (!member) return null;
+  const expected = Buffer.from(member.pin_hash, "hex");
+  const supplied = Buffer.from(hashPin(pin, member.pin_salt), "hex");
+  if (expected.length !== supplied.length || !timingSafeEqual(expected, supplied)) return null;
+  return staffMember(member);
+}
+
+export async function createStaffMember(input: { name: string; role: StaffMemberRole; pin: string }) {
+  const name = input.name.trim().replace(/\s+/g, " ");
+  if (name.length < 2 || name.length > 80) throw new Error("Informe um nome entre 2 e 80 caracteres.");
+  if (!validPin(input.pin)) throw new Error("O PIN precisa ter de 4 a 6 números.");
+  const current = await restaurant();
+  const salt = randomBytes(16).toString("hex");
+  const result = await query<StaffMemberRow>(
+    "INSERT INTO staff_members (restaurant_id, name, role, pin_salt, pin_hash) VALUES ($1,$2,$3,$4,$5) RETURNING id, name, role, pin_salt, pin_hash, active, created_at, updated_at",
+    [current.id, name, input.role, salt, hashPin(input.pin, salt)],
+  );
+  return staffMember(result.rows[0]);
+}
+
+export async function updateStaffMember(id: string, input: { name?: string; role?: StaffMemberRole; pin?: string; active?: boolean }) {
+  const current = await restaurant();
+  const existing = await query<StaffMemberRow>(
+    "SELECT id, name, role, pin_salt, pin_hash, active, created_at, updated_at FROM staff_members WHERE id = $1 AND restaurant_id = $2",
+    [id, current.id],
+  );
+  if (!existing.rows[0]) throw new Error("Membro da equipe não encontrado.");
+  const name = input.name === undefined ? existing.rows[0].name : input.name.trim().replace(/\s+/g, " ");
+  if (name.length < 2 || name.length > 80) throw new Error("Informe um nome entre 2 e 80 caracteres.");
+  if (input.pin !== undefined && !validPin(input.pin)) throw new Error("O PIN precisa ter de 4 a 6 números.");
+  const salt = input.pin === undefined ? existing.rows[0].pin_salt : randomBytes(16).toString("hex");
+  const hash = input.pin === undefined ? existing.rows[0].pin_hash : hashPin(input.pin, salt);
+  const result = await query<StaffMemberRow>(
+    "UPDATE staff_members SET name = $3, role = $4, pin_salt = $5, pin_hash = $6, active = $7, updated_at = now() WHERE id = $1 AND restaurant_id = $2 RETURNING id, name, role, pin_salt, pin_hash, active, created_at, updated_at",
+    [id, current.id, name, input.role ?? existing.rows[0].role, salt, hash, input.active ?? existing.rows[0].active],
+  );
+  return staffMember(result.rows[0]);
 }

@@ -5,7 +5,7 @@ import { hasStaffSession } from "@/lib/staff-session";
 const bodySchema = z.object({ tableNumber: z.number().int().positive(), payments: z.array(z.object({ method: z.enum(["Pix", "Dinheiro", "Débito", "Crédito"]), amountCents: z.number().int().positive() })).min(1) });
 
 export async function POST(request: Request) {
-  if (!hasStaffSession(request)) return Response.json({ error: "Acesso da equipe necessário." }, { status: 401 });
+  if (!hasStaffSession(request, ["cashier", "manager"])) return Response.json({ error: "Acesso de caixa necessário." }, { status: 403 });
   try {
     const body = bodySchema.parse(await request.json());
     return Response.json(await closeTable(body.tableNumber, body.payments));

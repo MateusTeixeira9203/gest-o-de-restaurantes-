@@ -6,7 +6,7 @@ const itemSchema = z.object({ productId: z.string().uuid(), variantId: z.string(
 const bodySchema = z.object({ tableNumber: z.number().int().positive().max(200), items: z.array(itemSchema).min(1).max(40), notes: z.string().trim().max(500).optional() });
 
 export async function POST(request: Request) {
-  if (!hasStaffSession(request)) return Response.json({ error: "Acesso da equipe necessário." }, { status: 401 });
+  if (!hasStaffSession(request, ["waiter", "manager"])) return Response.json({ error: "Acesso de garçom necessário." }, { status: 403 });
   try {
     const body = bodySchema.parse(await request.json());
     return Response.json({ order: await createOrder({ source: "waiter", fulfillment: "dine_in", tableNumber: body.tableNumber, items: body.items, notes: body.notes }) }, { status: 201 });

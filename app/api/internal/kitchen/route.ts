@@ -5,7 +5,7 @@ export const dynamic = "force-dynamic";
 
 function hasInternalAccess(request: Request) {
   const secret = process.env.RESTAURANT_INTERNAL_API_KEY;
-  return hasStaffSession(request) || Boolean(secret && request.headers.get("x-restaurant-internal-key") === secret);
+  return hasStaffSession(request, ["kitchen", "manager"]) || Boolean(secret && request.headers.get("x-restaurant-internal-key") === secret);
 }
 
 export async function GET(request: Request) {

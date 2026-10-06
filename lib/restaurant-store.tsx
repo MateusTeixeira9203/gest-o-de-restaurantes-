@@ -26,13 +26,16 @@ type PublicOrderInput = {
   delivery?: { addressLine1: string; addressLine2?: string; neighborhood?: string; city?: string; state?: string; postalCode?: string; reference?: string; latitude?: number; longitude?: number };
 };
 
-type Result = { ok: true; number: number } | { ok: false; message: string };
+type Result = { ok: true; number: number; role?: StaffRole } | { ok: false; message: string };
+export type StaffRole = "admin" | "manager" | "waiter" | "kitchen" | "cashier";
+type StaffSession = { username: string; role: StaffRole; staffId?: string | null };
 
 type StoreContextValue = {
   state: RestaurantState;
   kitchen: KitchenTicket[];
   ready: boolean;
   authenticated: boolean;
+  session: StaffSession | null;
   refresh: () => Promise<boolean>;
   login: (username: string, password: string) => Promise<Result>;
   logout: () => Promise<void>;
@@ -113,6 +116,7 @@ export function RestaurantStoreProvider({ children }: { children: React.ReactNod
   const [kitchen, setKitchen] = useState<KitchenTicket[]>([]);
   const [ready, setReady] = useState(false);
   const [authenticated, setAuthenticated] = useState(false);
+  const [session, setSession] = useState<StaffSession | null>(null);
   const [inventoryEnabled, setInventoryEnabledState] = useState(false);
 
   const loadPublicMenu = useCallback(async () => {
@@ -124,7 +128,7 @@ export function RestaurantStoreProvider({ children }: { children: React.ReactNod
 
   const refresh = useCallback(async () => {
     const response = await fetch("/api/operations/state", { cache: "no-store" });
-    if (response.status === 401) { setAuthenticated(false); return false; }
+    if (response.status === 401 || response.status === 403) { setAuthenticated(false); setSession(null); return false; }
     if (!response.ok) return false;
     const snapshot = await response.json() as Snapshot;
     setState(previous => stateFromSnapshot(snapshot, previous));
@@ -137,7 +141,12 @@ export function RestaurantStoreProvider({ children }: { children: React.ReactNod
   useEffect(() => {
     void (async () => {
       await loadPublicMenu();
-      await refresh();
+      const response = await fetch("/api/auth/session", { cache: "no-store" });
+      const current = await response.json().catch(() => null) as { authenticated?: boolean; username?: string | null; role?: StaffRole | null; staffId?: string | null } | null;
+      if (current?.authenticated && current.username && current.role) {
+        setSession({ username: current.username, role: current.role, staffId: current.staffId });
+        await refresh();
+      }
       setReady(true);
     })();
   }, [loadPublicMenu, refresh]);
@@ -151,13 +160,16 @@ export function RestaurantStoreProvider({ children }: { children: React.ReactNod
   const login = useCallback(async (username: string, password: string): Promise<Result> => {
     const response = await fetch("/api/auth/login", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ username, password }) });
     if (!response.ok) return { ok: false, message: await readError(response) };
+    const user = await response.json() as { username: string; role: StaffRole; staffId?: string };
+    setSession({ username: user.username, role: user.role, staffId: user.staffId });
     await refresh();
-    return { ok: true, number: 0 };
+    return { ok: true, number: 0, role: user.role };
   }, [refresh]);
 
   const logout = useCallback(async () => {
     await fetch("/api/auth/logout", { method: "POST" });
     setAuthenticated(false);
+    setSession(null);
     setKitchen([]);
   }, []);
 
@@ -259,7 +271,7 @@ export function RestaurantStoreProvider({ children }: { children: React.ReactNod
 
   const resetDemo = useCallback(() => { void refresh(); }, [refresh]);
 
-  const value = useMemo(() => ({ state, kitchen, ready, authenticated, refresh, login, logout, createOrder, createPublicOrder, cancelOrder, payTable, updateKitchenTicket, updateOrderStatus, toggleProduct, updateSettings, createTable, createProduct, inventoryEnabled, setInventoryEnabled, createInventoryItem, moveInventory, saveRecipe, resetDemo }), [state, kitchen, ready, authenticated, refresh, login, logout, createOrder, createPublicOrder, cancelOrder, payTable, updateKitchenTicket, updateOrderStatus, toggleProduct, updateSettings, createTable, createProduct, inventoryEnabled, setInventoryEnabled, createInventoryItem, moveInventory, saveRecipe, resetDemo]);
+  const value = useMemo<StoreContextValue>(() => ({ state, kitchen, ready, authenticated, session, refresh, login, logout, createOrder, createPublicOrder, cancelOrder, payTable, updateKitchenTicket, updateOrderStatus, toggleProduct, updateSettings, createTable, createProduct, inventoryEnabled, setInventoryEnabled, createInventoryItem, moveInventory, saveRecipe, resetDemo }), [state, kitchen, ready, authenticated, session, refresh, login, logout, createOrder, createPublicOrder, cancelOrder, payTable, updateKitchenTicket, updateOrderStatus, toggleProduct, updateSettings, createTable, createProduct, inventoryEnabled, setInventoryEnabled, createInventoryItem, moveInventory, saveRecipe, resetDemo]);
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }
 

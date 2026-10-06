@@ -6,7 +6,7 @@ const bodySchema = z.object({ status: z.enum(["preparing", "ready"]) });
 
 function hasInternalAccess(request: Request) {
   const secret = process.env.RESTAURANT_INTERNAL_API_KEY;
-  return hasStaffSession(request) || Boolean(secret && request.headers.get("x-restaurant-internal-key") === secret);
+  return hasStaffSession(request, ["kitchen", "manager"]) || Boolean(secret && request.headers.get("x-restaurant-internal-key") === secret);
 }
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ ticketId: string }> }) {
