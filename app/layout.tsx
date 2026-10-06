@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Restaurante — Operação & Gestão",
-  description: "Operação integrada para salão, cozinha, caixa e gestão.",
+  title: "Patos Lanches — Operação & Gestão",
+  description: "Operação integrada do Patos Lanches para salão, cozinha, caixa e gestão.",
   icons: {
     icon: "/favicon.svg",
     shortcut: "/favicon.svg",

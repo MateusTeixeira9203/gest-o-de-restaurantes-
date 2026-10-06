@@ -43,7 +43,7 @@ const demoOrders: Order[] = [
 ];
 
 export const createDemoState = (): RestaurantState => ({
-  settings: { name: "Restaurante", whatsapp: "5511999999999", serviceRate: 10, tableCount: 15 },
+  settings: { name: "Patos Lanches", whatsapp: "5511999999999", serviceRate: 10, tableCount: 15 },
   tables,
   products,
   orders: demoOrders,
