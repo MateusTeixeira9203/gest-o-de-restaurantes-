@@ -1,11 +1,12 @@
 import { z } from "zod";
 import { updateKitchenTicket } from "@/lib/restaurant-repository";
+import { hasStaffSession } from "@/lib/staff-session";
 
 const bodySchema = z.object({ status: z.enum(["preparing", "ready"]) });
 
 function hasInternalAccess(request: Request) {
   const secret = process.env.RESTAURANT_INTERNAL_API_KEY;
-  return Boolean(secret && request.headers.get("x-restaurant-internal-key") === secret);
+  return hasStaffSession(request) || Boolean(secret && request.headers.get("x-restaurant-internal-key") === secret);
 }
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ ticketId: string }> }) {

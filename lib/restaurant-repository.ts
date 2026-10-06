@@ -216,3 +216,90 @@ export async function updateKitchenTicket(ticketId: string, status: "preparing" 
     return { orderId, status: allReady ? "ready" : "preparing" };
   });
 }
+
+type SnapshotOrderRow = {
+  id: string; order_number: string; queue_number: string; source: "waiter" | "public_menu" | "qr_menu"; fulfillment: "dine_in" | "pickup" | "delivery"; status: string;
+  table_number: number | null; customer_name: string | null; customer_phone: string | null; notes: string | null; estimated_minutes: number | null; subtotal_cents: number; service_cents: number; total_cents: number; created_at: string;
+  items: Array<{ id: string; product_id: string | null; variant_id: string | null; product_name: string; variant_name: string; kitchen_sector: string; quantity: number; unit_price_cents: number; addons: Array<{ id: string; name: string; priceCents: number }>; note: string | null }>;
+};
+
+export async function getOperationSnapshot() {
+  const current = await restaurant();
+  const [menu, tables, orders, kitchen] = await Promise.all([
+    getPublicMenu(),
+    query<{ number: number; active: boolean }>("SELECT number, active FROM dining_tables WHERE restaurant_id = $1 ORDER BY number", [current.id]),
+    query<SnapshotOrderRow>(
+      `SELECT o.id, o.order_number, o.queue_number, o.source, o.fulfillment, o.status, t.number AS table_number, o.customer_name, o.customer_phone, o.notes, o.estimated_minutes, o.subtotal_cents, o.service_cents, o.total_cents, o.created_at,
+        COALESCE(json_agg(json_build_object('id', oi.id, 'product_id', oi.product_id, 'variant_id', oi.variant_id, 'product_name', oi.product_name, 'variant_name', oi.variant_name, 'kitchen_sector', oi.kitchen_sector, 'quantity', oi.quantity, 'unit_price_cents', oi.unit_price_cents, 'addons', oi.addons, 'note', oi.note) ORDER BY oi.created_at) FILTER (WHERE oi.id IS NOT NULL), '[]'::json) AS items
+       FROM orders o LEFT JOIN dining_tables t ON t.id = o.table_id LEFT JOIN order_items oi ON oi.order_id = o.id
+       WHERE o.restaurant_id = $1
+       GROUP BY o.id, t.number
+       ORDER BY o.created_at DESC LIMIT 200`,
+      [current.id],
+    ),
+    getKitchenQueue(),
+  ]);
+  return {
+    restaurant: { name: current.name, whatsapp: current.whatsapp ?? "", serviceRate: current.service_rate_basis_points / 100 },
+    products: menu.products,
+    tables: tables.rows,
+    orders: orders.rows.map(order => ({
+      id: order.id, orderNumber: Number(order.order_number), queueNumber: Number(order.queue_number), source: order.source, fulfillment: order.fulfillment, status: order.status,
+      tableNumber: order.table_number, customerName: order.customer_name, customerPhone: order.customer_phone, notes: order.notes, estimatedMinutes: order.estimated_minutes,
+      subtotalCents: order.subtotal_cents, serviceCents: order.service_cents, totalCents: order.total_cents, createdAt: order.created_at, items: order.items,
+    })),
+    kitchen,
+  };
+}
+
+export async function cancelOrder(orderId: string) {
+  return transaction(async client => {
+    const order = await client.query<{ id: string }>("UPDATE orders SET status = 'cancelled', cancelled_at = now(), updated_at = now() WHERE id = $1 AND status NOT IN ('completed', 'cancelled') RETURNING id", [orderId]);
+    if (!order.rows[0]) throw new Error("Este pedido não pode mais ser cancelado.");
+    await client.query("UPDATE kitchen_tickets SET status = 'cancelled', updated_at = now() WHERE order_id = $1 AND status <> 'ready'", [orderId]);
+    await client.query("INSERT INTO order_events (order_id, event_type, actor_role) VALUES ($1,'order_cancelled','staff')", [orderId]);
+    return { id: orderId };
+  });
+}
+
+export async function closeTable(tableNumber: number, payments: Array<{ method: "Pix" | "Dinheiro" | "Débito" | "Crédito"; amountCents: number }>) {
+  return transaction(async client => {
+    const current = await restaurant(client);
+    const orders = await client.query<{ id: string; total_cents: number }>(
+      "SELECT o.id, o.total_cents FROM orders o JOIN dining_tables t ON t.id = o.table_id WHERE o.restaurant_id = $1 AND t.number = $2 AND o.status NOT IN ('completed','cancelled') FOR UPDATE",
+      [current.id, tableNumber],
+    );
+    if (!orders.rows.length) throw new Error("Não há pedidos em aberto nesta mesa.");
+    const due = orders.rows.reduce((sum, order) => sum + order.total_cents, 0);
+    const received = payments.reduce((sum, payment) => sum + payment.amountCents, 0);
+    if (received < due) throw new Error("O valor recebido é menor que o total da conta.");
+    const methodMap = { Pix: "pix", Dinheiro: "cash", Débito: "debit", Crédito: "credit" } as const;
+    let remaining = due;
+    for (const payment of payments) {
+      if (!Number.isInteger(payment.amountCents) || payment.amountCents <= 0) continue;
+      const applied = Math.min(remaining, payment.amountCents);
+      if (applied <= 0) continue;
+      await client.query("INSERT INTO payments (order_id, method, amount_cents, status, paid_at) VALUES ($1,$2,$3,'paid',now())", [orders.rows[0].id, methodMap[payment.method], applied]);
+      remaining -= applied;
+    }
+    await client.query("UPDATE orders SET status = 'completed', updated_at = now() WHERE id = ANY($1::uuid[])", [orders.rows.map(order => order.id)]);
+    for (const order of orders.rows) await client.query("INSERT INTO order_events (order_id, event_type, actor_role, detail) VALUES ($1,'payment_confirmed','cashier',$2::jsonb)", [order.id, JSON.stringify({ tableNumber, due, received })]);
+    return { totalCents: due, changeCents: Math.max(0, received - due) };
+  });
+}
+
+export async function setProductAvailability(productId: string, available: boolean) {
+  const updated = await query<{ id: string }>("UPDATE menu_products SET available = $2, updated_at = now() WHERE id = $1 RETURNING id", [productId, available]);
+  if (!updated.rows[0]) throw new Error("Produto não encontrado.");
+  return { id: productId, available };
+}
+
+export async function updateRestaurantSettings(input: { name: string; whatsapp: string; serviceRate: number }) {
+  if (!Number.isFinite(input.serviceRate) || input.serviceRate < 0 || input.serviceRate > 100) throw new Error("Taxa de serviço inválida.");
+  const updated = await query<RestaurantRow>(
+    "UPDATE restaurants SET name = $2, whatsapp = NULLIF($3,''), service_rate_basis_points = $4, updated_at = now() WHERE slug = $1 RETURNING id, name, whatsapp, service_rate_basis_points",
+    [RESTAURANT_SLUG, input.name.trim(), input.whatsapp.trim(), Math.round(input.serviceRate * 100)],
+  );
+  if (!updated.rows[0]) throw new Error("Restaurante não encontrado.");
+  return { name: updated.rows[0].name, whatsapp: updated.rows[0].whatsapp ?? "", serviceRate: updated.rows[0].service_rate_basis_points / 100 };
+}

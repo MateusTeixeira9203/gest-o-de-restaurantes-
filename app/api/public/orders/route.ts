@@ -10,7 +10,7 @@ const itemSchema = z.object({
 });
 
 const orderSchema = z.object({
-  source: z.enum(["waiter", "public_menu", "qr_menu"]),
+  source: z.enum(["public_menu", "qr_menu"]),
   fulfillment: z.enum(["dine_in", "pickup", "delivery"]),
   tableNumber: z.number().int().positive().max(200).optional(),
   customer: z.object({ name: z.string().trim().min(2).max(100).optional(), phone: z.string().trim().min(8).max(24).optional() }).optional(),

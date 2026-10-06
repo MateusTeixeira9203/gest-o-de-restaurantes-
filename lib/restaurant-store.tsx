@@ -1,139 +1,228 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { createDemoState } from "./demo-data";
-import type { CartItem, OrderItem, OrderStatus, Payment, Product, RestaurantSettings, RestaurantState } from "./domain";
+import type { CartItem, Order, Payment, Product, RestaurantSettings, RestaurantState, TableStatus } from "./domain";
 
-const STORAGE_KEY = "restaurante-mvp-v3";
+type KitchenTicket = {
+  id: string; orderId: string; orderNumber: number; queueNumber: number; sector: string;
+  status: "new" | "preparing" | "ready" | "cancelled"; fulfillment: "dine_in" | "pickup" | "delivery";
+  tableNumber: number | null; customerName: string | null; estimatedMinutes: number | null; createdAt: string; notes: string | null;
+  items: Array<{ productName: string; variantName: string; quantity: number; note: string | null }>;
+};
+
+type RemoteProduct = { id: string; name: string; description: string; category: string; sector: string; available: boolean; featured: boolean; variants: Array<{ id: string; name: string; priceCents: number }>; addons: Array<{ id: string; name: string; priceCents: number }> };
+type Snapshot = {
+  restaurant: { name: string; whatsapp: string; serviceRate: number };
+  products: RemoteProduct[];
+  tables: Array<{ number: number; active: boolean }>;
+  orders: Array<{ id: string; orderNumber: number; source: "waiter" | "public_menu" | "qr_menu"; fulfillment: "dine_in" | "pickup" | "delivery"; status: Order["status"]; tableNumber: number | null; createdAt: string; items: Array<{ id: string; product_id: string | null; variant_id: string | null; product_name: string; variant_name: string; kitchen_sector: string; quantity: number; unit_price_cents: number; addons: Array<{ id: string; name: string; priceCents: number }>; note: string | null }> }>;
+  kitchen: KitchenTicket[];
+};
+
+type PublicOrderInput = {
+  source: "public_menu" | "qr_menu"; fulfillment: "dine_in" | "pickup" | "delivery"; tableNumber?: number;
+  customer?: { name?: string; phone?: string }; notes?: string; items: CartItem[];
+  delivery?: { addressLine1: string; addressLine2?: string; neighborhood?: string; city?: string; state?: string; postalCode?: string; reference?: string; latitude?: number; longitude?: number };
+};
+
+type Result = { ok: true; number: number } | { ok: false; message: string };
 
 type StoreContextValue = {
   state: RestaurantState;
+  kitchen: KitchenTicket[];
   ready: boolean;
-  createOrder: (tableId: string, cart: CartItem[], source: "waiter" | "qr") => { ok: true; number: number } | { ok: false; message: string };
-  updateOrderStatus: (orderId: string, status: OrderStatus) => void;
-  cancelOrder: (orderId: string) => void;
-  payTable: (tableId: string, payments: Payment[]) => void;
+  authenticated: boolean;
+  refresh: () => Promise<boolean>;
+  login: (username: string, password: string) => Promise<Result>;
+  logout: () => Promise<void>;
+  createOrder: (tableId: string, cart: CartItem[], source?: "waiter" | "qr") => Promise<Result>;
+  createPublicOrder: (input: PublicOrderInput) => Promise<Result>;
+  cancelOrder: (orderId: string) => Promise<Result>;
+  payTable: (tableId: string, payments: Payment[]) => Promise<{ ok: true; change: number } | { ok: false; message: string }>;
+  updateKitchenTicket: (ticketId: string, status: "preparing" | "ready") => Promise<Result>;
+  updateOrderStatus: (orderId: string, status: Order["status"]) => Promise<Result>;
+  toggleProduct: (productId: string) => Promise<Result>;
+  updateSettings: (settings: RestaurantSettings) => Promise<Result>;
   adjustStock: (stockId: string, quantity: number, type: "Entrada" | "Ajuste" | "Perda") => void;
-  toggleProduct: (productId: string) => void;
-  updateSettings: (settings: RestaurantSettings) => void;
   resetDemo: () => void;
 };
 
 const StoreContext = createContext<StoreContextValue | null>(null);
+const baseState = createDemoState();
 
-const recipeRequirements = (state: RestaurantState, cart: CartItem[]) => {
-  const req = new Map<string, number>();
-  for (const item of cart) {
-    const product = state.products.find(p => p.id === item.productId);
-    if (!product) continue;
-    for (const component of product.recipe[item.variantId] ?? []) req.set(component.stockId, (req.get(component.stockId) ?? 0) + component.quantity * item.quantity);
-  }
-  return req;
-};
+function productFromRemote(product: RemoteProduct): Product {
+  return {
+    id: product.id, name: product.name, description: product.description, category: product.category, sector: product.sector as Product["sector"],
+    available: product.available, featured: product.featured, recipe: {},
+    variants: product.variants.map(variant => ({ id: variant.id, name: variant.name, price: variant.priceCents / 100 })),
+    addons: product.addons.map(addon => ({ id: addon.id, name: addon.name, price: addon.priceCents / 100 })),
+  };
+}
 
-const deriveTableStatus = (orders: RestaurantState["orders"], tableId: string) => {
-  const active = orders.filter(o => o.tableId === tableId && !["completed", "cancelled"].includes(o.status));
-  if (!active.length) return "available" as const;
-  if (active.some(o => o.status === "ready")) return "ready" as const;
-  if (active.some(o => o.status === "preparing" || o.status === "confirmed")) return "preparing" as const;
-  return "occupied" as const;
-};
+function tableStatus(orders: Order[], tableId: string): TableStatus {
+  const active = orders.filter(order => order.tableId === tableId && !["completed", "cancelled"].includes(order.status));
+  if (!active.length) return "available";
+  if (active.some(order => order.status === "ready")) return "ready";
+  if (active.some(order => ["confirmed", "preparing"].includes(order.status))) return "preparing";
+  return "occupied";
+}
+
+function stateFromSnapshot(snapshot: Snapshot, previous: RestaurantState): RestaurantState {
+  const orders: Order[] = snapshot.orders.map(order => ({
+    id: order.id, number: order.orderNumber, tableId: order.tableNumber ? String(order.tableNumber).padStart(2, "0") : `externo-${order.id}`,
+    status: order.status, source: order.source === "waiter" ? "waiter" : "qr", createdAt: order.createdAt, stockApplied: false,
+    items: order.items.map(item => ({
+      id: item.id, productId: item.product_id ?? "", productName: item.product_name, variantId: item.variant_id ?? "", variantName: item.variant_name,
+      sector: item.kitchen_sector as Product["sector"], quantity: item.quantity, unitPrice: item.unit_price_cents / 100,
+      addons: item.addons.map(addon => ({ id: addon.id, name: addon.name, price: addon.priceCents / 100 })), note: item.note ?? undefined,
+    })),
+  }));
+  const tables = snapshot.tables.map(table => {
+    const id = String(table.number).padStart(2, "0");
+    const firstActive = orders.find(order => order.tableId === id && !["completed", "cancelled"].includes(order.status));
+    return { id, number: table.number, active: table.active, status: tableStatus(orders, id), openedAt: firstActive?.createdAt };
+  });
+  return {
+    ...previous,
+    settings: { name: snapshot.restaurant.name, whatsapp: snapshot.restaurant.whatsapp, serviceRate: snapshot.restaurant.serviceRate, tableCount: tables.length },
+    products: snapshot.products.map(productFromRemote),
+    tables,
+    orders,
+    sales: orders.filter(order => order.status === "completed").map(order => ({ id: `sale-${order.id}`, tableId: order.tableId, orderIds: [order.id], subtotal: order.items.reduce((sum, item) => sum + item.quantity * (item.unitPrice + item.addons.reduce((addons, addon) => addons + addon.price, 0)), 0), service: 0, total: order.items.reduce((sum, item) => sum + item.quantity * (item.unitPrice + item.addons.reduce((addons, addon) => addons + addon.price, 0)), 0), payments: [], createdAt: order.createdAt })),
+    nextOrderNumber: Math.max(1, ...orders.map(order => order.number + 1)),
+  };
+}
+
+async function readError(response: Response) {
+  const body = await response.json().catch(() => null) as { error?: string } | null;
+  return body?.error ?? "Não foi possível concluir a ação.";
+}
 
 export function RestaurantStoreProvider({ children }: { children: React.ReactNode }) {
-  const [state, setState] = useState<RestaurantState>(() => createDemoState());
-  const stateRef = useRef(state);
+  const [state, setState] = useState<RestaurantState>(baseState);
+  const [kitchen, setKitchen] = useState<KitchenTicket[]>([]);
   const [ready, setReady] = useState(false);
+  const [authenticated, setAuthenticated] = useState(false);
 
-  useEffect(() => { stateRef.current = state; }, [state]);
+  const loadPublicMenu = useCallback(async () => {
+    const response = await fetch("/api/public/menu", { cache: "no-store" });
+    if (!response.ok) return;
+    const menu = await response.json() as { restaurant: { name: string; whatsapp: string | null }; products: RemoteProduct[] };
+    setState(previous => ({ ...previous, settings: { ...previous.settings, name: menu.restaurant.name, whatsapp: menu.restaurant.whatsapp ?? "" }, products: menu.products.map(productFromRemote) }));
+  }, []);
 
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      // Loading persisted browser state after mount is intentional.
-      if (saved) {
-        const persisted = JSON.parse(saved) as RestaurantState;
-        // Keep the operational history already created in this browser while
-        // migrating only the old generic demo name to the restaurant brand.
-        // eslint-disable-next-line react-hooks/set-state-in-effect
-        setState(persisted.settings?.name === "Restaurante" ? { ...persisted, settings: { ...persisted.settings, name: "Patos Lanches" } } : persisted);
-      }
-    } catch { /* use demo data */ }
-    setReady(true);
+  const refresh = useCallback(async () => {
+    const response = await fetch("/api/operations/state", { cache: "no-store" });
+    if (response.status === 401) { setAuthenticated(false); return false; }
+    if (!response.ok) return false;
+    const snapshot = await response.json() as Snapshot;
+    setState(previous => stateFromSnapshot(snapshot, previous));
+    setKitchen(snapshot.kitchen);
+    setAuthenticated(true);
+    return true;
   }, []);
 
   useEffect(() => {
-    if (!ready) return;
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-    const channel = new BroadcastChannel(STORAGE_KEY); channel.postMessage(state); channel.close();
-  }, [state, ready]);
+    void (async () => {
+      await loadPublicMenu();
+      await refresh();
+      setReady(true);
+    })();
+  }, [loadPublicMenu, refresh]);
 
   useEffect(() => {
-    const channel = new BroadcastChannel(STORAGE_KEY);
-    channel.onmessage = event => setState(event.data as RestaurantState);
-    const onStorage = (event: StorageEvent) => { if (event.key === STORAGE_KEY && event.newValue) setState(JSON.parse(event.newValue)); };
-    window.addEventListener("storage", onStorage);
-    return () => { channel.close(); window.removeEventListener("storage", onStorage); };
+    if (!authenticated) return;
+    const interval = window.setInterval(() => { void refresh(); }, 4_000);
+    return () => window.clearInterval(interval);
+  }, [authenticated, refresh]);
+
+  const login = useCallback(async (username: string, password: string): Promise<Result> => {
+    const response = await fetch("/api/auth/login", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ username, password }) });
+    if (!response.ok) return { ok: false, message: await readError(response) };
+    await refresh();
+    return { ok: true, number: 0 };
+  }, [refresh]);
+
+  const logout = useCallback(async () => {
+    await fetch("/api/auth/logout", { method: "POST" });
+    setAuthenticated(false);
+    setKitchen([]);
   }, []);
 
-  const createOrder = useCallback((tableId: string, cart: CartItem[], source: "waiter" | "qr") => {
-    const state = stateRef.current;
-    if (!cart.length) return { ok: false as const, message: "Carrinho vazio" };
-    for (const item of cart) {
-      const product = state.products.find(p => p.id === item.productId);
-      if (!product || !product.available) return { ok: false as const, message: `${product?.name ?? "Produto"} está indisponível` };
-    }
-    const requirements = recipeRequirements(state, cart);
-    for (const [stockId, quantity] of requirements) {
-      const stockItem = state.stock.find(s => s.id === stockId);
-      if (!stockItem || stockItem.quantity < quantity) return { ok: false as const, message: `Estoque insuficiente: ${stockItem?.name ?? stockId}` };
-    }
-    const number = state.nextOrderNumber;
-    const items: OrderItem[] = cart.map((cartItem, index) => {
-      const product = state.products.find(p => p.id === cartItem.productId) as Product;
-      const variant = product.variants.find(v => v.id === cartItem.variantId)!;
-      return { id: `${number}-${index}`, productId: product.id, productName: product.name, variantId: variant.id, variantName: variant.name, sector: product.sector, quantity: cartItem.quantity, unitPrice: variant.price, addons: product.addons.filter(a => cartItem.addonIds.includes(a.id)), note: cartItem.note };
-    });
-    const orderId = `o${number}`;
-    const now = new Date().toISOString();
-    const updatedStock = state.stock.map(stockItem => ({ ...stockItem, quantity: Math.max(0, stockItem.quantity - (requirements.get(stockItem.id) ?? 0)) }));
-    const movements = [...state.movements, ...[...requirements].map(([stockId, quantity], index) => ({ id: `${orderId}-mov-${index}`, stockId, type: "Venda" as const, quantity: -quantity, createdAt: now, reference: `Pedido #${number}` }))];
-    setState({ ...state, nextOrderNumber: number + 1, stock: updatedStock, movements, orders: [...state.orders, { id: orderId, number, tableId, status: "confirmed", source, createdAt: now, items, stockApplied: true }], tables: state.tables.map(t => t.id === tableId ? { ...t, status: "preparing", openedAt: t.openedAt ?? now } : t) });
-    return { ok: true as const, number };
+  const createOrder = useCallback(async (tableId: string, cart: CartItem[], _source?: "waiter" | "qr"): Promise<Result> => {
+    const response = await fetch("/api/operations/orders", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ tableNumber: Number(tableId), items: cart.map(item => ({ productId: item.productId, variantId: item.variantId, quantity: item.quantity, addonIds: item.addonIds, note: item.note })) }) });
+    if (!response.ok) return { ok: false, message: await readError(response) };
+    const body = await response.json() as { order: { orderNumber: number } };
+    await refresh();
+    return { ok: true, number: body.order.orderNumber };
+  }, [refresh]);
+
+  const createPublicOrder = useCallback(async (input: PublicOrderInput): Promise<Result> => {
+    const response = await fetch("/api/public/orders", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ ...input, items: input.items.map(item => ({ productId: item.productId, variantId: item.variantId, quantity: item.quantity, addonIds: item.addonIds, note: item.note })) }) });
+    if (!response.ok) return { ok: false, message: await readError(response) };
+    const body = await response.json() as { order: { orderNumber: number } };
+    return { ok: true, number: body.order.orderNumber };
   }, []);
 
-  const updateOrderStatus = useCallback((orderId: string, status: OrderStatus) => setState(current => {
-    const target = current.orders.find(o => o.id === orderId); if (!target) return current;
-    const orders = current.orders.map(o => o.id === orderId ? { ...o, status } : o);
-    return { ...current, orders, tables: current.tables.map(t => t.id === target.tableId ? { ...t, status: deriveTableStatus(orders, t.id) } : t) };
-  }), []);
+  const cancelOrder = useCallback(async (orderId: string): Promise<Result> => {
+    const response = await fetch(`/api/operations/orders/${orderId}`, { method: "DELETE" });
+    if (!response.ok) return { ok: false, message: await readError(response) };
+    await refresh();
+    return { ok: true, number: 0 };
+  }, [refresh]);
 
-  const cancelOrder = useCallback((orderId: string) => setState(current => {
-    const target = current.orders.find(o => o.id === orderId); if (!target || ["completed", "cancelled"].includes(target.status)) return current;
-    const req = recipeRequirements(current, target.items.map((item, i) => ({ key: String(i), productId: item.productId, variantId: item.variantId, quantity: item.quantity, addonIds: item.addons.map(a => a.id), note: item.note })));
-    const stock = target.stockApplied ? current.stock.map(s => ({ ...s, quantity: s.quantity + (req.get(s.id) ?? 0) })) : current.stock;
-    const now = new Date().toISOString();
-    const movements = target.stockApplied ? [...current.movements, ...[...req].map(([stockId, quantity], i) => ({ id: `${orderId}-refund-${i}`, stockId, type: "Estorno" as const, quantity, createdAt: now, reference: `Cancelamento #${target.number}` }))] : current.movements;
-    const orders = current.orders.map(o => o.id === orderId ? { ...o, status: "cancelled" as const, stockApplied: false } : o);
-    return { ...current, stock, movements, orders, tables: current.tables.map(t => t.id === target.tableId ? { ...t, status: deriveTableStatus(orders, t.id) } : t) };
-  }), []);
+  const payTable = useCallback(async (tableId: string, payments: Payment[]) => {
+    const response = await fetch("/api/operations/payments", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ tableNumber: Number(tableId), payments: payments.map(payment => ({ method: payment.method, amountCents: Math.round(payment.amount * 100) })) }) });
+    if (!response.ok) return { ok: false as const, message: await readError(response) };
+    const body = await response.json() as { changeCents: number };
+    await refresh();
+    return { ok: true as const, change: body.changeCents / 100 };
+  }, [refresh]);
 
-  const payTable = useCallback((tableId: string, payments: Payment[]) => setState(current => {
-    const activeOrders = current.orders.filter(o => o.tableId === tableId && !["completed", "cancelled"].includes(o.status));
-    const subtotal = activeOrders.flatMap(o => o.items).reduce((sum, item) => sum + item.quantity * (item.unitPrice + item.addons.reduce((a, b) => a + b.price, 0)), 0);
-    const service = subtotal * current.settings.serviceRate / 100; const total = subtotal + service; const now = new Date().toISOString();
-    return { ...current, orders: current.orders.map(o => activeOrders.some(a => a.id === o.id) ? { ...o, status: "completed" as const } : o), tables: current.tables.map(t => t.id === tableId ? { ...t, status: "available", openedAt: undefined } : t), sales: [...current.sales, { id: `sale-${Date.now()}`, tableId, orderIds: activeOrders.map(o => o.id), subtotal, service, total, payments, createdAt: now }] };
-  }), []);
+  const updateKitchenTicket = useCallback(async (ticketId: string, status: "preparing" | "ready"): Promise<Result> => {
+    const response = await fetch(`/api/internal/kitchen/${ticketId}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ status }) });
+    if (!response.ok) return { ok: false, message: await readError(response) };
+    await refresh();
+    return { ok: true, number: 0 };
+  }, [refresh]);
 
-  const adjustStock = useCallback((stockId: string, quantity: number, type: "Entrada" | "Ajuste" | "Perda") => setState(current => {
-    const delta = type === "Perda" ? -Math.abs(quantity) : quantity; const now = new Date().toISOString();
-    return { ...current, stock: current.stock.map(s => s.id === stockId ? { ...s, quantity: Math.max(0, s.quantity + delta) } : s), movements: [...current.movements, { id: `mov-${Date.now()}`, stockId, type, quantity: delta, createdAt: now, reference: "Movimentação manual" }] };
-  }), []);
-  const toggleProduct = useCallback((productId: string) => setState(s => ({ ...s, products: s.products.map(p => p.id === productId ? { ...p, available: !p.available } : p) })), []);
-  const updateSettings = useCallback((settings: RestaurantSettings) => setState(s => ({ ...s, settings })), []);
-  const resetDemo = useCallback(() => setState(createDemoState()), []);
+  const updateOrderStatus = useCallback(async (orderId: string, status: Order["status"]): Promise<Result> => {
+    if (status === "delivered") return { ok: true, number: 0 };
+    const ticket = kitchen.find(item => item.orderId === orderId && item.status !== "ready");
+    if (!ticket || (status !== "preparing" && status !== "ready")) return { ok: false, message: "Não foi possível localizar a comanda da cozinha." };
+    return updateKitchenTicket(ticket.id, status);
+  }, [kitchen, updateKitchenTicket]);
 
-  const value = useMemo(() => ({ state, ready, createOrder, updateOrderStatus, cancelOrder, payTable, adjustStock, toggleProduct, updateSettings, resetDemo }), [state, ready, createOrder, updateOrderStatus, cancelOrder, payTable, adjustStock, toggleProduct, updateSettings, resetDemo]);
+  const toggleProduct = useCallback(async (productId: string): Promise<Result> => {
+    const product = state.products.find(item => item.id === productId);
+    if (!product) return { ok: false, message: "Produto não encontrado." };
+    const response = await fetch(`/api/operations/products/${productId}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ available: !product.available }) });
+    if (!response.ok) return { ok: false, message: await readError(response) };
+    await refresh();
+    return { ok: true, number: 0 };
+  }, [refresh, state.products]);
+
+  const updateSettings = useCallback(async (settings: RestaurantSettings): Promise<Result> => {
+    const response = await fetch("/api/operations/settings", { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ name: settings.name, whatsapp: settings.whatsapp, serviceRate: settings.serviceRate }) });
+    if (!response.ok) return { ok: false, message: await readError(response) };
+    await refresh();
+    return { ok: true, number: 0 };
+  }, [refresh]);
+
+  const adjustStock = useCallback((stockId: string, quantity: number, type: "Entrada" | "Ajuste" | "Perda") => {
+    const delta = type === "Perda" ? -Math.abs(quantity) : quantity;
+    setState(current => ({ ...current, stock: current.stock.map(item => item.id === stockId ? { ...item, quantity: Math.max(0, item.quantity + delta) } : item) }));
+  }, []);
+
+  const resetDemo = useCallback(() => { void refresh(); }, [refresh]);
+
+  const value = useMemo(() => ({ state, kitchen, ready, authenticated, refresh, login, logout, createOrder, createPublicOrder, cancelOrder, payTable, updateKitchenTicket, updateOrderStatus, toggleProduct, updateSettings, adjustStock, resetDemo }), [state, kitchen, ready, authenticated, refresh, login, logout, createOrder, createPublicOrder, cancelOrder, payTable, updateKitchenTicket, updateOrderStatus, toggleProduct, updateSettings, adjustStock, resetDemo]);
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }
 
-export function useRestaurant() { const value = useContext(StoreContext); if (!value) throw new Error("RestaurantStoreProvider ausente"); return value; }
+export function useRestaurant() {
+  const value = useContext(StoreContext);
+  if (!value) throw new Error("RestaurantStoreProvider ausente");
+  return value;
+}

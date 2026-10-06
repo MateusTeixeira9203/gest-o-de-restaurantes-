@@ -69,18 +69,35 @@ function TableCommand({ tableId }: { tableId: string }) {
 }
 
 function MenuBuilder({ tableId, source, publicMenu = false, onBack, onSent }: { tableId?: string; source: "waiter" | "qr"; publicMenu?: boolean; onBack?: () => void; onSent?: (number: number) => void }) {
-  const { state, createOrder } = useRestaurant(); const [category, setCategory] = useState("Todos"); const [search, setSearch] = useState(""); const [selected, setSelected] = useState<Product | null>(null); const [cart, setCart] = useState<CartItem[]>([]); const [cartOpen, setCartOpen] = useState(false); const [success, setSuccess] = useState<number | null>(null);
+  const { state, createOrder, createPublicOrder } = useRestaurant(); const [category, setCategory] = useState("Todos"); const [search, setSearch] = useState(""); const [selected, setSelected] = useState<Product | null>(null); const [cart, setCart] = useState<CartItem[]>([]); const [cartOpen, setCartOpen] = useState(false); const [success, setSuccess] = useState<number | null>(null);
   const filtered = state.products.filter(p => (category === "Todos" || p.category === category) && p.name.toLowerCase().includes(search.toLowerCase()));
   const total = cart.reduce((sum, item) => { const p = state.products.find(x => x.id === item.productId)!; const variant = p.variants.find(v => v.id === item.variantId)!; return sum + item.quantity * (variant.price + p.addons.filter(a => item.addonIds.includes(a.id)).reduce((a, b) => a + b.price, 0)); }, 0);
-  const submit = () => {
+  const submit = async () => {
+    if (publicMenu) {
+      const name = window.prompt("Informe seu nome para identificar o pedido:")?.trim();
+      if (!name) { toast.error("Informe seu nome para confirmar o pedido."); return; }
+      const phone = window.prompt("Informe seu WhatsApp para contato:")?.trim();
+      const isDelivery = !tableId && window.confirm("Deseja receber por entrega? Escolha Cancelar para retirada no balcão.");
+      const addressLine1 = isDelivery ? window.prompt("Endereço de entrega (rua e número):")?.trim() : undefined;
+      if (isDelivery && !addressLine1) { toast.error("Informe o endereço para entrega."); return; }
+      const neighborhood = isDelivery ? window.prompt("Bairro (opcional):")?.trim() : undefined;
+      const reference = isDelivery ? window.prompt("Ponto de referência (opcional):")?.trim() : undefined;
+      const result = await createPublicOrder({
+        source: tableId ? "qr_menu" : "public_menu", fulfillment: tableId ? "dine_in" : isDelivery ? "delivery" : "pickup",
+        tableNumber: tableId ? Number(tableId) : undefined, customer: { name, phone }, items: cart,
+        delivery: isDelivery ? { addressLine1: addressLine1!, neighborhood, reference } : undefined,
+      });
+      if (!result.ok) { toast.error(result.message); return; }
+      setCart([]); setCartOpen(false); setSuccess(result.number); return;
+    }
     if (publicMenu && !tableId) { if (!state.settings.whatsapp.trim()) { toast.error("Configure o WhatsApp em Gestão antes de receber pedidos pelo cardápio"); return; } const lines = cart.map(i => { const p = state.products.find(x => x.id === i.productId)!; const variant = p.variants.find(v => v.id === i.variantId)!; const addons = p.addons.filter(a => i.addonIds.includes(a.id)).map(a => `\n+ ${a.name} — ${money(a.price)}`).join(""); return `${i.quantity}x ${p.name} ${variant.name} — ${money(i.quantity * (variant.price + p.addons.filter(a => i.addonIds.includes(a.id)).reduce((x, a) => x + a.price, 0)))}${addons}${i.note ? `\nObs: ${i.note}` : ""}`; }); const msg = `Olá! Gostaria de fazer um pedido:\n\n${lines.join("\n\n")}\n\nTotal: ${money(total)}\n\nNome:\nRetirada ou entrega:`; window.open(`https://wa.me/${state.settings.whatsapp}?text=${encodeURIComponent(msg)}`, "_blank", "noopener,noreferrer"); return; }
-    if (!tableId) return; const result = createOrder(tableId, cart, source); if (!result.ok) { toast.error(result.message); return; } setCart([]); setCartOpen(false); setSuccess(result.number); onSent?.(result.number);
+    if (!tableId) return; const result = await createOrder(tableId, cart, source); if (!result.ok) { toast.error(result.message); return; } setCart([]); setCartOpen(false); setSuccess(result.number); onSent?.(result.number);
   };
   if (success) return <main className="customer-page"><div className="success-card"><span className="success-icon"><Check size={30} /></span><p className="text-sm font-semibold uppercase tracking-widest text-emerald-700">Pedido enviado</p><h1 className="mt-2 text-4xl font-semibold tracking-tight">Pedido #{success}</h1><p className="mt-3 text-neutral-500">Já enviamos para a cozinha. Você pode acompanhar com a equipe.</p><Link href={`/menu/mesa/${tableId}`} className="primary-button mt-7">Voltar ao cardápio</Link></div></main>;
   return <main className={publicMenu ? "customer-page" : "app-page"}><div className={publicMenu ? "customer-shell" : "page-container"}>{publicMenu ? <CustomerHeader tableId={tableId} /> : <Topbar title="Novo pedido" subtitle={`Mesa ${tableId}`} back="#" action={<button onClick={onBack} className="text-button">Cancelar</button>} />}{publicMenu && <div className="menu-hero"><Image src="/menu-hero.png" fill sizes="(max-width: 768px) 100vw, 720px" alt="Pizza de calabresa artesanal" className="object-cover" priority /><div className="menu-hero-overlay"><span className="live-pill"><Sparkles size={13} /> Feito na hora</span><h1>Seu pedido,<br />do seu jeito.</h1></div></div>}<div className="menu-toolbar"><div className="search-box"><Search size={18} /><input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar no cardápio" aria-label="Buscar produtos" /></div><div className="category-scroll">{CATEGORIES.map(c => <button key={c} onClick={() => setCategory(c)} className={category === c ? "category-chip active" : "category-chip"}>{c}</button>)}</div></div><section className="product-grid">{filtered.map(product => { const unavailable = !product.available || !isProductStockAvailable(state, product); return <button key={product.id} onClick={() => !unavailable && setSelected(product)} disabled={unavailable} className="product-card text-left"><div className="flex items-start justify-between gap-3"><div className={`product-symbol symbol-${product.category.toLowerCase().replace("ã", "a")}`}>{product.category === "Pizzas" ? "🍕" : product.category === "Bebidas" ? "🥤" : product.category === "Açaí" ? "🫐" : product.category === "Sorvetes" ? "🍨" : product.category === "Pastéis" ? "🥟" : "🍝"}</div>{unavailable ? <span className="sold-out">Indisponível</span> : <Plus size={18} className="text-neutral-400" />}</div><h3>{product.name}</h3><p>{product.description}</p><strong>A partir de {money(Math.min(...product.variants.map(v => v.price)))}</strong></button>; })}</section>{cart.length > 0 && <button onClick={() => setCartOpen(true)} className="cart-dock"><span className="cart-count">{cart.reduce((s, i) => s + i.quantity, 0)}</span><span>Ver pedido</span><strong>{money(total)}</strong></button>}<ProductDialog product={selected} open={!!selected} onOpenChange={open => !open && setSelected(null)} onAdd={item => { setCart(c => [...c, item]); setSelected(null); toast.success("Item adicionado"); }} /><CartSheet open={cartOpen} onOpenChange={setCartOpen} cart={cart} setCart={setCart} state={state} total={total} submit={submit} whatsapp={publicMenu && !tableId} /></div></main>;
 }
 
-function CustomerHeader({ tableId }: { tableId?: string }) { return <header className="customer-header"><Brand /><div className="text-right"><p className="text-xs uppercase tracking-wider text-neutral-400">{tableId ? "Você está na" : "Cardápio online"}</p><strong>{tableId ? `Mesa ${tableId}` : "Peça pelo WhatsApp"}</strong></div></header>; }
+function CustomerHeader({ tableId }: { tableId?: string }) { return <header className="customer-header"><Brand /><div className="text-right"><p className="text-xs uppercase tracking-wider text-neutral-400">{tableId ? "Você está na" : "Cardápio online"}</p><strong>{tableId ? `Mesa ${tableId}` : "Peça online"}</strong></div></header>; }
 
 function isProductStockAvailable(state: RestaurantState, product: Product) { return product.variants.some(variant => (product.recipe[variant.id] ?? []).every(component => (state.stock.find(s => s.id === component.stockId)?.quantity ?? 0) >= component.quantity)); }
 
@@ -164,6 +181,30 @@ function Configuration() { const { state, updateSettings, resetDemo } = useResta
 function PageTitle({ title, subtitle, action }: { title: string; subtitle: string; action?: string }) { return <div className="page-heading"><div><h2>{title}</h2><p>{subtitle}</p></div>{action && <button className="primary-button"><Plus size={17} /> {action}</button>}</div>; }
 function NotFound() { return <main className="app-page grid min-h-screen place-items-center"><div className="text-center"><p className="text-sm font-semibold uppercase tracking-wider text-neutral-400">404</p><h1 className="mt-2 text-3xl font-semibold">Página não encontrada</h1><Link href="/operacao" className="primary-button mt-6">Voltar à operação</Link></div></main>; }
 
+function StaffGate({ children }: { children: React.ReactNode }) {
+  const { authenticated, ready } = useRestaurant();
+  if (!ready) return <main className="app-page min-h-screen" aria-busy="true" />;
+  if (authenticated) return <>{children}</>;
+  return <main className="login-page"><section className="login-form-wrap"><div className="login-card text-center"><div className="login-lock mx-auto"><LockKeyhole size={22} /></div><h2>Acesso da equipe</h2><p className="mt-2">Entre na Gestão uma vez neste dispositivo para acessar garçom, cozinha e caixa.</p><Link href="/gestao" className="primary-button mt-6 justify-center">Entrar na Gestão <ArrowRight size={18} /></Link></div></section></main>;
+}
+
+function ServerLogin() {
+  const router = useRouter();
+  const { login } = useRestaurant();
+  const [user, setUser] = useState("admin");
+  const [password, setPassword] = useState("admin123");
+  const [busy, setBusy] = useState(false);
+  const submit = async (event: React.FormEvent) => {
+    event.preventDefault(); setBusy(true);
+    const result = await login(user, password);
+    setBusy(false);
+    if (!result.ok) { toast.error(result.message); return; }
+    sessionStorage.setItem("restaurante-auth", "ok");
+    router.push("/gestao/dashboard");
+  };
+  return <main className="login-page"><section className="login-brand"><Brand dark /><div><span className="live-pill"><Sparkles size={13} /> Operação conectada</span><h1>Uma fila.<br />Uma operação.</h1><p>Pedidos, cozinha e caixa trabalham sobre a mesma base em tempo real.</p></div></section><section className="login-form-wrap"><form onSubmit={submit} className="login-card"><div className="login-lock"><LockKeyhole size={22} /></div><h2>Entrar na Gestão</h2><p>Use o acesso configurado para a equipe.</p><label><span>Usuário</span><input value={user} onChange={event => setUser(event.target.value)} autoComplete="username" /></label><label><span>Senha</span><input value={password} onChange={event => setPassword(event.target.value)} type="password" autoComplete="current-password" /></label><button className="primary-button w-full justify-center" type="submit" disabled={busy}>{busy ? "Entrando…" : "Entrar"} <ArrowRight size={18} /></button><p className="mt-4 text-center text-xs text-neutral-400">No ambiente de teste: admin · admin123</p></form></section></main>;
+}
+
 function AppRouter() {
   const pathname = usePathname(); const { createOrder } = useRestaurant();
   useEffect(() => {
@@ -192,10 +233,10 @@ function AppRouter() {
         additionalProperties: false,
       },
       annotations: { readOnlyHint: false, untrustedContentHint: false },
-      execute(input: unknown) {
+      async execute(input: unknown) {
         const value = input as { tableId: string; items: { productId: string; variantId: string; quantity: number }[] };
         if (!value?.tableId || !Array.isArray(value.items) || !value.items.length) throw new Error("Mesa e itens são obrigatórios");
-        const result = createOrder(value.tableId, value.items.map((i, index) => ({ ...i, key: `tool-${index}`, addonIds: [] })), "waiter");
+        const result = await createOrder(value.tableId, value.items.map((i, index) => ({ ...i, key: `tool-${index}`, addonIds: [] })), "waiter");
         if (!result.ok) throw new Error(result.message);
         return { orderNumber: result.number, status: "confirmed", tableId: value.tableId };
       },
@@ -203,7 +244,16 @@ function AppRouter() {
     try { void Promise.resolve(context.registerTool(tool, { signal: lifecycle.signal })).catch(() => {}); } catch { /* unsupported context */ }
     return () => lifecycle.abort();
   }, [createOrder]);
-  if (pathname === "/operacao") return <OperationHome />; if (pathname === "/operacao/garcom") return <WaiterTables />; if (pathname.startsWith("/operacao/garcom/mesa/")) return <TableCommand tableId={pathname.split("/").pop()!} />; if (pathname === "/operacao/cozinha") return <Kitchen />; if (pathname === "/operacao/caixa") return <Cashier />; if (pathname === "/menu") return <MenuBuilder source="qr" publicMenu />; if (pathname.startsWith("/menu/mesa/")) return <MenuBuilder source="qr" publicMenu tableId={pathname.split("/").pop()!} />; if (pathname === "/gestao") return <Login />; if (pathname.startsWith("/gestao/")) return <Management section={pathname.split("/").pop() || "dashboard"} />; return <NotFound />;
+  if (pathname === "/operacao") return <StaffGate><OperationHome /></StaffGate>;
+  if (pathname === "/operacao/garcom") return <StaffGate><WaiterTables /></StaffGate>;
+  if (pathname.startsWith("/operacao/garcom/mesa/")) return <StaffGate><TableCommand tableId={pathname.split("/").pop()!} /></StaffGate>;
+  if (pathname === "/operacao/cozinha") return <StaffGate><Kitchen /></StaffGate>;
+  if (pathname === "/operacao/caixa") return <StaffGate><Cashier /></StaffGate>;
+  if (pathname === "/menu") return <MenuBuilder source="qr" publicMenu />;
+  if (pathname.startsWith("/menu/mesa/")) return <MenuBuilder source="qr" publicMenu tableId={pathname.split("/").pop()!} />;
+  if (pathname === "/gestao") return <ServerLogin />;
+  if (pathname.startsWith("/gestao/")) return <StaffGate><Management section={pathname.split("/").pop() || "dashboard"} /></StaffGate>;
+  return <NotFound />;
 }
 
 export default function RestaurantApp() {
