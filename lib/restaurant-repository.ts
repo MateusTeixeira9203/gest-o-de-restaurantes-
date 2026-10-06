@@ -1,5 +1,4 @@
 import type { PoolClient } from "pg";
-import { products } from "@/lib/demo-data";
 import { query, transaction } from "@/lib/database";
 
 const RESTAURANT_SLUG = "patos-lanches";
@@ -69,22 +68,8 @@ async function restaurant(client?: PoolClient): Promise<RestaurantRow> {
 
 async function ensureCatalog(client: PoolClient, restaurantId: string) {
   await client.query("SELECT pg_advisory_xact_lock(hashtext($1))", [`catalog:${restaurantId}`]);
-  const existing = await client.query<{ count: string }>("SELECT count(*) FROM menu_products WHERE restaurant_id = $1", [restaurantId]);
-  if (Number(existing.rows[0].count) > 0) return;
-
-  for (const product of products) {
-    const inserted = await client.query<{ id: string }>(
-      "INSERT INTO menu_products (restaurant_id, name, description, category, kitchen_sector, available, featured, sort_order) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id",
-      [restaurantId, product.name, product.description, product.category, product.sector, product.available, Boolean(product.featured), products.indexOf(product)],
-    );
-    const productId = inserted.rows[0].id;
-    for (const [index, variant] of product.variants.entries()) {
-      await client.query("INSERT INTO menu_variants (product_id, name, price_cents, sort_order) VALUES ($1,$2,$3,$4)", [productId, variant.name, cents(variant.price), index]);
-    }
-    for (const [index, addon] of product.addons.entries()) {
-      await client.query("INSERT INTO product_addons (product_id, name, price_cents, sort_order) VALUES ($1,$2,$3,$4)", [productId, addon.name, cents(addon.price), index]);
-    }
-  }
+  // The first operational setup is intentionally empty. Products are created
+  // by Gestão so no sample catalog leaks into a real restaurant.
 }
 
 export async function getPublicMenu() {
@@ -302,4 +287,20 @@ export async function updateRestaurantSettings(input: { name: string; whatsapp: 
   );
   if (!updated.rows[0]) throw new Error("Restaurante não encontrado.");
   return { name: updated.rows[0].name, whatsapp: updated.rows[0].whatsapp ?? "", serviceRate: updated.rows[0].service_rate_basis_points / 100 };
+}
+
+export async function createDiningTable(number: number) {
+  const current = await restaurant();
+  const result = await query<{ number: number }>("INSERT INTO dining_tables (restaurant_id, number, label) VALUES ($1,$2,$3) RETURNING number", [current.id, number, `Mesa ${String(number).padStart(2, "0")}`]);
+  return result.rows[0];
+}
+
+export async function createMenuProduct(input: { name: string; category: string; sector: string; priceCents: number; description?: string }) {
+  if (!Number.isInteger(input.priceCents) || input.priceCents < 0) throw new Error("Preço inválido.");
+  return transaction(async client => {
+    const current = await restaurant(client);
+    const product = await client.query<{ id: string }>("INSERT INTO menu_products (restaurant_id, name, description, category, kitchen_sector, sort_order) VALUES ($1,$2,$3,$4,$5,(SELECT COALESCE(max(sort_order), -1) + 1 FROM menu_products WHERE restaurant_id = $1)) RETURNING id", [current.id, input.name.trim(), input.description?.trim() ?? "", input.category.trim(), input.sector.trim()]);
+    await client.query("INSERT INTO menu_variants (product_id, name, price_cents) VALUES ($1,'Padrão',$2)", [product.rows[0].id, input.priceCents]);
+    return { id: product.rows[0].id };
+  });
 }

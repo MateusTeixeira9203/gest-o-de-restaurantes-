@@ -49,7 +49,7 @@ export default function Home() {
           </div>
         </section>
 
-        <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-5 text-xs text-white/35"><span>15 mesas configuradas</span><span>Dados sincronizados neste dispositivo</span></footer>
+        <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-5 text-xs text-white/35"><span>Selecione seu papel para começar</span><span>Operação compartilhada em tempo real</span></footer>
       </div>
     </main>
   );

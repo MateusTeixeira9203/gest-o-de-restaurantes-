@@ -1,7 +1,6 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import { createDemoState } from "./demo-data";
 import type { CartItem, Order, Payment, Product, RestaurantSettings, RestaurantState, TableStatus } from "./domain";
 
 type KitchenTicket = {
@@ -44,12 +43,14 @@ type StoreContextValue = {
   updateOrderStatus: (orderId: string, status: Order["status"]) => Promise<Result>;
   toggleProduct: (productId: string) => Promise<Result>;
   updateSettings: (settings: RestaurantSettings) => Promise<Result>;
+  createTable: (number: number) => Promise<Result>;
+  createProduct: (input: { name: string; category: string; sector: string; price: number; description?: string }) => Promise<Result>;
   adjustStock: (stockId: string, quantity: number, type: "Entrada" | "Ajuste" | "Perda") => void;
   resetDemo: () => void;
 };
 
 const StoreContext = createContext<StoreContextValue | null>(null);
-const baseState = createDemoState();
+const baseState: RestaurantState = { settings: { name: "Patos Lanches", whatsapp: "", serviceRate: 10, tableCount: 0 }, tables: [], products: [], orders: [], stock: [], movements: [], sales: [], nextOrderNumber: 1 };
 
 function productFromRemote(product: RemoteProduct): Product {
   return {
@@ -210,6 +211,18 @@ export function RestaurantStoreProvider({ children }: { children: React.ReactNod
     return { ok: true, number: 0 };
   }, [refresh]);
 
+  const createTable = useCallback(async (number: number): Promise<Result> => {
+    const response = await fetch("/api/operations/tables", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ number }) });
+    if (!response.ok) return { ok: false, message: await readError(response) };
+    await refresh(); return { ok: true, number };
+  }, [refresh]);
+
+  const createProduct = useCallback(async (input: { name: string; category: string; sector: string; price: number; description?: string }): Promise<Result> => {
+    const response = await fetch("/api/operations/products", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ ...input, priceCents: Math.round(input.price * 100) }) });
+    if (!response.ok) return { ok: false, message: await readError(response) };
+    await refresh(); return { ok: true, number: 0 };
+  }, [refresh]);
+
   const adjustStock = useCallback((stockId: string, quantity: number, type: "Entrada" | "Ajuste" | "Perda") => {
     const delta = type === "Perda" ? -Math.abs(quantity) : quantity;
     setState(current => ({ ...current, stock: current.stock.map(item => item.id === stockId ? { ...item, quantity: Math.max(0, item.quantity + delta) } : item) }));
@@ -217,7 +230,7 @@ export function RestaurantStoreProvider({ children }: { children: React.ReactNod
 
   const resetDemo = useCallback(() => { void refresh(); }, [refresh]);
 
-  const value = useMemo(() => ({ state, kitchen, ready, authenticated, refresh, login, logout, createOrder, createPublicOrder, cancelOrder, payTable, updateKitchenTicket, updateOrderStatus, toggleProduct, updateSettings, adjustStock, resetDemo }), [state, kitchen, ready, authenticated, refresh, login, logout, createOrder, createPublicOrder, cancelOrder, payTable, updateKitchenTicket, updateOrderStatus, toggleProduct, updateSettings, adjustStock, resetDemo]);
+  const value = useMemo(() => ({ state, kitchen, ready, authenticated, refresh, login, logout, createOrder, createPublicOrder, cancelOrder, payTable, updateKitchenTicket, updateOrderStatus, toggleProduct, updateSettings, createTable, createProduct, adjustStock, resetDemo }), [state, kitchen, ready, authenticated, refresh, login, logout, createOrder, createPublicOrder, cancelOrder, payTable, updateKitchenTicket, updateOrderStatus, toggleProduct, updateSettings, createTable, createProduct, adjustStock, resetDemo]);
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }
 
