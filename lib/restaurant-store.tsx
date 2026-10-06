@@ -10,13 +10,14 @@ type KitchenTicket = {
   items: Array<{ productName: string; variantName: string; quantity: number; note: string | null }>;
 };
 
-type RemoteProduct = { id: string; name: string; description: string; category: string; sector: string; available: boolean; featured: boolean; variants: Array<{ id: string; name: string; priceCents: number }>; addons: Array<{ id: string; name: string; priceCents: number }> };
+type RemoteProduct = { id: string; name: string; description: string; category: string; sector: string; available: boolean; featured: boolean; variants: Array<{ id: string; name: string; priceCents: number; stockAvailable: boolean }>; addons: Array<{ id: string; name: string; priceCents: number }> };
 type Snapshot = {
   restaurant: { name: string; whatsapp: string; serviceRate: number };
   products: RemoteProduct[];
   tables: Array<{ number: number; active: boolean }>;
   orders: Array<{ id: string; orderNumber: number; source: "waiter" | "public_menu" | "qr_menu"; fulfillment: "dine_in" | "pickup" | "delivery"; status: Order["status"]; tableNumber: number | null; createdAt: string; items: Array<{ id: string; product_id: string | null; variant_id: string | null; product_name: string; variant_name: string; kitchen_sector: string; quantity: number; unit_price_cents: number; addons: Array<{ id: string; name: string; priceCents: number }>; note: string | null }> }>;
   kitchen: KitchenTicket[];
+  inventory: { enabled: boolean; items: Array<{ id: string; name: string; category: string; unit: "un" | "g" | "kg" | "ml" | "L"; quantity: number; minimumQuantity: number; averageCostCents: number; active: boolean }>; movements: Array<{ id: string; itemId: string; type: "initial" | "purchase" | "sale_consumption" | "cancellation_return" | "loss" | "adjustment"; quantityDelta: number; note: string | null; createdAt: string }>; recipes: Array<{ variantId: string; itemId: string; quantity: number }> };
 };
 
 type PublicOrderInput = {
@@ -45,7 +46,11 @@ type StoreContextValue = {
   updateSettings: (settings: RestaurantSettings) => Promise<Result>;
   createTable: (number: number) => Promise<Result>;
   createProduct: (input: { name: string; category: string; sector: string; price: number; description?: string }) => Promise<Result>;
-  adjustStock: (stockId: string, quantity: number, type: "Entrada" | "Ajuste" | "Perda") => void;
+  inventoryEnabled: boolean;
+  setInventoryEnabled: (enabled: boolean) => Promise<Result>;
+  createInventoryItem: (input: { name: string; category?: string; unit: "un" | "g" | "kg" | "ml" | "L"; quantity?: number; minimumQuantity?: number; cost?: number }) => Promise<Result>;
+  moveInventory: (input: { itemId: string; type: "purchase" | "loss" | "adjustment"; quantity: number; cost?: number; note?: string }) => Promise<Result>;
+  saveRecipe: (productId: string, variantId: string, components: Array<{ itemId: string; quantity: number }>) => Promise<Result>;
   resetDemo: () => void;
 };
 
@@ -56,7 +61,7 @@ function productFromRemote(product: RemoteProduct): Product {
   return {
     id: product.id, name: product.name, description: product.description, category: product.category, sector: product.sector as Product["sector"],
     available: product.available, featured: product.featured, recipe: {},
-    variants: product.variants.map(variant => ({ id: variant.id, name: variant.name, price: variant.priceCents / 100 })),
+    variants: product.variants.map(variant => ({ id: variant.id, name: variant.name, price: variant.priceCents / 100, stockAvailable: variant.stockAvailable })),
     addons: product.addons.map(addon => ({ id: addon.id, name: addon.name, price: addon.priceCents / 100 })),
   };
 }
@@ -70,6 +75,7 @@ function tableStatus(orders: Order[], tableId: string): TableStatus {
 }
 
 function stateFromSnapshot(snapshot: Snapshot, previous: RestaurantState): RestaurantState {
+  const recipesByVariant = Map.groupBy(snapshot.inventory.recipes, recipe => recipe.variantId);
   const orders: Order[] = snapshot.orders.map(order => ({
     id: order.id, number: order.orderNumber, tableId: order.tableNumber ? String(order.tableNumber).padStart(2, "0") : `externo-${order.id}`,
     status: order.status, source: order.source === "waiter" ? "waiter" : "qr", createdAt: order.createdAt, stockApplied: false,
@@ -87,11 +93,13 @@ function stateFromSnapshot(snapshot: Snapshot, previous: RestaurantState): Resta
   return {
     ...previous,
     settings: { name: snapshot.restaurant.name, whatsapp: snapshot.restaurant.whatsapp, serviceRate: snapshot.restaurant.serviceRate, tableCount: tables.length },
-    products: snapshot.products.map(productFromRemote),
+    products: snapshot.products.map(product => ({ ...productFromRemote(product), recipe: Object.fromEntries(product.variants.map(variant => [variant.id, (recipesByVariant.get(variant.id) ?? []).map(component => ({ stockId: component.itemId, quantity: component.quantity }))])) })),
     tables,
     orders,
     sales: orders.filter(order => order.status === "completed").map(order => ({ id: `sale-${order.id}`, tableId: order.tableId, orderIds: [order.id], subtotal: order.items.reduce((sum, item) => sum + item.quantity * (item.unitPrice + item.addons.reduce((addons, addon) => addons + addon.price, 0)), 0), service: 0, total: order.items.reduce((sum, item) => sum + item.quantity * (item.unitPrice + item.addons.reduce((addons, addon) => addons + addon.price, 0)), 0), payments: [], createdAt: order.createdAt })),
     nextOrderNumber: Math.max(1, ...orders.map(order => order.number + 1)),
+    stock: snapshot.inventory.items.map(item => ({ id: item.id, name: item.name, category: item.category, unit: item.unit, quantity: item.quantity, minimum: item.minimumQuantity, cost: item.averageCostCents / 100 })),
+    movements: snapshot.inventory.movements.map(movement => ({ id: movement.id, stockId: movement.itemId, type: movement.type === "purchase" || movement.type === "initial" ? "Entrada" : movement.type === "loss" ? "Perda" : movement.type === "cancellation_return" ? "Estorno" : movement.type === "sale_consumption" ? "Venda" : "Ajuste", quantity: movement.quantityDelta, createdAt: movement.createdAt, reference: movement.note ?? (movement.type === "sale_consumption" ? "Baixa por venda" : movement.type === "cancellation_return" ? "Estorno de pedido" : "Movimentação de estoque") })),
   };
 }
 
@@ -105,6 +113,7 @@ export function RestaurantStoreProvider({ children }: { children: React.ReactNod
   const [kitchen, setKitchen] = useState<KitchenTicket[]>([]);
   const [ready, setReady] = useState(false);
   const [authenticated, setAuthenticated] = useState(false);
+  const [inventoryEnabled, setInventoryEnabledState] = useState(false);
 
   const loadPublicMenu = useCallback(async () => {
     const response = await fetch("/api/public/menu", { cache: "no-store" });
@@ -120,6 +129,7 @@ export function RestaurantStoreProvider({ children }: { children: React.ReactNod
     const snapshot = await response.json() as Snapshot;
     setState(previous => stateFromSnapshot(snapshot, previous));
     setKitchen(snapshot.kitchen);
+    setInventoryEnabledState(snapshot.inventory.enabled);
     setAuthenticated(true);
     return true;
   }, []);
@@ -223,14 +233,33 @@ export function RestaurantStoreProvider({ children }: { children: React.ReactNod
     await refresh(); return { ok: true, number: 0 };
   }, [refresh]);
 
-  const adjustStock = useCallback((stockId: string, quantity: number, type: "Entrada" | "Ajuste" | "Perda") => {
-    const delta = type === "Perda" ? -Math.abs(quantity) : quantity;
-    setState(current => ({ ...current, stock: current.stock.map(item => item.id === stockId ? { ...item, quantity: Math.max(0, item.quantity + delta) } : item) }));
-  }, []);
+  const setInventoryEnabled = useCallback(async (enabled: boolean): Promise<Result> => {
+    const response = await fetch("/api/operations/inventory/settings", { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ enabled }) });
+    if (!response.ok) return { ok: false, message: await readError(response) };
+    await refresh(); return { ok: true, number: 0 };
+  }, [refresh]);
+
+  const createInventoryItem = useCallback(async (input: { name: string; category?: string; unit: "un" | "g" | "kg" | "ml" | "L"; quantity?: number; minimumQuantity?: number; cost?: number }): Promise<Result> => {
+    const response = await fetch("/api/operations/inventory", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ ...input, unitCostCents: input.cost === undefined ? undefined : Math.round(input.cost * 100) }) });
+    if (!response.ok) return { ok: false, message: await readError(response) };
+    await refresh(); return { ok: true, number: 0 };
+  }, [refresh]);
+
+  const moveInventory = useCallback(async (input: { itemId: string; type: "purchase" | "loss" | "adjustment"; quantity: number; cost?: number; note?: string }): Promise<Result> => {
+    const response = await fetch("/api/operations/inventory", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "movement", ...input, unitCostCents: input.cost === undefined ? undefined : Math.round(input.cost * 100) }) });
+    if (!response.ok) return { ok: false, message: await readError(response) };
+    await refresh(); return { ok: true, number: 0 };
+  }, [refresh]);
+
+  const saveRecipe = useCallback(async (productId: string, variantId: string, components: Array<{ itemId: string; quantity: number }>): Promise<Result> => {
+    const response = await fetch(`/api/operations/products/${productId}/recipe`, { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ variantId, components }) });
+    if (!response.ok) return { ok: false, message: await readError(response) };
+    await refresh(); return { ok: true, number: 0 };
+  }, [refresh]);
 
   const resetDemo = useCallback(() => { void refresh(); }, [refresh]);
 
-  const value = useMemo(() => ({ state, kitchen, ready, authenticated, refresh, login, logout, createOrder, createPublicOrder, cancelOrder, payTable, updateKitchenTicket, updateOrderStatus, toggleProduct, updateSettings, createTable, createProduct, adjustStock, resetDemo }), [state, kitchen, ready, authenticated, refresh, login, logout, createOrder, createPublicOrder, cancelOrder, payTable, updateKitchenTicket, updateOrderStatus, toggleProduct, updateSettings, createTable, createProduct, adjustStock, resetDemo]);
+  const value = useMemo(() => ({ state, kitchen, ready, authenticated, refresh, login, logout, createOrder, createPublicOrder, cancelOrder, payTable, updateKitchenTicket, updateOrderStatus, toggleProduct, updateSettings, createTable, createProduct, inventoryEnabled, setInventoryEnabled, createInventoryItem, moveInventory, saveRecipe, resetDemo }), [state, kitchen, ready, authenticated, refresh, login, logout, createOrder, createPublicOrder, cancelOrder, payTable, updateKitchenTicket, updateOrderStatus, toggleProduct, updateSettings, createTable, createProduct, inventoryEnabled, setInventoryEnabled, createInventoryItem, moveInventory, saveRecipe, resetDemo]);
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }
 

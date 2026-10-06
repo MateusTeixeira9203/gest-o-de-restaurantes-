@@ -3,7 +3,7 @@ export type TableStatus = "available" | "occupied" | "preparing" | "ready" | "cl
 export type ProductionSector = "Pizzaria" | "Cozinha" | "Sobremesas";
 export type PaymentMethod = "Pix" | "Dinheiro" | "Débito" | "Crédito";
 
-export interface ProductVariant { id: string; name: string; price: number }
+export interface ProductVariant { id: string; name: string; price: number; stockAvailable?: boolean }
 export interface ProductAddon { id: string; name: string; price: number }
 export interface RecipeComponent { stockId: string; quantity: number }
 export interface Product {

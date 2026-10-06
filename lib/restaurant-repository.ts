@@ -7,6 +7,8 @@ type RestaurantRow = { id: string; name: string; whatsapp: string | null; servic
 type ProductRow = { id: string; name: string; description: string; category: string; kitchen_sector: string; available: boolean; featured: boolean };
 type VariantRow = { id: string; product_id: string; name: string; price_cents: number };
 type AddonRow = { id: string; product_id: string; name: string; price_cents: number };
+type InventoryItemRow = { id: string; name: string; category: string; unit: "un" | "g" | "kg" | "ml" | "L"; quantity: string; minimum_quantity: string; average_cost_cents: string; active: boolean };
+type RecipeRow = { variant_id: string; inventory_item_id: string; quantity: string; item_name?: string; available_quantity?: string; active?: boolean };
 
 export type PublicMenuProduct = {
   id: string;
@@ -16,7 +18,7 @@ export type PublicMenuProduct = {
   sector: string;
   available: boolean;
   featured: boolean;
-  variants: Array<{ id: string; name: string; priceCents: number }>;
+  variants: Array<{ id: string; name: string; priceCents: number; stockAvailable: boolean }>;
   addons: Array<{ id: string; name: string; priceCents: number }>;
 };
 
@@ -56,6 +58,13 @@ export type KitchenTicket = {
   items: Array<{ productName: string; variantName: string; quantity: number; note: string | null }>;
 };
 
+export type InventoryItem = { id: string; name: string; category: string; unit: "un" | "g" | "kg" | "ml" | "L"; quantity: number; minimumQuantity: number; averageCostCents: number; active: boolean };
+export type InventoryMovement = { id: string; itemId: string; type: "initial" | "purchase" | "sale_consumption" | "cancellation_return" | "loss" | "adjustment"; quantityDelta: number; unitCostCents: number | null; orderId: string | null; note: string | null; createdAt: string };
+
+function inventoryItem(row: InventoryItemRow): InventoryItem {
+  return { id: row.id, name: row.name, category: row.category, unit: row.unit, quantity: Number(row.quantity), minimumQuantity: Number(row.minimum_quantity), averageCostCents: Number(row.average_cost_cents), active: row.active };
+}
+
 const cents = (price: number) => Math.round(price * 100);
 
 async function restaurant(client?: PoolClient): Promise<RestaurantRow> {
@@ -72,25 +81,73 @@ async function ensureCatalog(client: PoolClient, restaurantId: string) {
   // by Gestão so no sample catalog leaks into a real restaurant.
 }
 
+async function inventorySnapshot(client: PoolClient, restaurantId: string) {
+  const [settings, items, movements, recipes] = await Promise.all([
+    client.query<{ enabled: boolean }>("SELECT enabled FROM inventory_settings WHERE restaurant_id = $1", [restaurantId]),
+    client.query<InventoryItemRow>("SELECT id, name, category, unit, quantity, minimum_quantity, average_cost_cents, active FROM inventory_items WHERE restaurant_id = $1 ORDER BY active DESC, name", [restaurantId]),
+    client.query<{ id: string; inventory_item_id: string; type: InventoryMovement["type"]; quantity_delta: string; unit_cost_cents: string | null; order_id: string | null; note: string | null; created_at: string }>("SELECT id, inventory_item_id, type, quantity_delta, unit_cost_cents, order_id, note, created_at FROM inventory_movements WHERE restaurant_id = $1 ORDER BY created_at DESC LIMIT 80", [restaurantId]),
+    client.query<RecipeRow>("SELECT prc.variant_id, prc.inventory_item_id, prc.quantity FROM product_recipe_components prc JOIN inventory_items i ON i.id = prc.inventory_item_id WHERE i.restaurant_id = $1 ORDER BY prc.created_at", [restaurantId]),
+  ]);
+  return {
+    enabled: settings.rows[0]?.enabled ?? false,
+    items: items.rows.map(inventoryItem),
+    movements: movements.rows.map(movement => ({ id: movement.id, itemId: movement.inventory_item_id, type: movement.type, quantityDelta: Number(movement.quantity_delta), unitCostCents: movement.unit_cost_cents === null ? null : Number(movement.unit_cost_cents), orderId: movement.order_id, note: movement.note, createdAt: movement.created_at })),
+    recipes: recipes.rows.map(recipe => ({ variantId: recipe.variant_id, itemId: recipe.inventory_item_id, quantity: Number(recipe.quantity) })),
+  };
+}
+
+async function consumeInventoryForOrder(client: PoolClient, restaurantId: string, orderId: string, items: Array<{ variant: VariantRow; quantity: number }>) {
+  const enabled = await client.query<{ enabled: boolean }>("SELECT enabled FROM inventory_settings WHERE restaurant_id = $1 FOR UPDATE", [restaurantId]);
+  if (!enabled.rows[0]?.enabled) return;
+  const variantIds = [...new Set(items.map(item => item.variant.id))];
+  if (!variantIds.length) return;
+  const recipes = await client.query<RecipeRow>(
+    "SELECT prc.variant_id, prc.inventory_item_id, prc.quantity, i.name AS item_name, i.quantity AS available_quantity, i.active FROM product_recipe_components prc JOIN inventory_items i ON i.id = prc.inventory_item_id WHERE prc.variant_id = ANY($1::uuid[]) FOR UPDATE OF i",
+    [variantIds],
+  );
+  const byVariant = Map.groupBy(recipes.rows, recipe => recipe.variant_id);
+  const required = new Map<string, { quantity: number; name: string; available: number; active: boolean }>();
+  for (const item of items) for (const component of byVariant.get(item.variant.id) ?? []) {
+    const existing = required.get(component.inventory_item_id);
+    required.set(component.inventory_item_id, {
+      quantity: (existing?.quantity ?? 0) + Number(component.quantity) * item.quantity,
+      name: component.item_name ?? "Ingrediente",
+      available: Number(component.available_quantity),
+      active: component.active ?? false,
+    });
+  }
+  for (const requirement of required.values()) {
+    if (!requirement.active || requirement.available < requirement.quantity) throw new Error(`Estoque insuficiente para ${requirement.name}.`);
+  }
+  for (const [itemId, requirement] of required) {
+    await client.query("UPDATE inventory_items SET quantity = quantity - $2, updated_at = now() WHERE id = $1", [itemId, requirement.quantity]);
+    await client.query("INSERT INTO inventory_movements (restaurant_id, inventory_item_id, type, quantity_delta, order_id, note) VALUES ($1,$2,'sale_consumption',$3,$4,$5)", [restaurantId, itemId, -requirement.quantity, orderId, "Baixa automática pela venda"]);
+  }
+}
+
 export async function getPublicMenu() {
   return transaction(async client => {
     const current = await restaurant(client);
     await ensureCatalog(client, current.id);
-    const [productResult, variantResult, addonResult] = await Promise.all([
+    const [productResult, variantResult, addonResult, inventorySettings, recipeResult] = await Promise.all([
       client.query<ProductRow>("SELECT id, name, description, category, kitchen_sector, available, featured FROM menu_products WHERE restaurant_id = $1 ORDER BY category, sort_order, name", [current.id]),
       client.query<VariantRow>("SELECT v.id, v.product_id, v.name, v.price_cents FROM menu_variants v JOIN menu_products p ON p.id = v.product_id WHERE p.restaurant_id = $1 AND v.active ORDER BY v.sort_order", [current.id]),
       client.query<AddonRow>("SELECT a.id, a.product_id, a.name, a.price_cents FROM product_addons a JOIN menu_products p ON p.id = a.product_id WHERE p.restaurant_id = $1 AND a.active ORDER BY a.sort_order", [current.id]),
+      client.query<{ enabled: boolean }>("SELECT enabled FROM inventory_settings WHERE restaurant_id = $1", [current.id]),
+      client.query<RecipeRow>("SELECT prc.variant_id, prc.inventory_item_id, prc.quantity, i.quantity AS available_quantity, i.active FROM product_recipe_components prc JOIN inventory_items i ON i.id = prc.inventory_item_id WHERE i.restaurant_id = $1", [current.id]),
     ]);
     const variantsByProduct = Map.groupBy(variantResult.rows, variant => variant.product_id);
     const addonsByProduct = Map.groupBy(addonResult.rows, addon => addon.product_id);
     return {
       restaurant: { name: current.name, whatsapp: current.whatsapp },
-      products: productResult.rows.map<PublicMenuProduct>(product => ({
-        id: product.id, name: product.name, description: product.description, category: product.category, sector: product.kitchen_sector,
-        available: product.available, featured: product.featured,
-        variants: (variantsByProduct.get(product.id) ?? []).map(variant => ({ id: variant.id, name: variant.name, priceCents: variant.price_cents })),
-        addons: (addonsByProduct.get(product.id) ?? []).map(addon => ({ id: addon.id, name: addon.name, priceCents: addon.price_cents })),
-      })),
+      products: productResult.rows.map<PublicMenuProduct>(product => {
+        const variants = (variantsByProduct.get(product.id) ?? []).map(variant => {
+          const recipe = recipeResult.rows.filter(component => component.variant_id === variant.id);
+          const stockAvailable = !inventorySettings.rows[0]?.enabled || !recipe.length || recipe.every(component => component.active && Number(component.available_quantity) >= Number(component.quantity));
+          return { id: variant.id, name: variant.name, priceCents: variant.price_cents, stockAvailable };
+        });
+        return { id: product.id, name: product.name, description: product.description, category: product.category, sector: product.kitchen_sector, available: product.available && variants.some(variant => variant.stockAvailable), featured: product.featured, variants, addons: (addonsByProduct.get(product.id) ?? []).map(addon => ({ id: addon.id, name: addon.name, priceCents: addon.price_cents })) };
+      }),
     };
   });
 }
@@ -152,6 +209,7 @@ export async function createOrder(input: CreateOrderInput) {
       [current.id, orderNumber, queueNumber, input.source, input.fulfillment, tableId, input.customer?.name ?? null, input.customer?.phone ?? null, input.notes ?? null, estimate, subtotal, service, subtotal + service],
     );
     const orderId = insertedOrder.rows[0].id;
+    await consumeInventoryForOrder(client, current.id, orderId, normalizedItems);
     for (const item of normalizedItems) {
       await client.query(
         "INSERT INTO order_items (order_id, product_id, variant_id, product_name, variant_name, kitchen_sector, quantity, unit_price_cents, addons, note) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9::jsonb,$10)",
@@ -210,7 +268,7 @@ type SnapshotOrderRow = {
 
 export async function getOperationSnapshot() {
   const current = await restaurant();
-  const [menu, tables, orders, kitchen] = await Promise.all([
+  const [menu, tables, orders, kitchen, inventory] = await Promise.all([
     getPublicMenu(),
     query<{ number: number; active: boolean }>("SELECT number, active FROM dining_tables WHERE restaurant_id = $1 ORDER BY number", [current.id]),
     query<SnapshotOrderRow>(
@@ -223,6 +281,7 @@ export async function getOperationSnapshot() {
       [current.id],
     ),
     getKitchenQueue(),
+    transaction(client => inventorySnapshot(client, current.id)),
   ]);
   return {
     restaurant: { name: current.name, whatsapp: current.whatsapp ?? "", serviceRate: current.service_rate_basis_points / 100 },
@@ -234,13 +293,20 @@ export async function getOperationSnapshot() {
       subtotalCents: order.subtotal_cents, serviceCents: order.service_cents, totalCents: order.total_cents, createdAt: order.created_at, items: order.items,
     })),
     kitchen,
+    inventory,
   };
 }
 
 export async function cancelOrder(orderId: string) {
   return transaction(async client => {
-    const order = await client.query<{ id: string }>("UPDATE orders SET status = 'cancelled', cancelled_at = now(), updated_at = now() WHERE id = $1 AND status NOT IN ('completed', 'cancelled') RETURNING id", [orderId]);
+    const order = await client.query<{ id: string; restaurant_id: string }>("UPDATE orders SET status = 'cancelled', cancelled_at = now(), updated_at = now() WHERE id = $1 AND status NOT IN ('completed', 'cancelled') RETURNING id, restaurant_id", [orderId]);
     if (!order.rows[0]) throw new Error("Este pedido não pode mais ser cancelado.");
+    const consumed = await client.query<{ inventory_item_id: string; quantity_delta: string }>("SELECT inventory_item_id, quantity_delta FROM inventory_movements WHERE order_id = $1 AND type = 'sale_consumption' FOR UPDATE", [orderId]);
+    for (const movement of consumed.rows) {
+      const returned = Math.abs(Number(movement.quantity_delta));
+      await client.query("UPDATE inventory_items SET quantity = quantity + $2, updated_at = now() WHERE id = $1", [movement.inventory_item_id, returned]);
+      await client.query("INSERT INTO inventory_movements (restaurant_id, inventory_item_id, type, quantity_delta, order_id, note) VALUES ($1,$2,'cancellation_return',$3,$4,$5)", [order.rows[0].restaurant_id, movement.inventory_item_id, returned, orderId, "Estorno por cancelamento"]);
+    }
     await client.query("UPDATE kitchen_tickets SET status = 'cancelled', updated_at = now() WHERE order_id = $1 AND status <> 'ready'", [orderId]);
     await client.query("INSERT INTO order_events (order_id, event_type, actor_role) VALUES ($1,'order_cancelled','staff')", [orderId]);
     return { id: orderId };
@@ -302,5 +368,65 @@ export async function createMenuProduct(input: { name: string; category: string;
     const product = await client.query<{ id: string }>("INSERT INTO menu_products (restaurant_id, name, description, category, kitchen_sector, sort_order) VALUES ($1,$2,$3,$4,$5,(SELECT COALESCE(max(sort_order), -1) + 1 FROM menu_products WHERE restaurant_id = $1)) RETURNING id", [current.id, input.name.trim(), input.description?.trim() ?? "", input.category.trim(), input.sector.trim()]);
     await client.query("INSERT INTO menu_variants (product_id, name, price_cents) VALUES ($1,'Padrão',$2)", [product.rows[0].id, input.priceCents]);
     return { id: product.rows[0].id };
+  });
+}
+
+export async function setInventoryEnabled(enabled: boolean) {
+  return transaction(async client => {
+    const current = await restaurant(client);
+    await client.query("INSERT INTO inventory_settings (restaurant_id, enabled, enabled_at) VALUES ($1,$2,CASE WHEN $2 THEN now() ELSE NULL END) ON CONFLICT (restaurant_id) DO UPDATE SET enabled = EXCLUDED.enabled, enabled_at = CASE WHEN EXCLUDED.enabled THEN COALESCE(inventory_settings.enabled_at, now()) ELSE NULL END, updated_at = now()", [current.id, enabled]);
+    return { enabled };
+  });
+}
+
+export async function createInventoryItem(input: { name: string; category?: string; unit: InventoryItem["unit"]; quantity?: number; minimumQuantity?: number; unitCostCents?: number }) {
+  if (!input.name.trim()) throw new Error("Informe o nome do material.");
+  const quantity = input.quantity ?? 0;
+  const minimumQuantity = input.minimumQuantity ?? 0;
+  const unitCostCents = input.unitCostCents ?? 0;
+  if (![quantity, minimumQuantity, unitCostCents].every(Number.isFinite) || quantity < 0 || minimumQuantity < 0 || unitCostCents < 0) throw new Error("Valores de estoque inválidos.");
+  return transaction(async client => {
+    const current = await restaurant(client);
+    const item = await client.query<InventoryItemRow>("INSERT INTO inventory_items (restaurant_id, name, category, unit, quantity, minimum_quantity, average_cost_cents) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id, name, category, unit, quantity, minimum_quantity, average_cost_cents, active", [current.id, input.name.trim(), input.category?.trim() || "Geral", input.unit, quantity, minimumQuantity, unitCostCents]);
+    if (quantity > 0) await client.query("INSERT INTO inventory_movements (restaurant_id, inventory_item_id, type, quantity_delta, unit_cost_cents, note) VALUES ($1,$2,'initial',$3,$4,$5)", [current.id, item.rows[0].id, quantity, unitCostCents, "Estoque inicial"]);
+    return inventoryItem(item.rows[0]);
+  });
+}
+
+export async function registerInventoryMovement(input: { itemId: string; type: "purchase" | "loss" | "adjustment"; quantity: number; unitCostCents?: number; note?: string }) {
+  if (!Number.isFinite(input.quantity) || input.quantity === 0) throw new Error("Informe uma quantidade diferente de zero.");
+  if (input.type !== "adjustment" && input.quantity < 0) throw new Error("A quantidade deve ser positiva.");
+  return transaction(async client => {
+    const current = await restaurant(client);
+    const item = await client.query<InventoryItemRow>("SELECT id, name, category, unit, quantity, minimum_quantity, average_cost_cents, active FROM inventory_items WHERE id = $1 AND restaurant_id = $2 FOR UPDATE", [input.itemId, current.id]);
+    if (!item.rows[0]) throw new Error("Material não encontrado.");
+    const before = inventoryItem(item.rows[0]);
+    const delta = input.type === "loss" ? -Math.abs(input.quantity) : input.quantity;
+    if (before.quantity + delta < 0) throw new Error(`Saldo insuficiente de ${before.name}.`);
+    const cost = input.unitCostCents;
+    const nextQuantity = before.quantity + delta;
+    const nextCost = input.type === "purchase" && cost !== undefined && nextQuantity > 0
+      ? ((before.quantity * before.averageCostCents) + (delta * cost)) / nextQuantity
+      : before.averageCostCents;
+    await client.query("UPDATE inventory_items SET quantity = $2, average_cost_cents = $3, updated_at = now() WHERE id = $1", [before.id, nextQuantity, nextCost]);
+    await client.query("INSERT INTO inventory_movements (restaurant_id, inventory_item_id, type, quantity_delta, unit_cost_cents, note) VALUES ($1,$2,$3,$4,$5,$6)", [current.id, before.id, input.type, delta, cost ?? null, input.note?.trim() || null]);
+    return { id: before.id, quantity: nextQuantity };
+  });
+}
+
+export async function replaceVariantRecipe(input: { variantId: string; components: Array<{ itemId: string; quantity: number }> }) {
+  if (input.components.some(component => !Number.isFinite(component.quantity) || component.quantity <= 0)) throw new Error("Informe quantidades válidas para a ficha técnica.");
+  if (new Set(input.components.map(component => component.itemId)).size !== input.components.length) throw new Error("Não repita um material na ficha técnica.");
+  return transaction(async client => {
+    const current = await restaurant(client);
+    const variant = await client.query<{ id: string }>("SELECT v.id FROM menu_variants v JOIN menu_products p ON p.id = v.product_id WHERE v.id = $1 AND p.restaurant_id = $2", [input.variantId, current.id]);
+    if (!variant.rows[0]) throw new Error("Variação de produto não encontrada.");
+    if (input.components.length) {
+      const materials = await client.query<{ id: string }>("SELECT id FROM inventory_items WHERE restaurant_id = $1 AND active AND id = ANY($2::uuid[])", [current.id, input.components.map(component => component.itemId)]);
+      if (materials.rows.length !== input.components.length) throw new Error("Um dos materiais não está disponível.");
+    }
+    await client.query("DELETE FROM product_recipe_components WHERE variant_id = $1", [input.variantId]);
+    for (const component of input.components) await client.query("INSERT INTO product_recipe_components (variant_id, inventory_item_id, quantity) VALUES ($1,$2,$3)", [input.variantId, component.itemId, component.quantity]);
+    return { variantId: input.variantId, components: input.components };
   });
 }
