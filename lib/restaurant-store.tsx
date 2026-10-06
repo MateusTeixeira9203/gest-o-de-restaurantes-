@@ -50,8 +50,13 @@ export function RestaurantStoreProvider({ children }: { children: React.ReactNod
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
       // Loading persisted browser state after mount is intentional.
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      if (saved) setState(JSON.parse(saved));
+      if (saved) {
+        const persisted = JSON.parse(saved) as RestaurantState;
+        // Keep the operational history already created in this browser while
+        // migrating only the old generic demo name to the restaurant brand.
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setState(persisted.settings?.name === "Restaurante" ? { ...persisted, settings: { ...persisted.settings, name: "Patos Lanches" } } : persisted);
+      }
     } catch { /* use demo data */ }
     setReady(true);
   }, []);
