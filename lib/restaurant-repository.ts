@@ -309,7 +309,7 @@ export async function getOperationSnapshot() {
   };
 }
 
-export async function cancelOrder(orderId: string) {
+export async function cancelOrder(orderId: string, actor: { role: string; name: string; reason: string }) {
   return transaction(async client => {
     const order = await client.query<{ id: string; restaurant_id: string }>("UPDATE orders SET status = 'cancelled', cancelled_at = now(), updated_at = now() WHERE id = $1 AND status NOT IN ('completed', 'cancelled') RETURNING id, restaurant_id", [orderId]);
     if (!order.rows[0]) throw new Error("Este pedido não pode mais ser cancelado.");
@@ -320,12 +320,12 @@ export async function cancelOrder(orderId: string) {
       await client.query("INSERT INTO inventory_movements (restaurant_id, inventory_item_id, type, quantity_delta, order_id, note) VALUES ($1,$2,'cancellation_return',$3,$4,$5)", [order.rows[0].restaurant_id, movement.inventory_item_id, returned, orderId, "Estorno por cancelamento"]);
     }
     await client.query("UPDATE kitchen_tickets SET status = 'cancelled', updated_at = now() WHERE order_id = $1 AND status <> 'cancelled'", [orderId]);
-    await client.query("INSERT INTO order_events (order_id, event_type, actor_role) VALUES ($1,'order_cancelled','staff')", [orderId]);
+    await client.query("INSERT INTO order_events (order_id, event_type, actor_role, detail) VALUES ($1,'order_cancelled',$2,$3::jsonb)", [orderId, actor.role, JSON.stringify({ reason: actor.reason, cancelledBy: actor.name })]);
     return { id: orderId };
   });
 }
 
-export async function closeTable(tableNumber: number, payments: Array<{ method: "Pix" | "Dinheiro" | "Débito" | "Crédito"; amountCents: number }>) {
+export async function closeTable(tableNumber: number, payments: Array<{ method: "Pix" | "Dinheiro" | "Débito" | "Crédito"; amountCents: number }>, actor: { role: string; name: string }) {
   return transaction(async client => {
     const current = await restaurant(client);
     const orders = await client.query<{ id: string; total_cents: number }>(
@@ -346,7 +346,7 @@ export async function closeTable(tableNumber: number, payments: Array<{ method: 
       remaining -= applied;
     }
     await client.query("UPDATE orders SET status = 'completed', updated_at = now() WHERE id = ANY($1::uuid[])", [orders.rows.map(order => order.id)]);
-    for (const order of orders.rows) await client.query("INSERT INTO order_events (order_id, event_type, actor_role, detail) VALUES ($1,'payment_confirmed','cashier',$2::jsonb)", [order.id, JSON.stringify({ tableNumber, due, received })]);
+    for (const order of orders.rows) await client.query("INSERT INTO order_events (order_id, event_type, actor_role, detail) VALUES ($1,'payment_confirmed',$2,$3::jsonb)", [order.id, actor.role, JSON.stringify({ tableNumber, due, received, processedBy: actor.name })]);
     return { totalCents: due, changeCents: Math.max(0, received - due) };
   });
 }

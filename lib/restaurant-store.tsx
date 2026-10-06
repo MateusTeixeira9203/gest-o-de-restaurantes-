@@ -41,7 +41,7 @@ type StoreContextValue = {
   logout: () => Promise<void>;
   createOrder: (tableId: string, cart: CartItem[], source?: "waiter" | "qr") => Promise<Result>;
   createPublicOrder: (input: PublicOrderInput) => Promise<Result>;
-  cancelOrder: (orderId: string) => Promise<Result>;
+  cancelOrder: (orderId: string, reason: string) => Promise<Result>;
   payTable: (tableId: string, payments: Payment[]) => Promise<{ ok: true; change: number } | { ok: false; message: string }>;
   updateKitchenTicket: (ticketId: string, status: "preparing" | "ready") => Promise<Result>;
   updateOrderStatus: (orderId: string, status: Order["status"]) => Promise<Result>;
@@ -188,8 +188,8 @@ export function RestaurantStoreProvider({ children }: { children: React.ReactNod
     return { ok: true, number: body.order.orderNumber };
   }, []);
 
-  const cancelOrder = useCallback(async (orderId: string): Promise<Result> => {
-    const response = await fetch(`/api/operations/orders/${orderId}`, { method: "DELETE" });
+  const cancelOrder = useCallback(async (orderId: string, reason: string): Promise<Result> => {
+    const response = await fetch(`/api/operations/orders/${orderId}`, { method: "DELETE", headers: { "content-type": "application/json" }, body: JSON.stringify({ reason }) });
     if (!response.ok) return { ok: false, message: await readError(response) };
     await refresh();
     return { ok: true, number: 0 };
