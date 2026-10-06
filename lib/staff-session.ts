@@ -1,7 +1,7 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 
 export const STAFF_SESSION_COOKIE = "patos_staff_session";
-export const STAFF_ROLES = ["admin", "manager", "waiter", "kitchen", "cashier"] as const;
+export const STAFF_ROLES = ["admin", "manager", "waiter", "kitchen", "cashier", "delivery"] as const;
 export type StaffRole = typeof STAFF_ROLES[number];
 
 export type SessionPayload = { username: string; role: StaffRole; staffId?: string; expiresAt: number };

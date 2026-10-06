@@ -2,12 +2,13 @@
 
 import type { AnchorHTMLAttributes } from "react";
 import Image from "next/image";
-import { ArrowRight, ChefHat, CircleDollarSign, LayoutDashboard, UtensilsCrossed } from "lucide-react";
+import { ArrowRight, Bike, ChefHat, CircleDollarSign, LayoutDashboard, UtensilsCrossed } from "lucide-react";
 
 const areas = [
   { href: "/operacao/garcom", label: "Garçom", note: "Mesas e comandas", icon: UtensilsCrossed, tone: "lime" },
   { href: "/operacao/cozinha", label: "Cozinha", note: "Fila de produção", icon: ChefHat, tone: "amber" },
   { href: "/operacao/caixa", label: "Caixa", note: "Contas e pagamentos", icon: CircleDollarSign, tone: "blue" },
+  { href: "/operacao/entregas", label: "Entregas", note: "Rotas e pedidos prontos", icon: Bike, tone: "amber" },
   { href: "/gestao", label: "Gestão", note: "Indicadores e controle", icon: LayoutDashboard, tone: "violet" },
 ];
 
@@ -36,10 +37,10 @@ export default function Home() {
           <div className="mb-10 max-w-xl">
             <span className="mb-5 inline-flex items-center gap-2 rounded-full border border-[#ffbd1a]/30 bg-[#ffbd1a]/10 px-3 py-1.5 text-xs font-semibold text-[#ffcc4d]"><span className="h-1.5 w-1.5 rounded-full bg-[#ffb20a]" /> Operação aberta</span>
             <h1 className="text-4xl font-semibold leading-[1.05] tracking-[-0.045em] sm:text-6xl">Onde você vai trabalhar agora?</h1>
-            <p className="mt-4 text-base leading-relaxed text-white/50 sm:text-lg">Escolha uma área para entrar. Garçom, cozinha e caixa têm acesso direto.</p>
+            <p className="mt-4 text-base leading-relaxed text-white/50 sm:text-lg">Escolha uma área para entrar. Garçom, cozinha, caixa e entrega têm acesso direto.</p>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
             {areas.map(({ href, label, note, icon: Icon, tone }) => (
               <Link key={href} href={href} className="group rounded-2xl border border-white/10 bg-white/[0.035] p-5 transition duration-200 hover:-translate-y-0.5 hover:border-white/20 hover:bg-white/[0.07]">
                 <div className={`icon-tile icon-${tone}`}><Icon size={20} /></div>

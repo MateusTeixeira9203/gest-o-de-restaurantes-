@@ -1,4 +1,4 @@
-export type OrderStatus = "pending" | "confirmed" | "preparing" | "ready" | "delivered" | "completed" | "cancelled";
+export type OrderStatus = "pending" | "confirmed" | "preparing" | "ready" | "out_for_delivery" | "delivered" | "completed" | "cancelled";
 export type TableStatus = "available" | "occupied" | "preparing" | "ready" | "closing";
 export type ProductionSector = "Pizzaria" | "Cozinha" | "Sobremesas";
 export type PaymentMethod = "Pix" | "Dinheiro" | "Débito" | "Crédito";
@@ -39,6 +39,10 @@ export interface Order {
   tableId: string;
   status: OrderStatus;
   source: "waiter" | "qr";
+  fulfillment?: "dine_in" | "pickup" | "delivery";
+  customerName?: string;
+  delivery?: { addressLine1: string; neighborhood?: string; reference?: string };
+  paid?: boolean;
   createdAt: string;
   items: OrderItem[];
   stockApplied: boolean;

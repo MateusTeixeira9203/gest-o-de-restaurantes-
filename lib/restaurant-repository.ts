@@ -10,7 +10,7 @@ type VariantRow = { id: string; product_id: string; name: string; price_cents: n
 type AddonRow = { id: string; product_id: string; name: string; price_cents: number };
 type InventoryItemRow = { id: string; name: string; category: string; unit: "un" | "g" | "kg" | "ml" | "L"; quantity: string; minimum_quantity: string; average_cost_cents: string; active: boolean };
 type RecipeRow = { variant_id: string; inventory_item_id: string; quantity: string; item_name?: string; available_quantity?: string; active?: boolean };
-type StaffMemberRow = { id: string; name: string; role: "manager" | "waiter" | "kitchen" | "cashier"; pin_salt: string; pin_hash: string; active: boolean; created_at: string; updated_at: string };
+type StaffMemberRow = { id: string; name: string; role: "manager" | "waiter" | "kitchen" | "cashier" | "delivery"; pin_salt: string; pin_hash: string; active: boolean; created_at: string; updated_at: string };
 export type StaffMember = Omit<StaffMemberRow, "pin_salt" | "pin_hash">;
 export type StaffMemberRole = StaffMember["role"];
 
@@ -274,7 +274,7 @@ export async function updateKitchenTicket(ticketId: string, status: "preparing" 
 
 type SnapshotOrderRow = {
   id: string; order_number: string; queue_number: string; source: "waiter" | "public_menu" | "qr_menu"; fulfillment: "dine_in" | "pickup" | "delivery"; status: string;
-  table_number: number | null; customer_name: string | null; customer_phone: string | null; notes: string | null; estimated_minutes: number | null; subtotal_cents: number; service_cents: number; total_cents: number; created_at: string;
+  table_number: number | null; customer_name: string | null; customer_phone: string | null; notes: string | null; estimated_minutes: number | null; subtotal_cents: number; service_cents: number; total_cents: number; paid_cents: number; delivery_address_line1: string | null; delivery_neighborhood: string | null; delivery_reference: string | null; created_at: string;
   items: Array<{ id: string; product_id: string | null; variant_id: string | null; product_name: string; variant_name: string; kitchen_sector: string; quantity: number; unit_price_cents: number; addons: Array<{ id: string; name: string; priceCents: number }>; note: string | null }>;
 };
 
@@ -284,9 +284,9 @@ export async function getOperationSnapshot() {
     getPublicMenu(),
     query<{ number: number; active: boolean }>("SELECT number, active FROM dining_tables WHERE restaurant_id = $1 ORDER BY number", [current.id]),
     query<SnapshotOrderRow>(
-      `SELECT o.id, o.order_number, o.queue_number, o.source, o.fulfillment, o.status, t.number AS table_number, o.customer_name, o.customer_phone, o.notes, o.estimated_minutes, o.subtotal_cents, o.service_cents, o.total_cents, o.created_at,
+      `SELECT o.id, o.order_number, o.queue_number, o.source, o.fulfillment, o.status, t.number AS table_number, o.customer_name, o.customer_phone, o.notes, o.estimated_minutes, o.subtotal_cents, o.service_cents, o.total_cents, COALESCE((SELECT sum(p.amount_cents) FROM payments p WHERE p.order_id = o.id AND p.status = 'paid'), 0)::int AS paid_cents, max(d.address_line1) AS delivery_address_line1, max(d.neighborhood) AS delivery_neighborhood, max(d.reference) AS delivery_reference, o.created_at,
         COALESCE(json_agg(json_build_object('id', oi.id, 'product_id', oi.product_id, 'variant_id', oi.variant_id, 'product_name', oi.product_name, 'variant_name', oi.variant_name, 'kitchen_sector', oi.kitchen_sector, 'quantity', oi.quantity, 'unit_price_cents', oi.unit_price_cents, 'addons', oi.addons, 'note', oi.note) ORDER BY oi.created_at) FILTER (WHERE oi.id IS NOT NULL), '[]'::json) AS items
-       FROM orders o LEFT JOIN dining_tables t ON t.id = o.table_id LEFT JOIN order_items oi ON oi.order_id = o.id
+       FROM orders o LEFT JOIN dining_tables t ON t.id = o.table_id LEFT JOIN delivery_details d ON d.order_id = o.id LEFT JOIN order_items oi ON oi.order_id = o.id
        WHERE o.restaurant_id = $1
        GROUP BY o.id, t.number
        ORDER BY o.created_at DESC LIMIT 200`,
@@ -301,7 +301,7 @@ export async function getOperationSnapshot() {
     tables: tables.rows,
     orders: orders.rows.map(order => ({
       id: order.id, orderNumber: Number(order.order_number), queueNumber: Number(order.queue_number), source: order.source, fulfillment: order.fulfillment, status: order.status,
-      tableNumber: order.table_number, customerName: order.customer_name, customerPhone: order.customer_phone, notes: order.notes, estimatedMinutes: order.estimated_minutes,
+      tableNumber: order.table_number, customerName: order.customer_name, customerPhone: order.customer_phone, notes: order.notes, estimatedMinutes: order.estimated_minutes, paidCents: order.paid_cents, delivery: order.delivery_address_line1 ? { addressLine1: order.delivery_address_line1, neighborhood: order.delivery_neighborhood, reference: order.delivery_reference } : null,
       subtotalCents: order.subtotal_cents, serviceCents: order.service_cents, totalCents: order.total_cents, createdAt: order.created_at, items: order.items,
     })),
     kitchen,
@@ -348,6 +348,19 @@ export async function closeTable(tableNumber: number, payments: Array<{ method: 
     await client.query("UPDATE orders SET status = 'completed', updated_at = now() WHERE id = ANY($1::uuid[])", [orders.rows.map(order => order.id)]);
     for (const order of orders.rows) await client.query("INSERT INTO order_events (order_id, event_type, actor_role, detail) VALUES ($1,'payment_confirmed',$2,$3::jsonb)", [order.id, actor.role, JSON.stringify({ tableNumber, due, received, processedBy: actor.name })]);
     return { totalCents: due, changeCents: Math.max(0, received - due) };
+  });
+}
+
+export async function updateDeliveryStatus(orderId: string, status: "out_for_delivery" | "delivered", actor: { role: string; name: string }) {
+  return transaction(async client => {
+    const order = await client.query<{ id: string; status: string }>("SELECT o.id, o.status FROM orders o JOIN delivery_details d ON d.order_id = o.id WHERE o.id = $1 FOR UPDATE", [orderId]);
+    if (!order.rows[0]) throw new Error("Pedido de entrega não encontrado.");
+    if (status === "out_for_delivery" && order.rows[0].status !== "ready") throw new Error("A entrega precisa estar pronta antes de sair.");
+    if (status === "delivered" && order.rows[0].status !== "out_for_delivery") throw new Error("Marque a saída antes de concluir a entrega.");
+    await client.query("UPDATE orders SET status = $2::order_status, delivered_at = CASE WHEN $2::order_status = 'delivered'::order_status THEN now() ELSE delivered_at END, updated_at = now() WHERE id = $1", [orderId, status]);
+    await client.query("UPDATE delivery_details SET departed_at = CASE WHEN $2 = 'out_for_delivery' THEN now() ELSE departed_at END, delivered_at = CASE WHEN $2 = 'delivered' THEN now() ELSE delivered_at END WHERE order_id = $1", [orderId, status]);
+    await client.query("INSERT INTO order_events (order_id, event_type, actor_role, detail) VALUES ($1,$2,$3,$4::jsonb)", [orderId, `delivery_${status}`, actor.role, JSON.stringify({ updatedBy: actor.name })]);
+    return { id: orderId, status };
   });
 }
 

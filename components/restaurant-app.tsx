@@ -4,9 +4,9 @@ import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { type AnchorHTMLAttributes, useEffect, useState } from "react";
 import {
-  ArrowLeft, ArrowRight, Bell, Boxes, Check, ChefHat, ChevronRight, CircleDollarSign, Clock3,
+  ArrowLeft, ArrowRight, Bell, Bike, Boxes, Check, ChefHat, ChevronRight, CircleDollarSign, Clock3,
   CookingPot, Copy, CreditCard, Download, Eye, EyeOff, FileBarChart, LayoutDashboard, LockKeyhole, LogOut,
-  Menu as MenuIcon, Minus, Package, Plus, QrCode, ReceiptText, RefreshCw, Search, Settings, ShoppingBag,
+  MapPin, Menu as MenuIcon, Minus, Package, Plus, QrCode, ReceiptText, RefreshCw, Search, Settings, ShoppingBag,
   SlidersHorizontal, Sparkles, Table2, TrendingUp, UtensilsCrossed, WalletCards, X,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -22,7 +22,7 @@ import { money, orderTotal, tableTotal } from "@/lib/domain";
 const TABLE_STATUS: Record<TableStatus, { label: string; cls: string }> = {
   available: { label: "Livre", cls: "status-free" }, occupied: { label: "Ocupada", cls: "status-occupied" }, preparing: { label: "Preparando", cls: "status-preparing" }, ready: { label: "Pedido pronto", cls: "status-ready" }, closing: { label: "Aguardando conta", cls: "status-closing" },
 };
-const ORDER_STATUS: Record<OrderStatus, string> = { pending: "Pendente", confirmed: "Novo", preparing: "Preparando", ready: "Pronto", delivered: "Entregue", completed: "Concluído", cancelled: "Cancelado" };
+const ORDER_STATUS: Record<OrderStatus, string> = { pending: "Pendente", confirmed: "Novo", preparing: "Preparando", ready: "Pronto", out_for_delivery: "Em entrega", delivered: "Entregue", completed: "Concluído", cancelled: "Cancelado" };
 const CATEGORIES = ["Todos", "Pizzas", "Pastéis", "Massas", "Bebidas", "Açaí", "Sorvetes"];
 const paymentMethods: PaymentMethod[] = ["Pix", "Dinheiro", "Débito", "Crédito"];
 
@@ -47,6 +47,7 @@ function OperationHome() {
     { href: "/operacao/garcom", role: "waiter", label: "Garçom", note: "Mesas e comandas", icon: UtensilsCrossed, tone: "lime" },
     { href: "/operacao/cozinha", role: "kitchen", label: "Cozinha", note: "Fila de produção", icon: ChefHat, tone: "amber" },
     { href: "/operacao/caixa", role: "cashier", label: "Caixa", note: "Contas e pagamentos", icon: CircleDollarSign, tone: "blue" },
+    { href: "/operacao/entregas", role: "delivery", label: "Entregas", note: "Rotas e pedidos prontos", icon: Bike, tone: "amber" },
     { href: "/gestao/dashboard", role: "manager", label: "Gestão", note: "Indicadores e controle", icon: LayoutDashboard, tone: "violet" },
   ];
   const visibleAreas = session?.role === "admin" || session?.role === "manager" ? areas : areas.filter(area => area.role === session?.role);
@@ -132,13 +133,20 @@ function Kitchen() {
   return <main className="kitchen-page"><div className="kitchen-shell"><Topbar title="Cozinha" subtitle={`${active.length} pedidos em produção`} action={<div className="hidden items-center gap-2 sm:flex"><Clock3 size={16} /><span className="text-sm font-medium">{new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</span></div>} /><div className="sector-tabs">{["Todos", "Pizzaria", "Cozinha", "Sobremesas"].map(s => <button key={s} onClick={() => setSector(s)} className={sector === s ? "active" : ""}>{s}</button>)}</div><div className="kanban">{columns.map(column => { const orders = active.filter(o => o.status === column.status); return <section key={column.status} className="kanban-column"><div className="kanban-title"><span>{column.label}</span><b>{orders.length}</b></div><div className="space-y-3">{orders.map(order => <KitchenCard key={order.id} order={order} sector={sector} onAdvance={() => { const next = order.status === "confirmed" ? "preparing" : "ready"; void updateOrderStatus(order.id, next).then(result => result.ok ? toast.success(next === "preparing" ? "Preparo iniciado." : "Pedido pronto: garçom avisado.") : toast.error(result.message)); }} />)}{!orders.length && <div className="kanban-empty"><Check size={20} /><span>Nenhum pedido</span></div>}</div></section>; })}</div></div></main>;
 }
 
-function KitchenCard({ order, sector, onAdvance }: { order: Order; sector: string; onAdvance: () => void }) { const items = sector === "Todos" ? order.items : order.items.filter(i => i.sector === sector); return <article className={`kitchen-card kitchen-${order.status}`}><div className="flex items-start justify-between"><div><span className="text-xs font-bold uppercase tracking-wider text-neutral-400">Pedido #{order.number}</span><h3 className="mt-1 text-xl font-semibold">Mesa {order.tableId}</h3></div><div className="text-right text-xs text-neutral-500"><p>{new Date(order.createdAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</p><p className="mt-1 font-semibold"><Elapsed date={order.createdAt} /></p></div></div><div className="my-5 space-y-3">{items.map(i => <div key={i.id}><p className="font-semibold">{i.quantity}× {i.productName} <span className="font-normal text-neutral-500">{i.variantName}</span></p>{i.note && <p className="mt-1 rounded-lg bg-amber-50 px-3 py-2 text-sm font-bold text-amber-800">{i.note.toUpperCase()}</p>}</div>)}</div>{order.status === "ready" ? <div className="secondary-button w-full justify-center">Pronto — aguardando retirada</div> : <button onClick={onAdvance} className="dark-button w-full justify-center">{order.status === "confirmed" ? "Iniciar preparo" : "Marcar como pronto"}<ArrowRight size={17} /></button>}</article>; }
+function KitchenCard({ order, sector, onAdvance }: { order: Order; sector: string; onAdvance: () => void }) { const items = sector === "Todos" ? order.items : order.items.filter(i => i.sector === sector); const recipient = order.fulfillment === "delivery" ? order.customerName || "Cliente" : order.fulfillment === "pickup" ? order.customerName || "Retirada" : `Mesa ${order.tableId}`; return <article className={`kitchen-card kitchen-${order.status}`}><div className="flex items-start justify-between"><div><span className="text-xs font-bold uppercase tracking-wider text-neutral-400">Pedido #{order.number}</span><h3 className="mt-1 text-xl font-semibold">{recipient}</h3></div><div className="text-right text-xs text-neutral-500"><p>{new Date(order.createdAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</p><p className="mt-1 font-semibold"><Elapsed date={order.createdAt} /></p></div></div><div className="my-5 space-y-3">{items.map(i => <div key={i.id}><p className="font-semibold">{i.quantity}× {i.productName} <span className="font-normal text-neutral-500">{i.variantName}</span></p>{i.note && <p className="mt-1 rounded-lg bg-amber-50 px-3 py-2 text-sm font-bold text-amber-800">{i.note.toUpperCase()}</p>}</div>)}</div>{order.status === "ready" ? <div className="secondary-button w-full justify-center">Pronto — aguardando retirada</div> : <button onClick={onAdvance} className="dark-button w-full justify-center">{order.status === "confirmed" ? "Iniciar preparo" : "Marcar como pronto"}<ArrowRight size={17} /></button>}</article>; }
 
 function Cashier() {
   const { state } = useRestaurant(); const [selectedId, setSelectedId] = useState<string | null>(null); const table = state.tables.find(t => t.id === selectedId);
   if (table) return <Checkout tableId={table.id} onBack={() => setSelectedId(null)} />;
   const open = state.tables.filter(t => t.status !== "available");
   return <main className="app-page"><div className="page-container"><Topbar title="Caixa" subtitle="Mesas abertas e pagamentos" /><div className="metric-grid compact"><Metric label="Mesas abertas" value={String(open.length)} icon={Table2} /><Metric label="Aguardando conta" value={String(state.tables.filter(t => t.status === "closing").length)} icon={ReceiptText} /><Metric label="Em aberto" value={money(open.reduce((s, t) => s + tableTotal(state, t.id), 0))} icon={WalletCards} /></div><h2 className="section-title mb-4">Contas abertas</h2><div className="cash-grid">{open.map(t => { const orders = state.orders.filter(o => o.tableId === t.id && !["completed", "cancelled"].includes(o.status)); return <button key={t.id} onClick={() => setSelectedId(t.id)} className="cash-card"><div className="flex items-start justify-between"><div><p className="text-sm text-neutral-500">Mesa</p><h3>{t.id}</h3></div><StatusPill status={t.status} /></div><div className="mt-8 flex items-end justify-between"><div><strong>{money(tableTotal(state, t.id))}</strong><p>{orders.length} {orders.length === 1 ? "pedido" : "pedidos"}</p></div><span className="open-account">Abrir conta <ChevronRight size={16} /></span></div></button>; })}</div></div></main>;
+}
+
+function Deliveries() {
+  const { state, updateDeliveryStatus } = useRestaurant();
+  const orders = state.orders.filter(order => order.fulfillment === "delivery" && ["ready", "out_for_delivery"].includes(order.status));
+  const update = (order: Order, status: "out_for_delivery" | "delivered") => { void updateDeliveryStatus(order.id, status).then(result => result.ok ? toast.success(status === "out_for_delivery" ? "Pedido saiu para entrega." : "Entrega concluída.") : toast.error(result.message)); };
+  return <main className="app-page"><div className="page-container max-w-5xl"><Topbar title="Entregas" subtitle={`${orders.length} pedido(s) aguardando ou em rota`} /><div className="mb-6 grid gap-3 sm:grid-cols-2"><div className="metric-card"><div className="metric-icon"><Bike size={18} /></div><p>Prontos para sair</p><strong>{orders.filter(order => order.status === "ready").length}</strong></div><div className="metric-card"><div className="metric-icon"><MapPin size={18} /></div><p>Em rota</p><strong>{orders.filter(order => order.status === "out_for_delivery").length}</strong></div></div><section className="grid gap-4 md:grid-cols-2">{orders.map(order => <article key={order.id} className="command-card p-5"><div className="flex items-start justify-between gap-4"><div><span className="text-xs font-bold uppercase tracking-wider text-neutral-400">Pedido #{order.number}</span><h2 className="mt-1 text-xl font-semibold">{order.customerName || "Cliente"}</h2></div><span className={order.paid ? "order-pill order-completed" : "order-pill order-pending"}>{order.paid ? "Pago" : "Receber"}</span></div><div className="mt-5 flex gap-3"><MapPin size={18} className="mt-0.5 shrink-0 text-neutral-400" /><div className="text-sm"><p className="font-medium">{order.delivery?.addressLine1 || "Endereço não informado"}</p>{order.delivery?.neighborhood && <p className="mt-1 text-neutral-500">{order.delivery.neighborhood}</p>}{order.delivery?.reference && <p className="mt-1 text-neutral-500">Ref.: {order.delivery.reference}</p>}</div></div><button onClick={() => update(order, order.status === "ready" ? "out_for_delivery" : "delivered")} className="primary-button mt-6 w-full justify-center">{order.status === "ready" ? <><Bike size={17} /> Saiu para entrega</> : <><Check size={17} /> Marcar entregue</>}</button></article>)}{!orders.length && <div className="empty-state md:col-span-2"><Bike size={28} /><p>Nenhuma entrega aguardando agora.</p></div>}</section></div></main>;
 }
 
 function PaymentConfirmAction({ disabled, total, payments, onConfirm }: { disabled: boolean; total: number; payments: Payment[]; onConfirm: () => Promise<void> }) {
@@ -195,6 +203,7 @@ function destinationForRole(role: StaffRole) {
   if (role === "waiter") return "/operacao/garcom";
   if (role === "kitchen") return "/operacao/cozinha";
   if (role === "cashier") return "/operacao/caixa";
+  if (role === "delivery") return "/operacao/entregas";
   return "/gestao/dashboard";
 }
 
@@ -202,7 +211,7 @@ function StaffGate({ children, roles }: { children: React.ReactNode; roles?: Sta
   const router = useRouter(); const { authenticated, ready, session, logout } = useRestaurant();
   if (!ready) return <main className="app-page min-h-screen" aria-busy="true" />;
   if (authenticated && session && (!roles || session.role === "admin" || roles.includes(session.role))) return <>{children}</>;
-  if (authenticated && session) return <main className="login-page"><section className="login-form-wrap"><div className="login-card text-center"><div className="login-lock mx-auto"><LockKeyhole size={22} /></div><h2>Área não liberada</h2><p className="mt-2">{session.username} está em {session.role === "waiter" ? "Garçom" : session.role === "kitchen" ? "Cozinha" : session.role === "cashier" ? "Caixa" : "Gestão"}. Escolha a área correta ou troque o usuário.</p><Link href={destinationForRole(session.role)} className="primary-button mt-6 justify-center">Ir para minha área <ArrowRight size={18} /></Link><button onClick={() => { void logout().then(() => router.push("/gestao")); }} className="secondary-button mt-3">Trocar usuário</button></div></section></main>;
+  if (authenticated && session) return <main className="login-page"><section className="login-form-wrap"><div className="login-card text-center"><div className="login-lock mx-auto"><LockKeyhole size={22} /></div><h2>Área não liberada</h2><p className="mt-2">{session.username} está em {session.role === "waiter" ? "Garçom" : session.role === "kitchen" ? "Cozinha" : session.role === "cashier" ? "Caixa" : session.role === "delivery" ? "Entrega" : "Gestão"}. Escolha a área correta ou troque o usuário.</p><Link href={destinationForRole(session.role)} className="primary-button mt-6 justify-center">Ir para minha área <ArrowRight size={18} /></Link><button onClick={() => { void logout().then(() => router.push("/gestao")); }} className="secondary-button mt-3">Trocar usuário</button></div></section></main>;
   return <main className="login-page"><section className="login-form-wrap"><div className="login-card text-center"><div className="login-lock mx-auto"><LockKeyhole size={22} /></div><h2>Confirme seu acesso</h2><p className="mt-2">Você selecionou esta área. Entre para continuar no papel escolhido.</p><Link href="/gestao" onClick={() => sessionStorage.setItem("restaurante-return-to", window.location.pathname)} className="primary-button mt-6 justify-center">Entrar <ArrowRight size={18} /></Link></div></section></main>;
 }
 
@@ -271,6 +280,7 @@ function AppRouter() {
   if (pathname.startsWith("/operacao/garcom/mesa/")) return <StaffGate roles={["waiter", "manager"]}><TableCommand tableId={pathname.split("/").pop()!} /></StaffGate>;
   if (pathname === "/operacao/cozinha") return <StaffGate roles={["kitchen", "manager"]}><Kitchen /></StaffGate>;
   if (pathname === "/operacao/caixa") return <StaffGate roles={["cashier", "manager"]}><Cashier /></StaffGate>;
+  if (pathname === "/operacao/entregas") return <StaffGate roles={["delivery", "cashier", "manager"]}><Deliveries /></StaffGate>;
   if (pathname === "/menu") return <MenuBuilder source="qr" publicMenu />;
   if (pathname.startsWith("/menu/mesa/")) return <MenuBuilder source="qr" publicMenu tableId={pathname.split("/").pop()!} />;
   if (pathname === "/gestao") return <ServerLogin />;

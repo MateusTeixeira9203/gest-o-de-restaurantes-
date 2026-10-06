@@ -4,10 +4,10 @@ import { useCallback, useEffect, useState } from "react";
 import { KeyRound, Plus, UserRoundCheck, UserRoundX } from "lucide-react";
 import { toast } from "sonner";
 
-type Role = "manager" | "waiter" | "kitchen" | "cashier";
+type Role = "manager" | "waiter" | "kitchen" | "cashier" | "delivery";
 type Member = { id: string; name: string; role: Role; active: boolean };
 
-const roleLabel: Record<Role, string> = { manager: "Gestão", waiter: "Garçom", kitchen: "Cozinha", cashier: "Caixa" };
+const roleLabel: Record<Role, string> = { manager: "Gestão", waiter: "Garçom", kitchen: "Cozinha", cashier: "Caixa", delivery: "Entrega" };
 
 async function responseError(response: Response) {
   const body = await response.json().catch(() => null) as { error?: string } | null;
