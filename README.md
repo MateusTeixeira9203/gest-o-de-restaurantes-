@@ -36,7 +36,9 @@ O script de build usa `next build --webpack`. As rotas são atendidas pelo App R
 - `/operacao/garcom` e `/operacao/garcom/mesa/[id]` — mesas, comandas e pedidos
 - `/operacao/cozinha` — produção por etapas e setor
 - `/operacao/caixa` — contas e pagamentos
-- `/menu` e `/menu/mesa/[id]` — cardápio público para retirada, entrega ou QR na mesa
+- `/menu` — cardápio público com escolha entre retirada e entrega
+- `/menu/entrega` — link do WhatsApp para pedido de entrega com nome e endereço obrigatórios
+- `/menu/mesa/[id]` — QR presencial com mesa identificada
 - `/gestao` — login administrativo
 - `/gestao/dashboard`, `/gestao/mesas`, `/gestao/pedidos`, `/gestao/cardapio`, `/gestao/estoque`, `/gestao/caixa`, `/gestao/equipe`, `/gestao/relatorios`, `/gestao/configuracoes`
 
@@ -46,7 +48,7 @@ No ambiente local de teste, as credenciais são `admin` / `admin123`. Em produç
 
 Pedidos, filas de cozinha, mesas, pagamentos, disponibilidade do cardápio e configurações do restaurante usam o PostgreSQL no Neon. Cada tela operacional consulta a mesma fonte e atualiza automaticamente a cada poucos segundos; por isso garçom, cozinha e caixa podem trabalhar em dispositivos diferentes após entrar com a conta da equipe.
 
-O cardápio público não recebe credenciais internas. O caixa pode copiar ou compartilhar `/menu` pelo WhatsApp; o WhatsApp só transporta o link, e os pedidos são registrados no sistema. Em Mesas, o QR é gerado localmente para `/menu/mesa/[id]`, sem serviço externo. O cliente escolhe retirada, entrega (endereço e localização opcionais) ou pedido da mesa, e vê uma estimativa calculada pela fila atual. A cozinha é protegida por sessão HTTP-only; nenhuma chave de integração é enviada ao navegador.
+O cardápio público não recebe credenciais internas. O caixa e a gestão compartilham `/menu/entrega` pelo WhatsApp; o WhatsApp só transporta o link, e o pedido é registrado como entrega no sistema. Essa rota exige nome, telefone e endereço escrito; a localização é opcional. Em Mesas, o QR é gerado localmente para `/menu/mesa/[id]`, sem serviço externo. O cliente vê uma estimativa calculada pela fila atual. A cozinha recebe os pedidos em ordem numérica, com etiqueta de entrega/retirada/mesa, número, nome e itens. A área de Entregas mostra o pedido desde a entrada na cozinha e libera a saída apenas depois do preparo. A cozinha é protegida por sessão HTTP-only; nenhuma chave de integração é enviada ao navegador.
 
 Fotos enviadas pela Gestão são convertidas para WebP e limitadas a 600 KB, com armazenamento na tabela `product_images`. O estoque é opcional; ao ser ativado, a baixa automática depende da receita configurada em cada variação do produto.
 
