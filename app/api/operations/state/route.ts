@@ -1,12 +1,31 @@
 import { getOperationSnapshot } from "@/lib/restaurant-repository";
-import { hasStaffSession } from "@/lib/staff-session";
+import { sessionFromRequest } from "@/lib/staff-session";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
-  if (!hasStaffSession(request)) return Response.json({ error: "Acesso da equipe necessário." }, { status: 401 });
+  const session = sessionFromRequest(request);
+  if (!session) return Response.json({ error: "Acesso da equipe necessário." }, { status: 401 });
   try {
-    return Response.json(await getOperationSnapshot(), { headers: { "Cache-Control": "no-store" } });
+    const snapshot = await getOperationSnapshot();
+    if (session.role === "admin" || session.role === "manager") {
+      return Response.json(snapshot, { headers: { "Cache-Control": "no-store" } });
+    }
+
+    const noInventory = { enabled: false, items: [], movements: [], recipes: [] };
+    const ordersWithoutAddresses = snapshot.orders.map(order => ({ ...order, delivery: null }));
+    const kitchenOrders = ordersWithoutAddresses
+      .filter(order => ["confirmed", "preparing", "ready"].includes(order.status))
+      .map(order => ({ ...order, customerPhone: null, payments: [], paidCents: 0 }));
+    const kitchenOrderIds = new Set(kitchenOrders.map(order => order.id));
+    const roleSnapshot = session.role === "kitchen"
+      ? { ...snapshot, tables: [], orders: kitchenOrders, kitchen: snapshot.kitchen.filter(ticket => kitchenOrderIds.has(ticket.orderId)), inventory: noInventory }
+      : session.role === "waiter"
+        ? { ...snapshot, orders: ordersWithoutAddresses.filter(order => order.fulfillment === "dine_in"), kitchen: [], inventory: noInventory }
+        : session.role === "delivery"
+          ? { ...snapshot, products: [], tables: [], orders: snapshot.orders.filter(order => order.fulfillment === "delivery"), kitchen: [], inventory: noInventory }
+          : { ...snapshot, orders: ordersWithoutAddresses, kitchen: [], inventory: noInventory };
+    return Response.json(roleSnapshot, { headers: { "Cache-Control": "no-store" } });
   } catch {
     return Response.json({ error: "Não foi possível carregar a operação." }, { status: 503 });
   }

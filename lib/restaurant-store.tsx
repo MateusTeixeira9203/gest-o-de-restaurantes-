@@ -12,8 +12,10 @@ type KitchenTicket = {
 };
 
 type RemoteProduct = { id: string; name: string; description: string; category: string; sector: string; available: boolean; featured: boolean; imageUrl: string | null; variants: Array<{ id: string; name: string; priceCents: number; stockAvailable: boolean }>; addons: Array<{ id: string; name: string; priceCents: number }> };
+type Branding = { logoUrl: string | null; coverUrl: string | null };
 type Snapshot = {
   restaurant: { name: string; whatsapp: string; serviceRate: number };
+  branding: Branding;
   products: RemoteProduct[];
   tables: Array<{ number: number; label: string | null; active: boolean }>;
   orders: Array<{ id: string; orderNumber: number; source: "waiter" | "public_menu" | "qr_menu"; fulfillment: "dine_in" | "pickup" | "delivery"; status: Order["status"]; tableNumber: number | null; customerName: string | null; subtotalCents: number; serviceCents: number; totalCents: number; paidCents: number; payments: Array<{ method: "pix" | "cash" | "debit" | "credit"; amountCents: number }>; delivery: { addressLine1: string; neighborhood: string | null; reference: string | null } | null; createdAt: string; items: Array<{ id: string; product_id: string | null; variant_id: string | null; product_name: string; variant_name: string; kitchen_sector: string; quantity: number; unit_price_cents: number; addons: Array<{ id: string; name: string; priceCents: number }>; note: string | null }> }>;
@@ -33,6 +35,7 @@ type StaffSession = { username: string; role: StaffRole; staffId?: string | null
 
 type StoreContextValue = {
   state: RestaurantState;
+  branding: Branding;
   kitchen: KitchenTicket[];
   ready: boolean;
   authenticated: boolean;
@@ -117,6 +120,7 @@ export function RestaurantStoreProvider({ children }: { children: React.ReactNod
   const pathname = usePathname();
   const publicMenuPage = pathname.startsWith("/menu");
   const [state, setState] = useState<RestaurantState>(baseState);
+  const [branding, setBranding] = useState<Branding>({ logoUrl: null, coverUrl: null });
   const [kitchen, setKitchen] = useState<KitchenTicket[]>([]);
   const [ready, setReady] = useState(false);
   const [authenticated, setAuthenticated] = useState(false);
@@ -126,7 +130,8 @@ export function RestaurantStoreProvider({ children }: { children: React.ReactNod
   const loadPublicMenu = useCallback(async () => {
     const response = await fetch("/api/public/menu", { cache: "no-store" });
     if (!response.ok) return;
-    const menu = await response.json() as { restaurant: { name: string; whatsapp: string | null }; products: RemoteProduct[] };
+    const menu = await response.json() as { restaurant: { name: string; whatsapp: string | null }; branding: Branding; products: RemoteProduct[] };
+    setBranding(menu.branding ?? { logoUrl: null, coverUrl: null });
     setState(previous => ({ ...previous, settings: { ...previous.settings, name: menu.restaurant.name, whatsapp: menu.restaurant.whatsapp ?? "" }, products: menu.products.map(productFromRemote) }));
   }, []);
 
@@ -135,6 +140,7 @@ export function RestaurantStoreProvider({ children }: { children: React.ReactNod
     if (response.status === 401 || response.status === 403) { setAuthenticated(false); setSession(null); return false; }
     if (!response.ok) return false;
     const snapshot = await response.json() as Snapshot;
+    setBranding(snapshot.branding ?? { logoUrl: null, coverUrl: null });
     setState(previous => stateFromSnapshot(snapshot, previous));
     setKitchen(snapshot.kitchen);
     setInventoryEnabledState(snapshot.inventory.enabled);
@@ -282,7 +288,7 @@ export function RestaurantStoreProvider({ children }: { children: React.ReactNod
 
   const resetDemo = useCallback(() => { void refresh(); }, [refresh]);
 
-  const value = useMemo<StoreContextValue>(() => ({ state, kitchen, ready, authenticated, session, refresh, login, logout, createOrder, createPublicOrder, cancelOrder, payTable, updateKitchenTicket, updateDeliveryStatus, updateOrderStatus, toggleProduct, updateSettings, createTable, createProduct, inventoryEnabled, setInventoryEnabled, createInventoryItem, moveInventory, saveRecipe, resetDemo }), [state, kitchen, ready, authenticated, session, refresh, login, logout, createOrder, createPublicOrder, cancelOrder, payTable, updateKitchenTicket, updateDeliveryStatus, updateOrderStatus, toggleProduct, updateSettings, createTable, createProduct, inventoryEnabled, setInventoryEnabled, createInventoryItem, moveInventory, saveRecipe, resetDemo]);
+  const value = useMemo<StoreContextValue>(() => ({ state, branding, kitchen, ready, authenticated, session, refresh, login, logout, createOrder, createPublicOrder, cancelOrder, payTable, updateKitchenTicket, updateDeliveryStatus, updateOrderStatus, toggleProduct, updateSettings, createTable, createProduct, inventoryEnabled, setInventoryEnabled, createInventoryItem, moveInventory, saveRecipe, resetDemo }), [state, branding, kitchen, ready, authenticated, session, refresh, login, logout, createOrder, createPublicOrder, cancelOrder, payTable, updateKitchenTicket, updateDeliveryStatus, updateOrderStatus, toggleProduct, updateSettings, createTable, createProduct, inventoryEnabled, setInventoryEnabled, createInventoryItem, moveInventory, saveRecipe, resetDemo]);
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }
 

@@ -140,17 +140,23 @@ async function consumeInventoryForOrder(client: PoolClient, restaurantId: string
 
 export async function getPublicMenu() {
   const current = await restaurant();
-  const [productResult, variantResult, addonResult, inventorySettings, recipeResult] = await Promise.all([
+  const [productResult, variantResult, addonResult, inventorySettings, recipeResult, brandImages] = await Promise.all([
       query<ProductRow>("SELECT p.id, p.name, p.description, p.category, p.kitchen_sector, p.available, p.featured, img.updated_at AS image_updated_at FROM menu_products p LEFT JOIN product_images img ON img.product_id = p.id WHERE p.restaurant_id = $1 ORDER BY p.category, p.sort_order, p.name", [current.id]),
       query<VariantRow>("SELECT v.id, v.product_id, v.name, v.price_cents FROM menu_variants v JOIN menu_products p ON p.id = v.product_id WHERE p.restaurant_id = $1 AND v.active ORDER BY v.sort_order", [current.id]),
       query<AddonRow>("SELECT a.id, a.product_id, a.name, a.price_cents FROM product_addons a JOIN menu_products p ON p.id = a.product_id WHERE p.restaurant_id = $1 AND a.active ORDER BY a.sort_order", [current.id]),
       query<{ enabled: boolean }>("SELECT enabled FROM inventory_settings WHERE restaurant_id = $1", [current.id]),
       query<RecipeRow>("SELECT prc.variant_id, prc.inventory_item_id, prc.quantity, i.quantity AS available_quantity, i.active FROM product_recipe_components prc JOIN inventory_items i ON i.id = prc.inventory_item_id WHERE i.restaurant_id = $1", [current.id]),
+      query<{ kind: "logo" | "cover"; updated_at: string }>("SELECT kind, updated_at FROM restaurant_brand_images WHERE restaurant_id = $1", [current.id]),
   ]);
+    const imageVersion = (kind: "logo" | "cover") => {
+      const image = brandImages.rows.find(row => row.kind === kind);
+      return image ? `/api/public/branding/${kind}?v=${new Date(image.updated_at).getTime()}` : null;
+    };
     const variantsByProduct = Map.groupBy(variantResult.rows, variant => variant.product_id);
     const addonsByProduct = Map.groupBy(addonResult.rows, addon => addon.product_id);
     return {
       restaurant: { name: current.name, whatsapp: current.whatsapp },
+      branding: { logoUrl: imageVersion("logo"), coverUrl: imageVersion("cover") },
       products: productResult.rows.map<PublicMenuProduct>(product => {
         const variants = (variantsByProduct.get(product.id) ?? []).map(variant => {
           const recipe = recipeResult.rows.filter(component => component.variant_id === variant.id);
@@ -265,8 +271,8 @@ export async function getKitchenQueue(sector?: string) {
 
 export async function updateKitchenTicket(ticketId: string, status: "preparing" | "ready") {
   return transaction(async client => {
-    const ticket = await client.query<{ order_id: string }>("UPDATE kitchen_tickets SET status = $2::kitchen_ticket_status, started_at = CASE WHEN $2::kitchen_ticket_status = 'preparing'::kitchen_ticket_status THEN COALESCE(started_at, now()) ELSE started_at END, ready_at = CASE WHEN $2::kitchen_ticket_status = 'ready'::kitchen_ticket_status THEN now() ELSE ready_at END, updated_at = now() WHERE id = $1 AND status <> 'cancelled' RETURNING order_id", [ticketId, status]);
-    if (!ticket.rows[0]) throw new Error("Comanda de cozinha não encontrada.");
+    const ticket = await client.query<{ order_id: string }>("UPDATE kitchen_tickets kt SET status = $2::kitchen_ticket_status, started_at = CASE WHEN $2::kitchen_ticket_status = 'preparing'::kitchen_ticket_status THEN COALESCE(started_at, now()) ELSE started_at END, ready_at = CASE WHEN $2::kitchen_ticket_status = 'ready'::kitchen_ticket_status THEN now() ELSE ready_at END, updated_at = now() WHERE kt.id = $1 AND ((kt.status = 'new' AND $2 = 'preparing') OR (kt.status IN ('new', 'preparing') AND $2 = 'ready')) AND EXISTS (SELECT 1 FROM orders o WHERE o.id = kt.order_id AND o.status IN ('confirmed', 'preparing')) RETURNING order_id", [ticketId, status]);
+    if (!ticket.rows[0]) throw new Error("Esta comanda não está mais nesta etapa da cozinha.");
     const orderId = ticket.rows[0].order_id;
     const summary = await client.query<{ total: string; ready: string; preparing: string }>("SELECT count(*) AS total, count(*) FILTER (WHERE status = 'ready') AS ready, count(*) FILTER (WHERE status = 'preparing') AS preparing FROM kitchen_tickets WHERE order_id = $1", [orderId]);
     const allReady = summary.rows[0].total === summary.rows[0].ready;
@@ -301,6 +307,7 @@ export async function getOperationSnapshot() {
   ]);
   return {
     restaurant: { name: current.name, whatsapp: current.whatsapp ?? "", serviceRate: current.service_rate_basis_points / 100 },
+    branding: menu.branding,
     products: menu.products,
     tables: tables.rows,
     orders: orders.rows.map(order => ({
@@ -315,7 +322,8 @@ export async function getOperationSnapshot() {
 
 export async function cancelOrder(orderId: string, actor: { role: string; name: string; reason: string }) {
   return transaction(async client => {
-    const order = await client.query<{ id: string; restaurant_id: string }>("UPDATE orders SET status = 'cancelled', cancelled_at = now(), updated_at = now() WHERE id = $1 AND status NOT IN ('completed', 'cancelled') RETURNING id, restaurant_id", [orderId]);
+    const current = await restaurant(client);
+    const order = await client.query<{ id: string; restaurant_id: string }>("UPDATE orders SET status = 'cancelled', cancelled_at = now(), updated_at = now() WHERE id = $1 AND restaurant_id = $2 AND status NOT IN ('completed', 'cancelled') AND ($3::text <> 'waiter' OR fulfillment = 'dine_in') RETURNING id, restaurant_id", [orderId, current.id, actor.role]);
     if (!order.rows[0]) throw new Error("Este pedido não pode mais ser cancelado.");
     const consumed = await client.query<{ inventory_item_id: string; quantity_delta: string }>("SELECT inventory_item_id, quantity_delta FROM inventory_movements WHERE order_id = $1 AND type = 'sale_consumption' FOR UPDATE", [orderId]);
     for (const movement of consumed.rows) {
@@ -368,6 +376,7 @@ export async function recordExternalPayment(orderId: string, method: "Pix" | "Di
     );
     const order = result.rows[0];
     if (!order || order.fulfillment === "dine_in" || order.status === "cancelled") throw new Error("Pedido online não encontrado ou cancelado.");
+    if (actor.role === "delivery" && order.fulfillment !== "delivery") throw new Error("A equipe de entrega só pode receber pedidos de entrega.");
     if (order.paid_cents >= order.total_cents) throw new Error("Este pedido já está pago.");
     if (order.fulfillment === "pickup" && order.status !== "ready") throw new Error("A retirada precisa estar pronta antes de fechar o pagamento.");
     const amount = order.total_cents - order.paid_cents;
@@ -504,6 +513,26 @@ export async function getProductImage(productId: string) {
   const current = await restaurant();
   const result = await query<{ image_data: Buffer; mime_type: string }>("SELECT img.image_data, img.mime_type FROM product_images img JOIN menu_products p ON p.id = img.product_id WHERE p.id = $1 AND p.restaurant_id = $2", [productId, current.id]);
   return result.rows[0] ?? null;
+}
+
+export type BrandImageKind = "logo" | "cover";
+
+export async function getBrandImage(kind: BrandImageKind) {
+  const current = await restaurant();
+  const result = await query<{ image_data: Buffer; mime_type: string }>("SELECT image_data, mime_type FROM restaurant_brand_images WHERE restaurant_id = $1 AND kind = $2", [current.id, kind]);
+  return result.rows[0] ?? null;
+}
+
+export async function setBrandImage(kind: BrandImageKind, imageData: Buffer) {
+  const current = await restaurant();
+  await query("INSERT INTO restaurant_brand_images (restaurant_id, kind, mime_type, image_data) VALUES ($1,$2,'image/webp',$3) ON CONFLICT (restaurant_id, kind) DO UPDATE SET image_data = EXCLUDED.image_data, updated_at = now()", [current.id, kind, imageData]);
+  return { kind };
+}
+
+export async function removeBrandImage(kind: BrandImageKind) {
+  const current = await restaurant();
+  await query("DELETE FROM restaurant_brand_images WHERE restaurant_id = $1 AND kind = $2", [current.id, kind]);
+  return { kind };
 }
 
 export async function setInventoryEnabled(enabled: boolean) {
