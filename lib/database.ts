@@ -1,6 +1,10 @@
 import { Pool, type PoolClient, type QueryResultRow } from "pg";
 
-const connectionString = process.env.DATABASE_URL;
+// Keep the current strict TLS verification explicit across pg connection-string upgrades.
+const connectionString = process.env.DATABASE_URL?.replace(
+  /([?&])sslmode=(?:require|prefer|verify-ca)(?=&|$)/,
+  "$1sslmode=verify-full",
+);
 
 const globalForDatabase = globalThis as unknown as { patosPool?: Pool };
 
