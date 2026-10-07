@@ -151,8 +151,9 @@ function KitchenCard({ order, sector, onAdvance }: { order: Order; sector: strin
 }
 
 function CashierMenuShare() {
+  const { state } = useRestaurant();
   const url = typeof window === "undefined" ? "" : `${window.location.origin}/menu/entrega`;
-  const share = () => window.open(`https://wa.me/?text=${encodeURIComponent(`Peça sua entrega no cardápio da Patos Lanches: ${url}`)}`, "_blank", "noopener,noreferrer");
+  const share = () => window.open(`https://wa.me/?text=${encodeURIComponent(`Peça sua entrega no cardápio da ${state.settings.name}: ${url}`)}`, "_blank", "noopener,noreferrer");
   const copy = async () => { try { await navigator.clipboard.writeText(url); toast.success("Link para entrega copiado."); } catch { toast.error("Não foi possível copiar o link."); } };
   return <section className="cash-share"><div><strong>Cardápio para entrega</strong><p>Envie pelo WhatsApp. O cliente informa nome e endereço; o pedido entra no sistema como entrega.</p></div><div><button className="secondary-button" onClick={() => void copy()}><Copy size={16} /> Copiar link</button><button className="primary-button" onClick={share}><ArrowRight size={16} /> Enviar no WhatsApp</button></div></section>;
 }
