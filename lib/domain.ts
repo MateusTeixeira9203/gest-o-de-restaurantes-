@@ -17,9 +17,10 @@ export interface Product {
   recipe: Record<string, RecipeComponent[]>;
   available: boolean;
   featured?: boolean;
+  imageUrl?: string | null;
 }
 
-export interface Table { id: string; number: number; status: TableStatus; active: boolean; openedAt?: string }
+export interface Table { id: string; number: number; label: string; status: TableStatus; active: boolean; openedAt?: string }
 export interface OrderItemAddon { id: string; name: string; price: number }
 export interface OrderItem {
   id: string;

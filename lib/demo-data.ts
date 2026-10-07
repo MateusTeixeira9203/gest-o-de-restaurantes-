@@ -28,7 +28,7 @@ export const stock: StockItem[] = [
 ].map(([id, name, category, quantity, unit, minimum, cost]) => ({ id, name, category, quantity, unit, minimum, cost })) as StockItem[];
 
 const status: Table["status"][] = ["available", "occupied", "preparing", "ready", "closing", "available", "occupied", "occupied", "preparing", "available", "ready", "available", "occupied", "available", "available"];
-export const tables: Table[] = status.map((s, i) => ({ id: String(i + 1).padStart(2, "0"), number: i + 1, status: s, active: true, openedAt: s === "available" ? undefined : new Date(DEMO_NOW - (18 + i) * 60000).toISOString() }));
+export const tables: Table[] = status.map((s, i) => ({ id: String(i + 1).padStart(2, "0"), number: i + 1, label: `Mesa ${String(i + 1).padStart(2, "0")}`, status: s, active: true, openedAt: s === "available" ? undefined : new Date(DEMO_NOW - (18 + i) * 60000).toISOString() }));
 
 const orderItem = (productId: string, variantId: string, quantity: number, note?: string) => {
   const p = products.find(x => x.id === productId)!; const variant = p.variants.find(x => x.id === variantId)!;

@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { usePathname } from "next/navigation";
 import type { CartItem, Order, Payment, Product, RestaurantSettings, RestaurantState, TableStatus } from "./domain";
 
 type KitchenTicket = {
@@ -10,12 +11,12 @@ type KitchenTicket = {
   items: Array<{ productName: string; variantName: string; quantity: number; note: string | null }>;
 };
 
-type RemoteProduct = { id: string; name: string; description: string; category: string; sector: string; available: boolean; featured: boolean; variants: Array<{ id: string; name: string; priceCents: number; stockAvailable: boolean }>; addons: Array<{ id: string; name: string; priceCents: number }> };
+type RemoteProduct = { id: string; name: string; description: string; category: string; sector: string; available: boolean; featured: boolean; imageUrl: string | null; variants: Array<{ id: string; name: string; priceCents: number; stockAvailable: boolean }>; addons: Array<{ id: string; name: string; priceCents: number }> };
 type Snapshot = {
   restaurant: { name: string; whatsapp: string; serviceRate: number };
   products: RemoteProduct[];
-  tables: Array<{ number: number; active: boolean }>;
-  orders: Array<{ id: string; orderNumber: number; source: "waiter" | "public_menu" | "qr_menu"; fulfillment: "dine_in" | "pickup" | "delivery"; status: Order["status"]; tableNumber: number | null; customerName: string | null; totalCents: number; paidCents: number; delivery: { addressLine1: string; neighborhood: string | null; reference: string | null } | null; createdAt: string; items: Array<{ id: string; product_id: string | null; variant_id: string | null; product_name: string; variant_name: string; kitchen_sector: string; quantity: number; unit_price_cents: number; addons: Array<{ id: string; name: string; priceCents: number }>; note: string | null }> }>;
+  tables: Array<{ number: number; label: string | null; active: boolean }>;
+  orders: Array<{ id: string; orderNumber: number; source: "waiter" | "public_menu" | "qr_menu"; fulfillment: "dine_in" | "pickup" | "delivery"; status: Order["status"]; tableNumber: number | null; customerName: string | null; subtotalCents: number; serviceCents: number; totalCents: number; paidCents: number; payments: Array<{ method: "pix" | "cash" | "debit" | "credit"; amountCents: number }>; delivery: { addressLine1: string; neighborhood: string | null; reference: string | null } | null; createdAt: string; items: Array<{ id: string; product_id: string | null; variant_id: string | null; product_name: string; variant_name: string; kitchen_sector: string; quantity: number; unit_price_cents: number; addons: Array<{ id: string; name: string; priceCents: number }>; note: string | null }> }>;
   kitchen: KitchenTicket[];
   inventory: { enabled: boolean; items: Array<{ id: string; name: string; category: string; unit: "un" | "g" | "kg" | "ml" | "L"; quantity: number; minimumQuantity: number; averageCostCents: number; active: boolean }>; movements: Array<{ id: string; itemId: string; type: "initial" | "purchase" | "sale_consumption" | "cancellation_return" | "loss" | "adjustment"; quantityDelta: number; note: string | null; createdAt: string }>; recipes: Array<{ variantId: string; itemId: string; quantity: number }> };
 };
@@ -64,7 +65,7 @@ const baseState: RestaurantState = { settings: { name: "Patos Lanches", whatsapp
 function productFromRemote(product: RemoteProduct): Product {
   return {
     id: product.id, name: product.name, description: product.description, category: product.category, sector: product.sector as Product["sector"],
-    available: product.available, featured: product.featured, recipe: {},
+    available: product.available, featured: product.featured, imageUrl: product.imageUrl, recipe: {},
     variants: product.variants.map(variant => ({ id: variant.id, name: variant.name, price: variant.priceCents / 100, stockAvailable: variant.stockAvailable })),
     addons: product.addons.map(addon => ({ id: addon.id, name: addon.name, price: addon.priceCents / 100 })),
   };
@@ -92,7 +93,7 @@ function stateFromSnapshot(snapshot: Snapshot, previous: RestaurantState): Resta
   const tables = snapshot.tables.map(table => {
     const id = String(table.number).padStart(2, "0");
     const firstActive = orders.find(order => order.tableId === id && !["completed", "cancelled"].includes(order.status));
-    return { id, number: table.number, active: table.active, status: tableStatus(orders, id), openedAt: firstActive?.createdAt };
+    return { id, number: table.number, label: table.label || `Mesa ${id}`, active: table.active, status: tableStatus(orders, id), openedAt: firstActive?.createdAt };
   });
   return {
     ...previous,
@@ -100,7 +101,7 @@ function stateFromSnapshot(snapshot: Snapshot, previous: RestaurantState): Resta
     products: snapshot.products.map(product => ({ ...productFromRemote(product), recipe: Object.fromEntries(product.variants.map(variant => [variant.id, (recipesByVariant.get(variant.id) ?? []).map(component => ({ stockId: component.itemId, quantity: component.quantity }))])) })),
     tables,
     orders,
-    sales: orders.filter(order => order.status === "completed").map(order => ({ id: `sale-${order.id}`, tableId: order.tableId, orderIds: [order.id], subtotal: order.items.reduce((sum, item) => sum + item.quantity * (item.unitPrice + item.addons.reduce((addons, addon) => addons + addon.price, 0)), 0), service: 0, total: order.items.reduce((sum, item) => sum + item.quantity * (item.unitPrice + item.addons.reduce((addons, addon) => addons + addon.price, 0)), 0), payments: [], createdAt: order.createdAt })),
+    sales: snapshot.orders.filter(order => order.status === "completed").map(order => ({ id: `sale-${order.id}`, tableId: order.tableNumber ? String(order.tableNumber).padStart(2, "0") : `externo-${order.id}`, orderIds: [order.id], subtotal: order.subtotalCents / 100, service: order.serviceCents / 100, total: order.totalCents / 100, payments: order.payments.map((payment, index) => ({ id: `payment-${order.id}-${index}`, method: ({ pix: "Pix", cash: "Dinheiro", debit: "Débito", credit: "Crédito" } as const)[payment.method], amount: payment.amountCents / 100 })), createdAt: order.createdAt })),
     nextOrderNumber: Math.max(1, ...orders.map(order => order.number + 1)),
     stock: snapshot.inventory.items.map(item => ({ id: item.id, name: item.name, category: item.category, unit: item.unit, quantity: item.quantity, minimum: item.minimumQuantity, cost: item.averageCostCents / 100 })),
     movements: snapshot.inventory.movements.map(movement => ({ id: movement.id, stockId: movement.itemId, type: movement.type === "purchase" || movement.type === "initial" ? "Entrada" : movement.type === "loss" ? "Perda" : movement.type === "cancellation_return" ? "Estorno" : movement.type === "sale_consumption" ? "Venda" : "Ajuste", quantity: movement.quantityDelta, createdAt: movement.createdAt, reference: movement.note ?? (movement.type === "sale_consumption" ? "Baixa por venda" : movement.type === "cancellation_return" ? "Estorno de pedido" : "Movimentação de estoque") })),
@@ -113,6 +114,8 @@ async function readError(response: Response) {
 }
 
 export function RestaurantStoreProvider({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const publicMenuPage = pathname.startsWith("/menu");
   const [state, setState] = useState<RestaurantState>(baseState);
   const [kitchen, setKitchen] = useState<KitchenTicket[]>([]);
   const [ready, setReady] = useState(false);
@@ -141,7 +144,7 @@ export function RestaurantStoreProvider({ children }: { children: React.ReactNod
 
   useEffect(() => {
     void (async () => {
-      await loadPublicMenu();
+      if (publicMenuPage) { await loadPublicMenu(); setReady(true); return; }
       const response = await fetch("/api/auth/session", { cache: "no-store" });
       const current = await response.json().catch(() => null) as { authenticated?: boolean; username?: string | null; role?: StaffRole | null; staffId?: string | null } | null;
       if (current?.authenticated && current.username && current.role) {
@@ -150,13 +153,14 @@ export function RestaurantStoreProvider({ children }: { children: React.ReactNod
       }
       setReady(true);
     })();
-  }, [loadPublicMenu, refresh]);
+  }, [loadPublicMenu, publicMenuPage, refresh]);
 
   useEffect(() => {
-    if (!authenticated) return;
-    const interval = window.setInterval(() => { void refresh(); }, 4_000);
+    if (!authenticated || publicMenuPage) return;
+    const intervalMs = pathname.startsWith("/operacao") ? 4_000 : pathname === "/gestao/pedidos" ? 8_000 : 20_000;
+    const interval = window.setInterval(() => { if (document.visibilityState === "visible") void refresh(); }, intervalMs);
     return () => window.clearInterval(interval);
-  }, [authenticated, refresh]);
+  }, [authenticated, pathname, publicMenuPage, refresh]);
 
   const login = useCallback(async (username: string, password: string): Promise<Result> => {
     const response = await fetch("/api/auth/login", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ username, password }) });
@@ -247,7 +251,7 @@ export function RestaurantStoreProvider({ children }: { children: React.ReactNod
   }, [refresh]);
 
   const createProduct = useCallback(async (input: { name: string; category: string; sector: string; price: number; description?: string }): Promise<Result> => {
-    const response = await fetch("/api/operations/products", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ ...input, priceCents: Math.round(input.price * 100) }) });
+    const response = await fetch("/api/operations/products", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name: input.name, category: input.category, sector: input.sector, description: input.description ?? "", variants: [{ name: "Padrão", priceCents: Math.round(input.price * 100) }], addons: [] }) });
     if (!response.ok) return { ok: false, message: await readError(response) };
     await refresh(); return { ok: true, number: 0 };
   }, [refresh]);

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { KeyRound, Plus, UserRoundCheck, UserRoundX } from "lucide-react";
 import { toast } from "sonner";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 type Role = "manager" | "waiter" | "kitchen" | "cashier" | "delivery";
 type Member = { id: string; name: string; role: Role; active: boolean };
@@ -21,6 +22,9 @@ export function TeamManagement() {
   const [role, setRole] = useState<Role>("waiter");
   const [pin, setPin] = useState("");
   const [saving, setSaving] = useState(false);
+  const [resetMember, setResetMember] = useState<Member | null>(null);
+  const [nextPin, setNextPin] = useState("");
+  const [resetting, setResetting] = useState(false);
 
   const load = useCallback(async () => {
     const response = await fetch("/api/operations/team", { cache: "no-store" });
@@ -29,7 +33,7 @@ export function TeamManagement() {
     setTeam(body.team); setLoading(false);
   }, []);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => { void Promise.resolve().then(load); }, [load]);
 
   const add = async (event: React.FormEvent) => {
     event.preventDefault(); setSaving(true);
@@ -45,12 +49,13 @@ export function TeamManagement() {
     toast.success(member.active ? "Acesso desativado." : "Acesso reativado."); await load();
   };
 
-  const resetPin = async (member: Member) => {
-    const nextPin = window.prompt(`Novo PIN de 4 a 6 números para ${member.name}:`);
-    if (nextPin === null) return;
-    const response = await fetch(`/api/operations/team/${member.id}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ pin: nextPin }) });
+  const resetPin = async () => {
+    if (!resetMember || !/^[0-9]{4,6}$/.test(nextPin)) { toast.error("O PIN deve ter 4 a 6 números."); return; }
+    setResetting(true);
+    const response = await fetch(`/api/operations/team/${resetMember.id}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ pin: nextPin }) });
+    setResetting(false);
     if (!response.ok) { toast.error(await responseError(response)); return; }
-    toast.success("PIN atualizado.");
+    setResetMember(null); setNextPin(""); toast.success("PIN atualizado.");
   };
 
   return <section className="settings-card mt-6">
@@ -62,7 +67,8 @@ export function TeamManagement() {
       <button className="primary-button self-end" disabled={saving}>{saving ? "Salvando…" : <><Plus size={17} /> Adicionar</>}</button>
     </form>
     <div className="mt-6 divide-y divide-neutral-100 rounded-2xl border border-neutral-200">
-      {loading ? <p className="p-5 text-sm text-neutral-500">Carregando equipe…</p> : team.length ? team.map(member => <div key={member.id} className="flex flex-wrap items-center justify-between gap-3 p-4"><div><strong>{member.name}</strong><p className="mt-1 text-sm text-neutral-500">{roleLabel[member.role]} · {member.active ? "Acesso ativo" : "Acesso desativado"}</p></div><div className="flex gap-2"><button type="button" onClick={() => resetPin(member)} className="secondary-button"><KeyRound size={15} /> PIN</button><button type="button" onClick={() => void toggle(member)} className="secondary-button">{member.active ? <><UserRoundX size={15} /> Desativar</> : <><UserRoundCheck size={15} /> Reativar</>}</button></div></div>) : <p className="p-5 text-sm text-neutral-500">Ainda não há ninguém cadastrado. Comece pelo responsável de cada área.</p>}
+      {loading ? <p className="p-5 text-sm text-neutral-500">Carregando equipe…</p> : team.length ? team.map(member => <div key={member.id} className="flex flex-wrap items-center justify-between gap-3 p-4"><div><strong>{member.name}</strong><p className="mt-1 text-sm text-neutral-500">{roleLabel[member.role]} · {member.active ? "Acesso ativo" : "Acesso desativado"}</p></div><div className="flex gap-2"><button type="button" onClick={() => { setResetMember(member); setNextPin(""); }} className="secondary-button"><KeyRound size={15} /> PIN</button><button type="button" onClick={() => void toggle(member)} className="secondary-button">{member.active ? <><UserRoundX size={15} /> Desativar</> : <><UserRoundCheck size={15} /> Reativar</>}</button></div></div>) : <p className="p-5 text-sm text-neutral-500">Ainda não há ninguém cadastrado. Comece pelo responsável de cada área.</p>}
     </div>
+    <Dialog open={!!resetMember} onOpenChange={value => !resetting && !value && setResetMember(null)}><DialogContent className="rounded-3xl sm:max-w-sm"><DialogHeader><DialogTitle>Alterar PIN de {resetMember?.name}</DialogTitle><DialogDescription>Use de 4 a 6 números. O PIN antigo deixará de funcionar imediatamente.</DialogDescription></DialogHeader><label className="admin-field"><span>Novo PIN</span><input type="password" inputMode="numeric" autoComplete="new-password" value={nextPin} onChange={event => setNextPin(event.target.value.replace(/\D/g, "").slice(0, 6))} placeholder="4 a 6 números" /></label><div className="admin-dialog-actions"><button className="secondary-button" onClick={() => setResetMember(null)} disabled={resetting}>Cancelar</button><button className="primary-button" onClick={() => void resetPin()} disabled={resetting}>{resetting ? "Salvando…" : "Salvar novo PIN"}</button></div></DialogContent></Dialog>
   </section>;
 }

@@ -1,7 +1,7 @@
 "use client";
 
-import type { AnchorHTMLAttributes } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { ArrowRight, Bike, ChefHat, CircleDollarSign, LayoutDashboard, UtensilsCrossed } from "lucide-react";
 
 const areas = [
@@ -11,13 +11,6 @@ const areas = [
   { href: "/operacao/entregas", label: "Entregas", note: "Rotas e pedidos prontos", icon: Bike, tone: "amber" },
   { href: "/gestao", label: "Gestão", note: "Indicadores e controle", icon: LayoutDashboard, tone: "violet" },
 ];
-
-// The deployed Worker handles every route directly. A native anchor keeps
-// navigation dependable even if the client router has not hydrated yet.
-type NativeLinkProps = AnchorHTMLAttributes<HTMLAnchorElement> & { href: string };
-function Link({ href, ...props }: NativeLinkProps) {
-  return <a href={href} {...props} />;
-}
 
 export default function Home() {
   return (
