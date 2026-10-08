@@ -1,6 +1,6 @@
 {
-  "name": "site-creator-vinext-starter",
-  "version": "0.1.0",
+  "name": "gestor-food",
+  "version": "0.2.0",
   "private": true,
   "engines": {
     "node": ">=22.13.0"
@@ -14,7 +14,9 @@
     "db:generate": "node scripts/database.mjs explain-generation",
     "db:status": "node scripts/database.mjs status",
     "db:inspect": "node scripts/database.mjs inspect",
-    "db:migrate": "node scripts/database.mjs apply"
+    "db:migrate": "node scripts/database.mjs apply",
+    "typecheck": "tsc --noEmit",
+    "test:integration": "node tests/approval.integration.mjs && node tests/finance.integration.mjs && node tests/tenancy.integration.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",
