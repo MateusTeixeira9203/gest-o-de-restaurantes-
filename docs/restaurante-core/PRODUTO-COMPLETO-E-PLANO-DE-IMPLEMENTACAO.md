@@ -1,12 +1,12 @@
 # Gestor Food produto completo e plano de implementação
 
-Versão 1.0 • 7 de outubro de 2026 • Primeiro piloto em Minas Gerais • Alvo de avaliação no sábado 10 de outubro de 2026
+Versão 1.1 • 7 de outubro de 2026 • Primeiro piloto em Minas Gerais • Alvo de avaliação no sábado 10 de outubro de 2026
 
 Este é o documento mestre para transformar a base do Patos Lanches em um produto de operação e gestão de restaurantes, personalizável por estabelecimento, com planos Essencial e Profissional. Ele define o produto completo acordado até aqui e divide sua construção em blocos que podem ser implementados, testados pelo proprietário do produto e corrigidos antes da próxima entrega.
 
 Sua função é ser o **manual do produto e contrato de escopo para desenvolvimento e validação**: visão, nome, marca, design, funcionalidades, regras, arquitetura, dados, integrações, operação, entregas e critérios de aceite. Uma implementação deve poder ser conferida contra esta base, e uma mudança de direção precisa ficar registrada nela.
 
-**Estado atual: especificação para implementação.** A existência de um recurso neste documento não significa que ele está implementado ou aprovado. O código existente será reaproveitado; os novos módulos precisam de implementação e evidência de funcionamento. O quadro de acompanhamento começa sem blocos concluídos.
+**Estado atual: MVP local 0.2 implementado para validação.** A existência de um recurso neste documento não significa que ele está concluído. O recorte entregue, as evidências e todas as pendências estão em [Entrega local de 07/10/2026](ENTREGA-LOCAL-2026-10-07.md). O quadro da seção 19 foi atualizado; seu aceite permanece pendente. Fiscal real e integrações automáticas não estão disponíveis.
 
 Este arquivo passa a ser a referência principal de escopo, sequência e aceite. Os documentos anteriores permanecem como apoio. Em caso de divergência, prevalecem a instrução mais recente do proprietário e sua incorporação neste documento. Mudanças futuras devem atualizar a versão, o bloco afetado e os testes, evitando manter duas definições concorrentes.
 
@@ -98,7 +98,7 @@ Compras avançadas, importação de XML de fornecedores, controle por barril, co
 | Infraestrutura | Reaproveitar GitHub, Next.js, Neon PostgreSQL e Vercel existentes |
 | Ambiente de trabalho | Usar o projeto e banco atuais, pois o proprietário informou que a operação comercial ainda não começou |
 | Preservação | Manter IDs, cadastros e histórico; nada de reset global para preparar a versão |
-| Publicação | Sem commits, pushes ou deploys enquanto vigorar a orientação atual; preparar localmente e verificar |
+| Publicação | Instrução atual de 07/10: commits organizados e migrações autorizados; preparar localhost para teste do proprietário. Sem push ou deploy nesta etapa |
 | Pedidos | Cliente solicita; garçom ou caixa autorizado decide enviar à cozinha |
 | Pacotes | Essencial e Profissional, ambos personalizáveis |
 | Piloto financeiro | Testar a capacidade Profissional no Patos, antes do portal comercial de planos |
@@ -918,7 +918,7 @@ Todos os blocos abaixo começam como **planejados**. Cada um só muda de estado 
 
 **Verificação técnica:** lint, typecheck e build aplicáveis; testes de domínio/integração essenciais; recarga e nova sessão; concorrência; falha de conexão; logs sem segredos; totalizadores independentes; regressão do delivery existente. Verificar limpeza/reversão de dados sintéticos sem tocar no histórico legítimo.
 
-**Publicação:** preparar alterações e plano de atualização, respeitando a instrução atual de não fazer commit/push/deploy. Quando a publicação for autorizada, aplicar a sequência revisada, aguardar conclusão da implantação e executar a verificação no endereço que será usado pelo restaurante. Teste local não é prova do deploy.
+**Publicação:** preparar alterações e plano de atualização, com commits e migrações autorizados. Push e deploy ficam para a etapa de publicação. Quando a publicação for autorizada, aplicar a sequência revisada, aguardar conclusão da implantação e executar a verificação no endereço que será usado pelo restaurante. Teste local não é prova do deploy.
 
 **Aceite:** zero bloqueador crítico no escopo liberado, pendências menores registradas, acessos e procedimento operacional claros, dados reconciliados e fiscal real validado se anunciado como disponível. **Fica depois:** prometer disponibilidade absoluta, integração universal e abertura de outros clientes sem B13.
 
@@ -1122,26 +1122,26 @@ Ensaiar no celular e no desktop. Para impressão, testar o modelo real, largura,
 
 Aceite de uso e validação técnica são campos independentes. Você pode gostar da tela e ainda haver um cálculo errado; um teste técnico pode passar e o fluxo continuar confuso. A liberação exige as duas dimensões para o escopo acordado. Subpartes podem ter estados distintos, como fiscal em homologação aceito e fiscal em produção bloqueado.
 
-### 19.2 Quadro inicial
+### 19.2 Quadro atualizado em 07/10/2026
 
 | Bloco | Implementação | Verificação técnica | Seu aceite | Dependência a acompanhar |
 | --- | --- | --- | --- | --- |
-| B00 | Planejado | Pendente | Pendente | Schema atual e recuperação |
-| B01 | Planejado | Pendente | Pendente | Reaproveitamento de identidade/acesso |
-| B02 | Planejado | Pendente | Pendente | B01 |
-| B03 | Planejado | Pendente | Pendente | B02 |
-| B04 | Planejado | Pendente | Pendente | B03 e saldos iniciais |
-| B05 | Planejado | Pendente | Pendente | B04 |
-| B06 | Planejado | Pendente | Pendente | Dados de fichas e custos |
-| B07 | Planejado | Pendente | Pendente | B05 e B06 |
-| B08 | Planejado | Pendente | Pendente | Emitente, Focus, A1 e configuração |
-| B09 | Planejado | Pendente | Pendente | B05/B07; B08 para arquivos fiscais |
-| B10 | Planejado | Pendente | Pendente | Jornada integrada e hardware |
-| B11 | Evolução planejada | Pendente | Pendente | Provedor/conta selecionados |
-| B12 | Evolução planejada | Pendente | Pendente | Layout/relatórios autorizados |
-| B13 | Evolução planejada | Pendente | Pendente | Isolamento antes de outro cliente |
-| B14 | Evolução planejada | Pendente | Pendente | B13 e condições comerciais |
-| B15 | Evolução por subentrega | Pendente | Pendente | Prioridade conforme uso real |
+| B00 | Implementado no recorte local | Baseline, backup e preservação conferidos | Pendente | Ensaio de restauração pendente |
+| B01 | Parcial: identidade, PIN, sessão, marca e plano | Acesso, revogação e isolamento testados | Pendente | Permissões granulares e auditoria completa |
+| B02 | Implementado no fluxo atual | Testes de aprovação e concorrência passaram | Pendente | Seu teste no salão/caixa |
+| B03 | Parcial: atendimento integral e cancelamento | Pagamento/preparo separados; sem reposição após preparo | Pendente | Atendimento parcial, transferências e hardware |
+| B04 | Núcleo de caixa e razão implementado | Troco, contrapartidas, idempotência, estorno e fechamento testados | Pendente | Saldos reais, múltiplas gavetas e diferenças |
+| B05 | Parcial: contas e baixas manuais | Baixa parcial, saldo, estorno e cancelamento testados | Pendente | Recorrência, parcelas, anexos e contas bancárias |
+| B06 | Parcial: receitas por porção e custo histórico | Snapshot preservado após mudança de custo | Pendente | Conversões, rendimento e integração de compras |
+| B07 | Parcial: período e resultados gerenciais | Consultas reais; custos incompletos identificados | Pendente | Métricas adicionais e validação dos cadastros |
+| B08 | Não implementado | Bloqueado para emissão real | Pendente | Emitente, contador, provedor, A1/CSC e integração |
+| B09 | CSV financeiro implementado | Exportação de 205 lançamentos extras conferida | Pendente | XML/ZIP e pacote contábil completo |
+| B10 | Parcial: testes e localhost | APIs, banco, navegador e build verificados | Pendente | Seu aceite, restauração, volume, hardware e deploy |
+| B11 | Evolução não implementada | Pendente | Pendente | Escolher provedor e implementar integração |
+| B12 | Conciliação manual de cartão implementada | Repasse líquido, taxa e repetição testados | Pendente | Importação e conciliação automáticas |
+| B13 | Parcial: domínios e contexto por restaurante | Dois restaurantes sintéticos testados no mesmo banco | Pendente | RLS, onboarding, domínio real e auditoria ampliada |
+| B14 | Parcial: dois planos com bloqueio no servidor | Essencial bloqueia financeiro avançado | Pendente | Licença, suporte, cobrança e condições comerciais |
+| B15 | Evoluções abertas | Pendente por subentrega | Pendente | Priorização conforme os testes do piloto |
 
 O sistema existente contém partes desses fluxos. Isso não torna o bloco novo concluído. O quadro acompanha os requisitos deste manual e não apaga o trabalho já disponível na base.
 
@@ -1378,6 +1378,7 @@ Consultas de referência desta consolidação: 07/10/2026. Não copiar regras de
 
 | Versão | Data | Alteração | Estado |
 | --- | --- | --- | --- |
+| 1.1 | 07/10/2026 | MVP local 0.2, autorização de commits/migrações, evidências e pendências por bloco | Teste do proprietário e publicação pendentes |
 | 1.0 | 07/10/2026 | Consolidação do produto completo, contrato de design, arquitetura, regras, 16 blocos, dependências, plano até sábado e aceite por testes | Documento criado; implementação e aceites ainda pendentes |
 
 Alterações futuras devem registrar versão, motivação, blocos afetados e decisão. Os campos de status devem acompanhar a implementação; não atualizar como concluído apenas porque foi escrito código ou criada uma tela.

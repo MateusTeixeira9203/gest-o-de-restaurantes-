@@ -1,3 +1,36 @@
+# Gestor Food
+
+MVP local 0.2: operação, aprovação de pedidos, caixa, financeiro gerencial, custos e personalização por restaurante.
+
+- [Manual completo do produto](docs/restaurante-core/PRODUTO-COMPLETO-E-PLANO-DE-IMPLEMENTACAO.md)
+- [Entrega, testes e pendências](docs/restaurante-core/ENTREGA-LOCAL-2026-10-07.md)
+
+## Iniciar localmente
+
+```bash
+./scripts/dev-local.sh
+```
+
+Abra `http://localhost:3000`. O script usa o Node instalado ou o runtime local já disponível neste computador. Na configuração normal com Node e pnpm, `pnpm dev` também funciona.
+
+O Neon atual já recebeu as migrações até `0012`. **Abra um turno de caixa antes de receber pagamentos.** Não recrie nem reaplique manualmente as migrações antigas. Para próximas alterações: backup atualizado, `pnpm db:status` e `pnpm db:migrate --backup=/caminho/backup.dump`.
+
+O plano Profissional do piloto libera **Financeiro**, **Custos**, **Resultados** e **Contabilidade**. Emissão fiscal e integrações automáticas ainda não estão implementadas; consulte a entrega antes de anunciar capacidades.
+
+## Desenvolvimento e verificação
+
+```bash
+pnpm typecheck
+pnpm lint
+pnpm build
+# Requer localhost ativo e nenhuma gaveta aberta; cria e remove fixtures próprias no banco configurado.
+pnpm test:integration
+```
+
+O contexto vem de `restaurant_domains.hostname`. Localhost usa `RESTAURANT_SLUG` (padrão `patos-lanches`); previews oficiais usam `VERCEL_URL`. A sessão é vinculada ao restaurante. A expansão comercial ainda exige concluir os itens de segurança/onboarding do manual.
+
+---
+
 # Restaurante — Operação & Gestão
 
 Aplicação operacional para restaurante, construída em Next.js, TypeScript e Tailwind CSS. O fluxo funciona de ponta a ponta: pedido, cozinha, caixa, fechamento de mesa, estoque e gestão.
@@ -42,7 +75,7 @@ O script de build usa `next build --webpack`. As rotas são atendidas pelo App R
 - `/gestao` — login administrativo
 - `/gestao/dashboard`, `/gestao/mesas`, `/gestao/pedidos`, `/gestao/cardapio`, `/gestao/estoque`, `/gestao/caixa`, `/gestao/equipe`, `/gestao/relatorios`, `/gestao/configuracoes`
 
-No ambiente local de teste, as credenciais são `admin` / `admin123`. Em produção, use as variáveis de ambiente acima e troque a senha antes do primeiro uso.
+Use os acessos já configurados nas variáveis de ambiente ou cadastre a equipe pela gestão. Não há senha padrão garantida pelo código.
 
 ## Persistência e operação
 

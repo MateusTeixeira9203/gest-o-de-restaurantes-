@@ -8,7 +8,7 @@ O desenho mantém um repositório, uma aplicação principal e um banco de produ
 
 **Recorte atual de execução:** primeiro evoluir o Patos Lanches como restaurante único, com operação, financeiro e emissão fiscal das vendas em Minas Gerais. Novos clientes, múltiplos endereços e ativação comercial dos planos ficam para a próxima etapa. A [primeira versão](PRIMEIRA-VERSAO.md) e o [piloto fiscal em MG](FISCAL-MG.md) definem essa entrega; a arquitetura multiempresa permanece como destino.
 
-**Estado desta entrega:** arquitetura e pesquisa. Os recursos novos descritos aqui são especificação, não funcionalidades já implementadas. A leitura do código foi feita no checkout `4e02411`, com as leituras públicas posteriores registradas em Estado e melhorias; os novos fluxos ainda não foram implementados nem validados. Nenhuma migração, commit ou push faz parte desta entrega documental.
+**Estado atual:** MVP local 0.2 com migrações aplicadas, commits organizados e testes de operação, financeiro e isolamento. Veja [o que foi entregue e o que ficou pendente](ENTREGA-LOCAL-2026-10-07.md). O manual continua sendo o escopo completo; não confundir o recorte implementado com aceite de todos os blocos. Não houve push nem deploy.
 
 ## Documentos
 
