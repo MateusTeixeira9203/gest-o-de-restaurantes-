@@ -1,0 +1,2194 @@
+{
+  "columns": [
+    {
+      "table_name": "delivery_details",
+      "column_name": "order_id",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "delivery_details",
+      "column_name": "address_line1",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "delivery_details",
+      "column_name": "address_line2",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "delivery_details",
+      "column_name": "neighborhood",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "delivery_details",
+      "column_name": "city",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "delivery_details",
+      "column_name": "state",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "delivery_details",
+      "column_name": "postal_code",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "delivery_details",
+      "column_name": "reference",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "delivery_details",
+      "column_name": "latitude",
+      "udt_name": "numeric",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "delivery_details",
+      "column_name": "longitude",
+      "udt_name": "numeric",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "delivery_details",
+      "column_name": "delivery_contact_name",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "delivery_details",
+      "column_name": "delivery_contact_phone",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "delivery_details",
+      "column_name": "courier_name",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "delivery_details",
+      "column_name": "assigned_at",
+      "udt_name": "timestamptz",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "delivery_details",
+      "column_name": "departed_at",
+      "udt_name": "timestamptz",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "delivery_details",
+      "column_name": "delivered_at",
+      "udt_name": "timestamptz",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "dining_tables",
+      "column_name": "id",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": "gen_random_uuid()"
+    },
+    {
+      "table_name": "dining_tables",
+      "column_name": "restaurant_id",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "dining_tables",
+      "column_name": "number",
+      "udt_name": "int4",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "dining_tables",
+      "column_name": "label",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "dining_tables",
+      "column_name": "active",
+      "udt_name": "bool",
+      "is_nullable": "NO",
+      "column_default": "true"
+    },
+    {
+      "table_name": "dining_tables",
+      "column_name": "created_at",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "inventory_items",
+      "column_name": "id",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": "gen_random_uuid()"
+    },
+    {
+      "table_name": "inventory_items",
+      "column_name": "restaurant_id",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "inventory_items",
+      "column_name": "name",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "inventory_items",
+      "column_name": "category",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": "'Geral'::text"
+    },
+    {
+      "table_name": "inventory_items",
+      "column_name": "unit",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "inventory_items",
+      "column_name": "quantity",
+      "udt_name": "numeric",
+      "is_nullable": "NO",
+      "column_default": "0"
+    },
+    {
+      "table_name": "inventory_items",
+      "column_name": "minimum_quantity",
+      "udt_name": "numeric",
+      "is_nullable": "NO",
+      "column_default": "0"
+    },
+    {
+      "table_name": "inventory_items",
+      "column_name": "average_cost_cents",
+      "udt_name": "numeric",
+      "is_nullable": "NO",
+      "column_default": "0"
+    },
+    {
+      "table_name": "inventory_items",
+      "column_name": "active",
+      "udt_name": "bool",
+      "is_nullable": "NO",
+      "column_default": "true"
+    },
+    {
+      "table_name": "inventory_items",
+      "column_name": "created_at",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "inventory_items",
+      "column_name": "updated_at",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "inventory_movements",
+      "column_name": "id",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": "gen_random_uuid()"
+    },
+    {
+      "table_name": "inventory_movements",
+      "column_name": "restaurant_id",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "inventory_movements",
+      "column_name": "inventory_item_id",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "inventory_movements",
+      "column_name": "type",
+      "udt_name": "inventory_movement_type",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "inventory_movements",
+      "column_name": "quantity_delta",
+      "udt_name": "numeric",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "inventory_movements",
+      "column_name": "unit_cost_cents",
+      "udt_name": "numeric",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "inventory_movements",
+      "column_name": "order_id",
+      "udt_name": "uuid",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "inventory_movements",
+      "column_name": "note",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "inventory_movements",
+      "column_name": "created_at",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "inventory_settings",
+      "column_name": "restaurant_id",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "inventory_settings",
+      "column_name": "enabled",
+      "udt_name": "bool",
+      "is_nullable": "NO",
+      "column_default": "false"
+    },
+    {
+      "table_name": "inventory_settings",
+      "column_name": "enabled_at",
+      "udt_name": "timestamptz",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "inventory_settings",
+      "column_name": "updated_at",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "kitchen_tickets",
+      "column_name": "id",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": "gen_random_uuid()"
+    },
+    {
+      "table_name": "kitchen_tickets",
+      "column_name": "restaurant_id",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "kitchen_tickets",
+      "column_name": "order_id",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "kitchen_tickets",
+      "column_name": "kitchen_sector",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "kitchen_tickets",
+      "column_name": "queue_number",
+      "udt_name": "int8",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "kitchen_tickets",
+      "column_name": "status",
+      "udt_name": "kitchen_ticket_status",
+      "is_nullable": "NO",
+      "column_default": "'new'::kitchen_ticket_status"
+    },
+    {
+      "table_name": "kitchen_tickets",
+      "column_name": "priority",
+      "udt_name": "int2",
+      "is_nullable": "NO",
+      "column_default": "0"
+    },
+    {
+      "table_name": "kitchen_tickets",
+      "column_name": "started_at",
+      "udt_name": "timestamptz",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "kitchen_tickets",
+      "column_name": "ready_at",
+      "udt_name": "timestamptz",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "kitchen_tickets",
+      "column_name": "created_at",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "kitchen_tickets",
+      "column_name": "updated_at",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "menu_products",
+      "column_name": "id",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": "gen_random_uuid()"
+    },
+    {
+      "table_name": "menu_products",
+      "column_name": "restaurant_id",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "menu_products",
+      "column_name": "name",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "menu_products",
+      "column_name": "description",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": "''::text"
+    },
+    {
+      "table_name": "menu_products",
+      "column_name": "category",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "menu_products",
+      "column_name": "kitchen_sector",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "menu_products",
+      "column_name": "available",
+      "udt_name": "bool",
+      "is_nullable": "NO",
+      "column_default": "true"
+    },
+    {
+      "table_name": "menu_products",
+      "column_name": "featured",
+      "udt_name": "bool",
+      "is_nullable": "NO",
+      "column_default": "false"
+    },
+    {
+      "table_name": "menu_products",
+      "column_name": "sort_order",
+      "udt_name": "int4",
+      "is_nullable": "NO",
+      "column_default": "0"
+    },
+    {
+      "table_name": "menu_products",
+      "column_name": "created_at",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "menu_products",
+      "column_name": "updated_at",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "menu_variants",
+      "column_name": "id",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": "gen_random_uuid()"
+    },
+    {
+      "table_name": "menu_variants",
+      "column_name": "product_id",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "menu_variants",
+      "column_name": "name",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "menu_variants",
+      "column_name": "price_cents",
+      "udt_name": "int4",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "menu_variants",
+      "column_name": "active",
+      "udt_name": "bool",
+      "is_nullable": "NO",
+      "column_default": "true"
+    },
+    {
+      "table_name": "menu_variants",
+      "column_name": "sort_order",
+      "udt_name": "int4",
+      "is_nullable": "NO",
+      "column_default": "0"
+    },
+    {
+      "table_name": "order_events",
+      "column_name": "id",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": "gen_random_uuid()"
+    },
+    {
+      "table_name": "order_events",
+      "column_name": "order_id",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "order_events",
+      "column_name": "event_type",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "order_events",
+      "column_name": "actor_role",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "order_events",
+      "column_name": "detail",
+      "udt_name": "jsonb",
+      "is_nullable": "NO",
+      "column_default": "'{}'::jsonb"
+    },
+    {
+      "table_name": "order_events",
+      "column_name": "created_at",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "order_items",
+      "column_name": "id",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": "gen_random_uuid()"
+    },
+    {
+      "table_name": "order_items",
+      "column_name": "order_id",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "order_items",
+      "column_name": "product_id",
+      "udt_name": "uuid",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "order_items",
+      "column_name": "variant_id",
+      "udt_name": "uuid",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "order_items",
+      "column_name": "product_name",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "order_items",
+      "column_name": "variant_name",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "order_items",
+      "column_name": "kitchen_sector",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "order_items",
+      "column_name": "quantity",
+      "udt_name": "int4",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "order_items",
+      "column_name": "unit_price_cents",
+      "udt_name": "int4",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "order_items",
+      "column_name": "addons",
+      "udt_name": "jsonb",
+      "is_nullable": "NO",
+      "column_default": "'[]'::jsonb"
+    },
+    {
+      "table_name": "order_items",
+      "column_name": "note",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "order_items",
+      "column_name": "created_at",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "orders",
+      "column_name": "id",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": "gen_random_uuid()"
+    },
+    {
+      "table_name": "orders",
+      "column_name": "restaurant_id",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "orders",
+      "column_name": "order_number",
+      "udt_name": "int8",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "orders",
+      "column_name": "queue_number",
+      "udt_name": "int8",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "orders",
+      "column_name": "source",
+      "udt_name": "order_source",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "orders",
+      "column_name": "fulfillment",
+      "udt_name": "fulfillment_type",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "orders",
+      "column_name": "status",
+      "udt_name": "order_status",
+      "is_nullable": "NO",
+      "column_default": "'draft'::order_status"
+    },
+    {
+      "table_name": "orders",
+      "column_name": "table_id",
+      "udt_name": "uuid",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "orders",
+      "column_name": "customer_name",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "orders",
+      "column_name": "customer_phone",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "orders",
+      "column_name": "notes",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "orders",
+      "column_name": "estimated_minutes",
+      "udt_name": "int4",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "orders",
+      "column_name": "subtotal_cents",
+      "udt_name": "int4",
+      "is_nullable": "NO",
+      "column_default": "0"
+    },
+    {
+      "table_name": "orders",
+      "column_name": "service_cents",
+      "udt_name": "int4",
+      "is_nullable": "NO",
+      "column_default": "0"
+    },
+    {
+      "table_name": "orders",
+      "column_name": "delivery_fee_cents",
+      "udt_name": "int4",
+      "is_nullable": "NO",
+      "column_default": "0"
+    },
+    {
+      "table_name": "orders",
+      "column_name": "total_cents",
+      "udt_name": "int4",
+      "is_nullable": "NO",
+      "column_default": "0"
+    },
+    {
+      "table_name": "orders",
+      "column_name": "confirmed_at",
+      "udt_name": "timestamptz",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "orders",
+      "column_name": "ready_at",
+      "udt_name": "timestamptz",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "orders",
+      "column_name": "collected_at",
+      "udt_name": "timestamptz",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "orders",
+      "column_name": "delivered_at",
+      "udt_name": "timestamptz",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "orders",
+      "column_name": "cancelled_at",
+      "udt_name": "timestamptz",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "orders",
+      "column_name": "created_at",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "orders",
+      "column_name": "updated_at",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "payments",
+      "column_name": "id",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": "gen_random_uuid()"
+    },
+    {
+      "table_name": "payments",
+      "column_name": "order_id",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "payments",
+      "column_name": "method",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "payments",
+      "column_name": "amount_cents",
+      "udt_name": "int4",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "payments",
+      "column_name": "status",
+      "udt_name": "payment_status",
+      "is_nullable": "NO",
+      "column_default": "'pending'::payment_status"
+    },
+    {
+      "table_name": "payments",
+      "column_name": "external_reference",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "payments",
+      "column_name": "paid_at",
+      "udt_name": "timestamptz",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "payments",
+      "column_name": "created_at",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "product_addons",
+      "column_name": "id",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": "gen_random_uuid()"
+    },
+    {
+      "table_name": "product_addons",
+      "column_name": "product_id",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "product_addons",
+      "column_name": "name",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "product_addons",
+      "column_name": "price_cents",
+      "udt_name": "int4",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "product_addons",
+      "column_name": "active",
+      "udt_name": "bool",
+      "is_nullable": "NO",
+      "column_default": "true"
+    },
+    {
+      "table_name": "product_addons",
+      "column_name": "sort_order",
+      "udt_name": "int4",
+      "is_nullable": "NO",
+      "column_default": "0"
+    },
+    {
+      "table_name": "product_images",
+      "column_name": "product_id",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "product_images",
+      "column_name": "mime_type",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "product_images",
+      "column_name": "image_data",
+      "udt_name": "bytea",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "product_images",
+      "column_name": "updated_at",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "product_recipe_components",
+      "column_name": "id",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": "gen_random_uuid()"
+    },
+    {
+      "table_name": "product_recipe_components",
+      "column_name": "variant_id",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "product_recipe_components",
+      "column_name": "inventory_item_id",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "product_recipe_components",
+      "column_name": "quantity",
+      "udt_name": "numeric",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "product_recipe_components",
+      "column_name": "created_at",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "restaurant_brand_images",
+      "column_name": "restaurant_id",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "restaurant_brand_images",
+      "column_name": "kind",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "restaurant_brand_images",
+      "column_name": "mime_type",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "restaurant_brand_images",
+      "column_name": "image_data",
+      "udt_name": "bytea",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "restaurant_brand_images",
+      "column_name": "updated_at",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "restaurant_counters",
+      "column_name": "restaurant_id",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "restaurant_counters",
+      "column_name": "next_order_number",
+      "udt_name": "int8",
+      "is_nullable": "NO",
+      "column_default": "1"
+    },
+    {
+      "table_name": "restaurant_counters",
+      "column_name": "next_queue_number",
+      "udt_name": "int8",
+      "is_nullable": "NO",
+      "column_default": "1"
+    },
+    {
+      "table_name": "restaurant_counters",
+      "column_name": "updated_at",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "restaurants",
+      "column_name": "id",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": "gen_random_uuid()"
+    },
+    {
+      "table_name": "restaurants",
+      "column_name": "slug",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "restaurants",
+      "column_name": "name",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "restaurants",
+      "column_name": "timezone",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": "'America/Sao_Paulo'::text"
+    },
+    {
+      "table_name": "restaurants",
+      "column_name": "whatsapp",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "restaurants",
+      "column_name": "service_rate_basis_points",
+      "udt_name": "int4",
+      "is_nullable": "NO",
+      "column_default": "1000"
+    },
+    {
+      "table_name": "restaurants",
+      "column_name": "created_at",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "restaurants",
+      "column_name": "updated_at",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "staff_members",
+      "column_name": "id",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": "gen_random_uuid()"
+    },
+    {
+      "table_name": "staff_members",
+      "column_name": "restaurant_id",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "staff_members",
+      "column_name": "name",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "staff_members",
+      "column_name": "role",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "staff_members",
+      "column_name": "pin_salt",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "staff_members",
+      "column_name": "pin_hash",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "staff_members",
+      "column_name": "active",
+      "udt_name": "bool",
+      "is_nullable": "NO",
+      "column_default": "true"
+    },
+    {
+      "table_name": "staff_members",
+      "column_name": "created_at",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "staff_members",
+      "column_name": "updated_at",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    }
+  ],
+  "constraints": [
+    {
+      "relname": "delivery_details",
+      "conname": "delivery_details_address_line1_not_null",
+      "definition": "NOT NULL address_line1"
+    },
+    {
+      "relname": "delivery_details",
+      "conname": "delivery_details_check",
+      "definition": "CHECK ((((latitude IS NULL) AND (longitude IS NULL)) OR ((latitude IS NOT NULL) AND (longitude IS NOT NULL))))"
+    },
+    {
+      "relname": "delivery_details",
+      "conname": "delivery_details_order_id_fkey",
+      "definition": "FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE"
+    },
+    {
+      "relname": "delivery_details",
+      "conname": "delivery_details_order_id_not_null",
+      "definition": "NOT NULL order_id"
+    },
+    {
+      "relname": "delivery_details",
+      "conname": "delivery_details_pkey",
+      "definition": "PRIMARY KEY (order_id)"
+    },
+    {
+      "relname": "dining_tables",
+      "conname": "dining_tables_active_not_null",
+      "definition": "NOT NULL active"
+    },
+    {
+      "relname": "dining_tables",
+      "conname": "dining_tables_created_at_not_null",
+      "definition": "NOT NULL created_at"
+    },
+    {
+      "relname": "dining_tables",
+      "conname": "dining_tables_id_not_null",
+      "definition": "NOT NULL id"
+    },
+    {
+      "relname": "dining_tables",
+      "conname": "dining_tables_number_check",
+      "definition": "CHECK ((number > 0))"
+    },
+    {
+      "relname": "dining_tables",
+      "conname": "dining_tables_number_not_null",
+      "definition": "NOT NULL number"
+    },
+    {
+      "relname": "dining_tables",
+      "conname": "dining_tables_pkey",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "relname": "dining_tables",
+      "conname": "dining_tables_restaurant_id_fkey",
+      "definition": "FOREIGN KEY (restaurant_id) REFERENCES restaurants(id) ON DELETE CASCADE"
+    },
+    {
+      "relname": "dining_tables",
+      "conname": "dining_tables_restaurant_id_not_null",
+      "definition": "NOT NULL restaurant_id"
+    },
+    {
+      "relname": "dining_tables",
+      "conname": "dining_tables_restaurant_id_number_key",
+      "definition": "UNIQUE (restaurant_id, number)"
+    },
+    {
+      "relname": "inventory_items",
+      "conname": "inventory_items_active_not_null",
+      "definition": "NOT NULL active"
+    },
+    {
+      "relname": "inventory_items",
+      "conname": "inventory_items_average_cost_cents_check",
+      "definition": "CHECK ((average_cost_cents >= (0)::numeric))"
+    },
+    {
+      "relname": "inventory_items",
+      "conname": "inventory_items_average_cost_cents_not_null",
+      "definition": "NOT NULL average_cost_cents"
+    },
+    {
+      "relname": "inventory_items",
+      "conname": "inventory_items_category_not_null",
+      "definition": "NOT NULL category"
+    },
+    {
+      "relname": "inventory_items",
+      "conname": "inventory_items_created_at_not_null",
+      "definition": "NOT NULL created_at"
+    },
+    {
+      "relname": "inventory_items",
+      "conname": "inventory_items_id_not_null",
+      "definition": "NOT NULL id"
+    },
+    {
+      "relname": "inventory_items",
+      "conname": "inventory_items_minimum_quantity_check",
+      "definition": "CHECK ((minimum_quantity >= (0)::numeric))"
+    },
+    {
+      "relname": "inventory_items",
+      "conname": "inventory_items_minimum_quantity_not_null",
+      "definition": "NOT NULL minimum_quantity"
+    },
+    {
+      "relname": "inventory_items",
+      "conname": "inventory_items_name_not_null",
+      "definition": "NOT NULL name"
+    },
+    {
+      "relname": "inventory_items",
+      "conname": "inventory_items_pkey",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "relname": "inventory_items",
+      "conname": "inventory_items_quantity_check",
+      "definition": "CHECK ((quantity >= (0)::numeric))"
+    },
+    {
+      "relname": "inventory_items",
+      "conname": "inventory_items_quantity_not_null",
+      "definition": "NOT NULL quantity"
+    },
+    {
+      "relname": "inventory_items",
+      "conname": "inventory_items_restaurant_id_fkey",
+      "definition": "FOREIGN KEY (restaurant_id) REFERENCES restaurants(id) ON DELETE CASCADE"
+    },
+    {
+      "relname": "inventory_items",
+      "conname": "inventory_items_restaurant_id_name_key",
+      "definition": "UNIQUE (restaurant_id, name)"
+    },
+    {
+      "relname": "inventory_items",
+      "conname": "inventory_items_restaurant_id_not_null",
+      "definition": "NOT NULL restaurant_id"
+    },
+    {
+      "relname": "inventory_items",
+      "conname": "inventory_items_unit_check",
+      "definition": "CHECK ((unit = ANY (ARRAY['un'::text, 'g'::text, 'kg'::text, 'ml'::text, 'L'::text])))"
+    },
+    {
+      "relname": "inventory_items",
+      "conname": "inventory_items_unit_not_null",
+      "definition": "NOT NULL unit"
+    },
+    {
+      "relname": "inventory_items",
+      "conname": "inventory_items_updated_at_not_null",
+      "definition": "NOT NULL updated_at"
+    },
+    {
+      "relname": "inventory_movements",
+      "conname": "inventory_movements_created_at_not_null",
+      "definition": "NOT NULL created_at"
+    },
+    {
+      "relname": "inventory_movements",
+      "conname": "inventory_movements_id_not_null",
+      "definition": "NOT NULL id"
+    },
+    {
+      "relname": "inventory_movements",
+      "conname": "inventory_movements_inventory_item_id_fkey",
+      "definition": "FOREIGN KEY (inventory_item_id) REFERENCES inventory_items(id) ON DELETE RESTRICT"
+    },
+    {
+      "relname": "inventory_movements",
+      "conname": "inventory_movements_inventory_item_id_not_null",
+      "definition": "NOT NULL inventory_item_id"
+    },
+    {
+      "relname": "inventory_movements",
+      "conname": "inventory_movements_order_id_fkey",
+      "definition": "FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE SET NULL"
+    },
+    {
+      "relname": "inventory_movements",
+      "conname": "inventory_movements_pkey",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "relname": "inventory_movements",
+      "conname": "inventory_movements_quantity_delta_check",
+      "definition": "CHECK ((quantity_delta <> (0)::numeric))"
+    },
+    {
+      "relname": "inventory_movements",
+      "conname": "inventory_movements_quantity_delta_not_null",
+      "definition": "NOT NULL quantity_delta"
+    },
+    {
+      "relname": "inventory_movements",
+      "conname": "inventory_movements_restaurant_id_fkey",
+      "definition": "FOREIGN KEY (restaurant_id) REFERENCES restaurants(id) ON DELETE CASCADE"
+    },
+    {
+      "relname": "inventory_movements",
+      "conname": "inventory_movements_restaurant_id_not_null",
+      "definition": "NOT NULL restaurant_id"
+    },
+    {
+      "relname": "inventory_movements",
+      "conname": "inventory_movements_type_not_null",
+      "definition": "NOT NULL type"
+    },
+    {
+      "relname": "inventory_settings",
+      "conname": "inventory_settings_enabled_not_null",
+      "definition": "NOT NULL enabled"
+    },
+    {
+      "relname": "inventory_settings",
+      "conname": "inventory_settings_pkey",
+      "definition": "PRIMARY KEY (restaurant_id)"
+    },
+    {
+      "relname": "inventory_settings",
+      "conname": "inventory_settings_restaurant_id_fkey",
+      "definition": "FOREIGN KEY (restaurant_id) REFERENCES restaurants(id) ON DELETE CASCADE"
+    },
+    {
+      "relname": "inventory_settings",
+      "conname": "inventory_settings_restaurant_id_not_null",
+      "definition": "NOT NULL restaurant_id"
+    },
+    {
+      "relname": "inventory_settings",
+      "conname": "inventory_settings_updated_at_not_null",
+      "definition": "NOT NULL updated_at"
+    },
+    {
+      "relname": "kitchen_tickets",
+      "conname": "kitchen_tickets_created_at_not_null",
+      "definition": "NOT NULL created_at"
+    },
+    {
+      "relname": "kitchen_tickets",
+      "conname": "kitchen_tickets_id_not_null",
+      "definition": "NOT NULL id"
+    },
+    {
+      "relname": "kitchen_tickets",
+      "conname": "kitchen_tickets_kitchen_sector_not_null",
+      "definition": "NOT NULL kitchen_sector"
+    },
+    {
+      "relname": "kitchen_tickets",
+      "conname": "kitchen_tickets_order_id_fkey",
+      "definition": "FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE"
+    },
+    {
+      "relname": "kitchen_tickets",
+      "conname": "kitchen_tickets_order_id_kitchen_sector_key",
+      "definition": "UNIQUE (order_id, kitchen_sector)"
+    },
+    {
+      "relname": "kitchen_tickets",
+      "conname": "kitchen_tickets_order_id_not_null",
+      "definition": "NOT NULL order_id"
+    },
+    {
+      "relname": "kitchen_tickets",
+      "conname": "kitchen_tickets_pkey",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "relname": "kitchen_tickets",
+      "conname": "kitchen_tickets_priority_not_null",
+      "definition": "NOT NULL priority"
+    },
+    {
+      "relname": "kitchen_tickets",
+      "conname": "kitchen_tickets_queue_number_not_null",
+      "definition": "NOT NULL queue_number"
+    },
+    {
+      "relname": "kitchen_tickets",
+      "conname": "kitchen_tickets_restaurant_id_fkey",
+      "definition": "FOREIGN KEY (restaurant_id) REFERENCES restaurants(id) ON DELETE CASCADE"
+    },
+    {
+      "relname": "kitchen_tickets",
+      "conname": "kitchen_tickets_restaurant_id_not_null",
+      "definition": "NOT NULL restaurant_id"
+    },
+    {
+      "relname": "kitchen_tickets",
+      "conname": "kitchen_tickets_status_not_null",
+      "definition": "NOT NULL status"
+    },
+    {
+      "relname": "kitchen_tickets",
+      "conname": "kitchen_tickets_updated_at_not_null",
+      "definition": "NOT NULL updated_at"
+    },
+    {
+      "relname": "menu_products",
+      "conname": "menu_products_available_not_null",
+      "definition": "NOT NULL available"
+    },
+    {
+      "relname": "menu_products",
+      "conname": "menu_products_category_not_null",
+      "definition": "NOT NULL category"
+    },
+    {
+      "relname": "menu_products",
+      "conname": "menu_products_created_at_not_null",
+      "definition": "NOT NULL created_at"
+    },
+    {
+      "relname": "menu_products",
+      "conname": "menu_products_description_not_null",
+      "definition": "NOT NULL description"
+    },
+    {
+      "relname": "menu_products",
+      "conname": "menu_products_featured_not_null",
+      "definition": "NOT NULL featured"
+    },
+    {
+      "relname": "menu_products",
+      "conname": "menu_products_id_not_null",
+      "definition": "NOT NULL id"
+    },
+    {
+      "relname": "menu_products",
+      "conname": "menu_products_kitchen_sector_not_null",
+      "definition": "NOT NULL kitchen_sector"
+    },
+    {
+      "relname": "menu_products",
+      "conname": "menu_products_name_not_null",
+      "definition": "NOT NULL name"
+    },
+    {
+      "relname": "menu_products",
+      "conname": "menu_products_pkey",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "relname": "menu_products",
+      "conname": "menu_products_restaurant_id_fkey",
+      "definition": "FOREIGN KEY (restaurant_id) REFERENCES restaurants(id) ON DELETE CASCADE"
+    },
+    {
+      "relname": "menu_products",
+      "conname": "menu_products_restaurant_id_not_null",
+      "definition": "NOT NULL restaurant_id"
+    },
+    {
+      "relname": "menu_products",
+      "conname": "menu_products_sort_order_not_null",
+      "definition": "NOT NULL sort_order"
+    },
+    {
+      "relname": "menu_products",
+      "conname": "menu_products_updated_at_not_null",
+      "definition": "NOT NULL updated_at"
+    },
+    {
+      "relname": "menu_variants",
+      "conname": "menu_variants_active_not_null",
+      "definition": "NOT NULL active"
+    },
+    {
+      "relname": "menu_variants",
+      "conname": "menu_variants_id_not_null",
+      "definition": "NOT NULL id"
+    },
+    {
+      "relname": "menu_variants",
+      "conname": "menu_variants_name_not_null",
+      "definition": "NOT NULL name"
+    },
+    {
+      "relname": "menu_variants",
+      "conname": "menu_variants_pkey",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "relname": "menu_variants",
+      "conname": "menu_variants_price_cents_check",
+      "definition": "CHECK ((price_cents >= 0))"
+    },
+    {
+      "relname": "menu_variants",
+      "conname": "menu_variants_price_cents_not_null",
+      "definition": "NOT NULL price_cents"
+    },
+    {
+      "relname": "menu_variants",
+      "conname": "menu_variants_product_id_fkey",
+      "definition": "FOREIGN KEY (product_id) REFERENCES menu_products(id) ON DELETE CASCADE"
+    },
+    {
+      "relname": "menu_variants",
+      "conname": "menu_variants_product_id_not_null",
+      "definition": "NOT NULL product_id"
+    },
+    {
+      "relname": "menu_variants",
+      "conname": "menu_variants_sort_order_not_null",
+      "definition": "NOT NULL sort_order"
+    },
+    {
+      "relname": "order_events",
+      "conname": "order_events_actor_role_not_null",
+      "definition": "NOT NULL actor_role"
+    },
+    {
+      "relname": "order_events",
+      "conname": "order_events_created_at_not_null",
+      "definition": "NOT NULL created_at"
+    },
+    {
+      "relname": "order_events",
+      "conname": "order_events_detail_not_null",
+      "definition": "NOT NULL detail"
+    },
+    {
+      "relname": "order_events",
+      "conname": "order_events_event_type_not_null",
+      "definition": "NOT NULL event_type"
+    },
+    {
+      "relname": "order_events",
+      "conname": "order_events_id_not_null",
+      "definition": "NOT NULL id"
+    },
+    {
+      "relname": "order_events",
+      "conname": "order_events_order_id_fkey",
+      "definition": "FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE"
+    },
+    {
+      "relname": "order_events",
+      "conname": "order_events_order_id_not_null",
+      "definition": "NOT NULL order_id"
+    },
+    {
+      "relname": "order_events",
+      "conname": "order_events_pkey",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "relname": "order_items",
+      "conname": "order_items_addons_not_null",
+      "definition": "NOT NULL addons"
+    },
+    {
+      "relname": "order_items",
+      "conname": "order_items_created_at_not_null",
+      "definition": "NOT NULL created_at"
+    },
+    {
+      "relname": "order_items",
+      "conname": "order_items_id_not_null",
+      "definition": "NOT NULL id"
+    },
+    {
+      "relname": "order_items",
+      "conname": "order_items_kitchen_sector_not_null",
+      "definition": "NOT NULL kitchen_sector"
+    },
+    {
+      "relname": "order_items",
+      "conname": "order_items_order_id_fkey",
+      "definition": "FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE"
+    },
+    {
+      "relname": "order_items",
+      "conname": "order_items_order_id_not_null",
+      "definition": "NOT NULL order_id"
+    },
+    {
+      "relname": "order_items",
+      "conname": "order_items_pkey",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "relname": "order_items",
+      "conname": "order_items_product_id_fkey",
+      "definition": "FOREIGN KEY (product_id) REFERENCES menu_products(id) ON DELETE SET NULL"
+    },
+    {
+      "relname": "order_items",
+      "conname": "order_items_product_name_not_null",
+      "definition": "NOT NULL product_name"
+    },
+    {
+      "relname": "order_items",
+      "conname": "order_items_quantity_check",
+      "definition": "CHECK ((quantity > 0))"
+    },
+    {
+      "relname": "order_items",
+      "conname": "order_items_quantity_not_null",
+      "definition": "NOT NULL quantity"
+    },
+    {
+      "relname": "order_items",
+      "conname": "order_items_unit_price_cents_check",
+      "definition": "CHECK ((unit_price_cents >= 0))"
+    },
+    {
+      "relname": "order_items",
+      "conname": "order_items_unit_price_cents_not_null",
+      "definition": "NOT NULL unit_price_cents"
+    },
+    {
+      "relname": "order_items",
+      "conname": "order_items_variant_id_fkey",
+      "definition": "FOREIGN KEY (variant_id) REFERENCES menu_variants(id) ON DELETE SET NULL"
+    },
+    {
+      "relname": "order_items",
+      "conname": "order_items_variant_name_not_null",
+      "definition": "NOT NULL variant_name"
+    },
+    {
+      "relname": "orders",
+      "conname": "orders_check",
+      "definition": "CHECK ((((fulfillment = 'dine_in'::fulfillment_type) AND (table_id IS NOT NULL)) OR (fulfillment <> 'dine_in'::fulfillment_type)))"
+    },
+    {
+      "relname": "orders",
+      "conname": "orders_created_at_not_null",
+      "definition": "NOT NULL created_at"
+    },
+    {
+      "relname": "orders",
+      "conname": "orders_delivery_fee_cents_check",
+      "definition": "CHECK ((delivery_fee_cents >= 0))"
+    },
+    {
+      "relname": "orders",
+      "conname": "orders_delivery_fee_cents_not_null",
+      "definition": "NOT NULL delivery_fee_cents"
+    },
+    {
+      "relname": "orders",
+      "conname": "orders_estimated_minutes_check",
+      "definition": "CHECK (((estimated_minutes IS NULL) OR (estimated_minutes >= 0)))"
+    },
+    {
+      "relname": "orders",
+      "conname": "orders_fulfillment_not_null",
+      "definition": "NOT NULL fulfillment"
+    },
+    {
+      "relname": "orders",
+      "conname": "orders_id_not_null",
+      "definition": "NOT NULL id"
+    },
+    {
+      "relname": "orders",
+      "conname": "orders_order_number_not_null",
+      "definition": "NOT NULL order_number"
+    },
+    {
+      "relname": "orders",
+      "conname": "orders_pkey",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "relname": "orders",
+      "conname": "orders_queue_number_not_null",
+      "definition": "NOT NULL queue_number"
+    },
+    {
+      "relname": "orders",
+      "conname": "orders_restaurant_id_fkey",
+      "definition": "FOREIGN KEY (restaurant_id) REFERENCES restaurants(id) ON DELETE CASCADE"
+    },
+    {
+      "relname": "orders",
+      "conname": "orders_restaurant_id_not_null",
+      "definition": "NOT NULL restaurant_id"
+    },
+    {
+      "relname": "orders",
+      "conname": "orders_restaurant_id_order_number_key",
+      "definition": "UNIQUE (restaurant_id, order_number)"
+    },
+    {
+      "relname": "orders",
+      "conname": "orders_restaurant_id_queue_number_key",
+      "definition": "UNIQUE (restaurant_id, queue_number)"
+    },
+    {
+      "relname": "orders",
+      "conname": "orders_service_cents_check",
+      "definition": "CHECK ((service_cents >= 0))"
+    },
+    {
+      "relname": "orders",
+      "conname": "orders_service_cents_not_null",
+      "definition": "NOT NULL service_cents"
+    },
+    {
+      "relname": "orders",
+      "conname": "orders_source_not_null",
+      "definition": "NOT NULL source"
+    },
+    {
+      "relname": "orders",
+      "conname": "orders_status_not_null",
+      "definition": "NOT NULL status"
+    },
+    {
+      "relname": "orders",
+      "conname": "orders_subtotal_cents_check",
+      "definition": "CHECK ((subtotal_cents >= 0))"
+    },
+    {
+      "relname": "orders",
+      "conname": "orders_subtotal_cents_not_null",
+      "definition": "NOT NULL subtotal_cents"
+    },
+    {
+      "relname": "orders",
+      "conname": "orders_table_id_fkey",
+      "definition": "FOREIGN KEY (table_id) REFERENCES dining_tables(id) ON DELETE SET NULL"
+    },
+    {
+      "relname": "orders",
+      "conname": "orders_total_cents_check",
+      "definition": "CHECK ((total_cents >= 0))"
+    },
+    {
+      "relname": "orders",
+      "conname": "orders_total_cents_not_null",
+      "definition": "NOT NULL total_cents"
+    },
+    {
+      "relname": "orders",
+      "conname": "orders_updated_at_not_null",
+      "definition": "NOT NULL updated_at"
+    },
+    {
+      "relname": "payments",
+      "conname": "payments_amount_cents_check",
+      "definition": "CHECK ((amount_cents > 0))"
+    },
+    {
+      "relname": "payments",
+      "conname": "payments_amount_cents_not_null",
+      "definition": "NOT NULL amount_cents"
+    },
+    {
+      "relname": "payments",
+      "conname": "payments_created_at_not_null",
+      "definition": "NOT NULL created_at"
+    },
+    {
+      "relname": "payments",
+      "conname": "payments_id_not_null",
+      "definition": "NOT NULL id"
+    },
+    {
+      "relname": "payments",
+      "conname": "payments_method_check",
+      "definition": "CHECK ((method = ANY (ARRAY['pix'::text, 'cash'::text, 'debit'::text, 'credit'::text, 'online'::text])))"
+    },
+    {
+      "relname": "payments",
+      "conname": "payments_method_not_null",
+      "definition": "NOT NULL method"
+    },
+    {
+      "relname": "payments",
+      "conname": "payments_order_id_fkey",
+      "definition": "FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE"
+    },
+    {
+      "relname": "payments",
+      "conname": "payments_order_id_not_null",
+      "definition": "NOT NULL order_id"
+    },
+    {
+      "relname": "payments",
+      "conname": "payments_pkey",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "relname": "payments",
+      "conname": "payments_status_not_null",
+      "definition": "NOT NULL status"
+    },
+    {
+      "relname": "product_addons",
+      "conname": "product_addons_active_not_null",
+      "definition": "NOT NULL active"
+    },
+    {
+      "relname": "product_addons",
+      "conname": "product_addons_id_not_null",
+      "definition": "NOT NULL id"
+    },
+    {
+      "relname": "product_addons",
+      "conname": "product_addons_name_not_null",
+      "definition": "NOT NULL name"
+    },
+    {
+      "relname": "product_addons",
+      "conname": "product_addons_pkey",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "relname": "product_addons",
+      "conname": "product_addons_price_cents_check",
+      "definition": "CHECK ((price_cents >= 0))"
+    },
+    {
+      "relname": "product_addons",
+      "conname": "product_addons_price_cents_not_null",
+      "definition": "NOT NULL price_cents"
+    },
+    {
+      "relname": "product_addons",
+      "conname": "product_addons_product_id_fkey",
+      "definition": "FOREIGN KEY (product_id) REFERENCES menu_products(id) ON DELETE CASCADE"
+    },
+    {
+      "relname": "product_addons",
+      "conname": "product_addons_product_id_not_null",
+      "definition": "NOT NULL product_id"
+    },
+    {
+      "relname": "product_addons",
+      "conname": "product_addons_sort_order_not_null",
+      "definition": "NOT NULL sort_order"
+    },
+    {
+      "relname": "product_images",
+      "conname": "product_images_image_data_check",
+      "definition": "CHECK (((octet_length(image_data) >= 1) AND (octet_length(image_data) <= 600000)))"
+    },
+    {
+      "relname": "product_images",
+      "conname": "product_images_image_data_not_null",
+      "definition": "NOT NULL image_data"
+    },
+    {
+      "relname": "product_images",
+      "conname": "product_images_mime_type_check",
+      "definition": "CHECK ((mime_type = 'image/webp'::text))"
+    },
+    {
+      "relname": "product_images",
+      "conname": "product_images_mime_type_not_null",
+      "definition": "NOT NULL mime_type"
+    },
+    {
+      "relname": "product_images",
+      "conname": "product_images_pkey",
+      "definition": "PRIMARY KEY (product_id)"
+    },
+    {
+      "relname": "product_images",
+      "conname": "product_images_product_id_fkey",
+      "definition": "FOREIGN KEY (product_id) REFERENCES menu_products(id) ON DELETE CASCADE"
+    },
+    {
+      "relname": "product_images",
+      "conname": "product_images_product_id_not_null",
+      "definition": "NOT NULL product_id"
+    },
+    {
+      "relname": "product_images",
+      "conname": "product_images_updated_at_not_null",
+      "definition": "NOT NULL updated_at"
+    },
+    {
+      "relname": "product_recipe_components",
+      "conname": "product_recipe_components_created_at_not_null",
+      "definition": "NOT NULL created_at"
+    },
+    {
+      "relname": "product_recipe_components",
+      "conname": "product_recipe_components_id_not_null",
+      "definition": "NOT NULL id"
+    },
+    {
+      "relname": "product_recipe_components",
+      "conname": "product_recipe_components_inventory_item_id_fkey",
+      "definition": "FOREIGN KEY (inventory_item_id) REFERENCES inventory_items(id) ON DELETE RESTRICT"
+    },
+    {
+      "relname": "product_recipe_components",
+      "conname": "product_recipe_components_inventory_item_id_not_null",
+      "definition": "NOT NULL inventory_item_id"
+    },
+    {
+      "relname": "product_recipe_components",
+      "conname": "product_recipe_components_pkey",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "relname": "product_recipe_components",
+      "conname": "product_recipe_components_quantity_check",
+      "definition": "CHECK ((quantity > (0)::numeric))"
+    },
+    {
+      "relname": "product_recipe_components",
+      "conname": "product_recipe_components_quantity_not_null",
+      "definition": "NOT NULL quantity"
+    },
+    {
+      "relname": "product_recipe_components",
+      "conname": "product_recipe_components_variant_id_fkey",
+      "definition": "FOREIGN KEY (variant_id) REFERENCES menu_variants(id) ON DELETE CASCADE"
+    },
+    {
+      "relname": "product_recipe_components",
+      "conname": "product_recipe_components_variant_id_inventory_item_id_key",
+      "definition": "UNIQUE (variant_id, inventory_item_id)"
+    },
+    {
+      "relname": "product_recipe_components",
+      "conname": "product_recipe_components_variant_id_not_null",
+      "definition": "NOT NULL variant_id"
+    },
+    {
+      "relname": "restaurant_brand_images",
+      "conname": "restaurant_brand_images_image_data_check",
+      "definition": "CHECK (((octet_length(image_data) >= 1) AND (octet_length(image_data) <= 1000000)))"
+    },
+    {
+      "relname": "restaurant_brand_images",
+      "conname": "restaurant_brand_images_image_data_not_null",
+      "definition": "NOT NULL image_data"
+    },
+    {
+      "relname": "restaurant_brand_images",
+      "conname": "restaurant_brand_images_kind_check",
+      "definition": "CHECK ((kind = ANY (ARRAY['logo'::text, 'cover'::text])))"
+    },
+    {
+      "relname": "restaurant_brand_images",
+      "conname": "restaurant_brand_images_kind_not_null",
+      "definition": "NOT NULL kind"
+    },
+    {
+      "relname": "restaurant_brand_images",
+      "conname": "restaurant_brand_images_mime_type_check",
+      "definition": "CHECK ((mime_type = 'image/webp'::text))"
+    },
+    {
+      "relname": "restaurant_brand_images",
+      "conname": "restaurant_brand_images_mime_type_not_null",
+      "definition": "NOT NULL mime_type"
+    },
+    {
+      "relname": "restaurant_brand_images",
+      "conname": "restaurant_brand_images_pkey",
+      "definition": "PRIMARY KEY (restaurant_id, kind)"
+    },
+    {
+      "relname": "restaurant_brand_images",
+      "conname": "restaurant_brand_images_restaurant_id_fkey",
+      "definition": "FOREIGN KEY (restaurant_id) REFERENCES restaurants(id) ON DELETE CASCADE"
+    },
+    {
+      "relname": "restaurant_brand_images",
+      "conname": "restaurant_brand_images_restaurant_id_not_null",
+      "definition": "NOT NULL restaurant_id"
+    },
+    {
+      "relname": "restaurant_brand_images",
+      "conname": "restaurant_brand_images_updated_at_not_null",
+      "definition": "NOT NULL updated_at"
+    },
+    {
+      "relname": "restaurant_counters",
+      "conname": "restaurant_counters_next_order_number_check",
+      "definition": "CHECK ((next_order_number > 0))"
+    },
+    {
+      "relname": "restaurant_counters",
+      "conname": "restaurant_counters_next_order_number_not_null",
+      "definition": "NOT NULL next_order_number"
+    },
+    {
+      "relname": "restaurant_counters",
+      "conname": "restaurant_counters_next_queue_number_check",
+      "definition": "CHECK ((next_queue_number > 0))"
+    },
+    {
+      "relname": "restaurant_counters",
+      "conname": "restaurant_counters_next_queue_number_not_null",
+      "definition": "NOT NULL next_queue_number"
+    },
+    {
+      "relname": "restaurant_counters",
+      "conname": "restaurant_counters_pkey",
+      "definition": "PRIMARY KEY (restaurant_id)"
+    },
+    {
+      "relname": "restaurant_counters",
+      "conname": "restaurant_counters_restaurant_id_fkey",
+      "definition": "FOREIGN KEY (restaurant_id) REFERENCES restaurants(id) ON DELETE CASCADE"
+    },
+    {
+      "relname": "restaurant_counters",
+      "conname": "restaurant_counters_restaurant_id_not_null",
+      "definition": "NOT NULL restaurant_id"
+    },
+    {
+      "relname": "restaurant_counters",
+      "conname": "restaurant_counters_updated_at_not_null",
+      "definition": "NOT NULL updated_at"
+    },
+    {
+      "relname": "restaurants",
+      "conname": "restaurants_created_at_not_null",
+      "definition": "NOT NULL created_at"
+    },
+    {
+      "relname": "restaurants",
+      "conname": "restaurants_id_not_null",
+      "definition": "NOT NULL id"
+    },
+    {
+      "relname": "restaurants",
+      "conname": "restaurants_name_not_null",
+      "definition": "NOT NULL name"
+    },
+    {
+      "relname": "restaurants",
+      "conname": "restaurants_pkey",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "relname": "restaurants",
+      "conname": "restaurants_service_rate_basis_points_check",
+      "definition": "CHECK (((service_rate_basis_points >= 0) AND (service_rate_basis_points <= 10000)))"
+    },
+    {
+      "relname": "restaurants",
+      "conname": "restaurants_service_rate_basis_points_not_null",
+      "definition": "NOT NULL service_rate_basis_points"
+    },
+    {
+      "relname": "restaurants",
+      "conname": "restaurants_slug_key",
+      "definition": "UNIQUE (slug)"
+    },
+    {
+      "relname": "restaurants",
+      "conname": "restaurants_slug_not_null",
+      "definition": "NOT NULL slug"
+    },
+    {
+      "relname": "restaurants",
+      "conname": "restaurants_timezone_not_null",
+      "definition": "NOT NULL timezone"
+    },
+    {
+      "relname": "restaurants",
+      "conname": "restaurants_updated_at_not_null",
+      "definition": "NOT NULL updated_at"
+    },
+    {
+      "relname": "staff_members",
+      "conname": "staff_members_active_not_null",
+      "definition": "NOT NULL active"
+    },
+    {
+      "relname": "staff_members",
+      "conname": "staff_members_created_at_not_null",
+      "definition": "NOT NULL created_at"
+    },
+    {
+      "relname": "staff_members",
+      "conname": "staff_members_id_not_null",
+      "definition": "NOT NULL id"
+    },
+    {
+      "relname": "staff_members",
+      "conname": "staff_members_name_not_null",
+      "definition": "NOT NULL name"
+    },
+    {
+      "relname": "staff_members",
+      "conname": "staff_members_pin_hash_not_null",
+      "definition": "NOT NULL pin_hash"
+    },
+    {
+      "relname": "staff_members",
+      "conname": "staff_members_pin_salt_not_null",
+      "definition": "NOT NULL pin_salt"
+    },
+    {
+      "relname": "staff_members",
+      "conname": "staff_members_pkey",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "relname": "staff_members",
+      "conname": "staff_members_restaurant_id_fkey",
+      "definition": "FOREIGN KEY (restaurant_id) REFERENCES restaurants(id) ON DELETE CASCADE"
+    },
+    {
+      "relname": "staff_members",
+      "conname": "staff_members_restaurant_id_name_key",
+      "definition": "UNIQUE (restaurant_id, name)"
+    },
+    {
+      "relname": "staff_members",
+      "conname": "staff_members_restaurant_id_not_null",
+      "definition": "NOT NULL restaurant_id"
+    },
+    {
+      "relname": "staff_members",
+      "conname": "staff_members_role_check",
+      "definition": "CHECK ((role = ANY (ARRAY['manager'::text, 'waiter'::text, 'kitchen'::text, 'cashier'::text, 'delivery'::text])))"
+    },
+    {
+      "relname": "staff_members",
+      "conname": "staff_members_role_not_null",
+      "definition": "NOT NULL role"
+    },
+    {
+      "relname": "staff_members",
+      "conname": "staff_members_updated_at_not_null",
+      "definition": "NOT NULL updated_at"
+    }
+  ]
+}

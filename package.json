@@ -11,7 +11,10 @@
     "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
-    "db:generate": "drizzle-kit generate"
+    "db:generate": "node scripts/database.mjs explain-generation",
+    "db:status": "node scripts/database.mjs status",
+    "db:inspect": "node scripts/database.mjs inspect",
+    "db:migrate": "node scripts/database.mjs apply"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",
