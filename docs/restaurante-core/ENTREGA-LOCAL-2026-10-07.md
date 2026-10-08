@@ -44,6 +44,36 @@ O backup fica em `outputs/backups/pre-gestor-food-20261007.dump`, fora do Git e 
 
 As migrações antigas foram reconhecidas por comparação estrutural, sem reexecutar os scripts sobre dados existentes. `app_migrations` registra checksums. Novas migrações: `0006` a `0012`. Antes de uma próxima migração, crie um backup atualizado e execute `db:status`. O migrador exige um arquivo `pg_dump` válido e não permite alterar silenciosamente uma migração já registrada.
 
+## Revalidação do design e do turno — 07/10/2026
+
+A direção visual confere com as seções 7.4–7.10 do manual: evolução da base existente, superfícies claras, texto escuro, marca do restaurante, navegação lateral na gestão e acessos diretos por papel. O manual não registra mockup aprovado nem identidade definitiva do Gestor Food; portanto, essa conferência não equivale a aceite visual integral.
+
+Foi simulado no navegador um turno com dados sintéticos, seguindo as telas e confirmando os registros no PostgreSQL:
+
+| Etapa | Evidência |
+| --- | --- |
+| Abrir caixa | Fundo inicial de R$ 100 |
+| Garçom registrar pedido | Mesa de teste 180, prato R$ 20, observação sem cebola, envio explícito à cozinha |
+| Produção | Novo → em preparo → pronto; observação preservada; um único consumo de insumo |
+| Servir | Atendimento registrado antes do pagamento |
+| Receber | R$ 22 de conta, incluindo R$ 2 de serviço; dinheiro entregue R$ 50; troco R$ 28 |
+| Liberar mesa | Pedido concluído e mesa livre depois do atendimento e recebimento |
+| Apurar custo | Venda R$ 20, custo histórico R$ 7, diferença R$ 13; serviço separado |
+| Registrar despesa | Conta de limpeza R$ 5, baixa em dinheiro, persistência após recarga |
+| Fechar caixa | Esperado R$ 117 e contado R$ 117, sem diferença |
+| Resultado | R$ 8 após deduzir a despesa, identificado como gerencial parcial por cobertura do histórico |
+| Pedido público | Solicitação pendente, estoque intacto até conferência; aprovação no caixa e entrada posterior na cozinha |
+
+Durante o cenário, o servidor de desenvolvimento encerrou antes da gravação do pagamento, sem causa confirmada. O banco preservou pedido servido e estoque, sem recebimento. Após reiniciar o servidor e reabrir a tela, o pagamento foi registrado uma vez e o turno concluído. Isso verifica a retomada deste cenário, não todos os casos de timeout, perda de conexão ou resposta desconhecida.
+
+Foram corrigidos nesta revalidação: nomes acessíveis dos botões de quantidade, limite visual ao diminuir abaixo de uma unidade, indicação de envio e bloqueio do botão no carrinho, foco visível, controles de toque maiores e fechamento de diálogos em português. As seções financeiras agora quebram linha no celular e têm alvos de 44 px, sem esconder opções atrás de rolagem lateral.
+
+Financeiro e cozinha foram inspecionados em 360, 390 e 430 px; não houve transbordamento horizontal da página nessas telas. O diálogo de produto foi usado em 360 px. A cozinha mantém rolagem interna entre colunas. Console da sessão retomada sem erros ou avisos capturados. A aprovação visual de todas as telas, zoom, leitores de tela, textos extremos, navegação compacta por papel e todos os estados de falha ainda não está concluída.
+
+Os testes de integração de aprovação, financeiro e isolamento foram repetidos em duas rodadas nesta revalidação, além das execuções da entrega inicial. O cenário financeiro foi ampliado para cobrir entrega: endereço ausente na resposta da cozinha, bloqueio de saída antes de pronto, bloqueio de entrega sem saída, pagamento sem encerrar produção e reconhecimento único da receita. A simulação no navegador e as rotinas HTTP são evidências distintas; nem todos os cenários HTTP foram repetidos pela interface.
+
+Todos os dados criados nesta simulação são temporários e foram removidos. Os testes não emitem notas, transferem dinheiro, enviam WhatsApp nem usam dados de clientes reais.
+
 ## Pendências para o produto completo
 
 ### 1. Fiscal e contabilidade fiscal — B08 / parte de B09

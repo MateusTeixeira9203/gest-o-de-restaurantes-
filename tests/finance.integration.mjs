@@ -295,6 +295,33 @@ try {
     reason: "QA devolução confirmada",
     confirmedReturned: true,
   });
+  // Delivery uses its own fulfillment path; paying must not bypass dispatch.
+  const deliveryAddress = `${prefix} Rua fictícia 123`;
+  const deliveryOrder = await call("/api/public/orders", {
+    source: "public_menu", fulfillment: "delivery",
+    customer: { name: prefix, phone: "31999990000" },
+    delivery: { addressLine1: deliveryAddress, city: "QA", state: "MG" },
+    items: [{ productId: product, variantId: variant, quantity: 1 }],
+  });
+  assert.equal(deliveryOrder.status, 201, JSON.stringify(deliveryOrder.body));
+  const deliveryId = deliveryOrder.body.order.id;
+  orders.push(deliveryId);
+  await ok(`/api/operations/orders/${deliveryId}/approval`, { decision: "approve", revision: 1 });
+  const kitchenQueue = await call("/api/internal/kitchen", null, randomUUID(), "GET");
+  assert.equal(kitchenQueue.status, 200);
+  assert.ok(!JSON.stringify(kitchenQueue.body).includes(deliveryAddress), "Kitchen must not expose the delivery address");
+  const deliveryTicket = (await db.query("SELECT id FROM kitchen_tickets WHERE order_id=$1", [deliveryId])).rows[0].id;
+  assert.equal((await call(`/api/operations/deliveries/${deliveryId}`, { status: "out_for_delivery" }, randomUUID(), "PATCH")).status, 400);
+  assert.equal((await call(`/api/internal/kitchen/${deliveryTicket}`, { status: "preparing" }, randomUUID(), "PATCH")).status, 200);
+  assert.equal((await call(`/api/internal/kitchen/${deliveryTicket}`, { status: "ready" }, randomUUID(), "PATCH")).status, 200);
+  await ok(`/api/operations/orders/${deliveryId}/payment`, { method: "Pix" });
+  assert.equal((await db.query("SELECT status FROM orders WHERE id=$1", [deliveryId])).rows[0].status, "ready");
+  assert.equal((await call(`/api/operations/deliveries/${deliveryId}`, { status: "delivered" }, randomUUID(), "PATCH")).status, 400);
+  assert.equal((await call(`/api/operations/deliveries/${deliveryId}`, { status: "out_for_delivery" }, randomUUID(), "PATCH")).status, 200);
+  assert.equal((await call(`/api/operations/deliveries/${deliveryId}`, { status: "delivered" }, randomUUID(), "PATCH")).status, 200);
+  assert.equal((await db.query("SELECT status FROM orders WHERE id=$1", [deliveryId])).rows[0].status, "completed");
+  assert.equal((await db.query("SELECT count(*)::int n FROM finance_entries WHERE source_type='sale_realized' AND source_id=$1", [deliveryId])).rows[0].n, 1);
+  console.log("PASS: delivery approval, kitchen address privacy, prepare/ready/dispatch/deliver sequence and paid order completion.");
   await command({
     action: "cash_move",
     kind: "withdrawal",
