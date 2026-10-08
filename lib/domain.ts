@@ -35,6 +35,7 @@ export interface OrderItem {
   note?: string;
 }
 export interface Order {
+  revision: number;
   id: string;
   number: number;
   tableId: string;

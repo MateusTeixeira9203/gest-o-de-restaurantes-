@@ -6,7 +6,7 @@ const itemSchema = z.object({ name: z.string().trim().min(2).max(100), category:
 const movementSchema = z.object({ itemId: z.string().uuid(), type: z.enum(["purchase", "loss", "adjustment"]), quantity: z.number().finite(), unitCostCents: z.number().nonnegative().optional(), note: z.string().trim().max(240).optional() });
 
 export async function POST(request: Request) {
-  if (!hasStaffSession(request, ["manager"])) return Response.json({ error: "Acesso de gestão necessário." }, { status: 403 });
+  if (!(await hasStaffSession(request, ["manager"]))) return Response.json({ error: "Acesso de gestão necessário." }, { status: 403 });
   try {
     const body = await request.json() as { action?: string };
     const result = body.action === "movement" ? await registerInventoryMovement(movementSchema.parse(body)) : await createInventoryItem(itemSchema.parse(body));

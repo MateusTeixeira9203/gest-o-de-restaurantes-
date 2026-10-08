@@ -3,7 +3,7 @@ import { setProductImage } from "@/lib/restaurant-repository";
 import { hasStaffSession } from "@/lib/staff-session";
 
 export async function PUT(request: Request, { params }: { params: Promise<{ productId: string }> }) {
-  if (!hasStaffSession(request, ["manager"])) return Response.json({ error: "Acesso de gestão necessário." }, { status: 403 });
+  if (!(await hasStaffSession(request, ["manager"]))) return Response.json({ error: "Acesso de gestão necessário." }, { status: 403 });
   try {
     const file = (await request.formData()).get("image");
     if (!(file instanceof File) || !file.type.startsWith("image/") || file.size > 5_000_000 || file.size < 1) throw new Error("Escolha uma imagem de até 5 MB.");

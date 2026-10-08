@@ -1,15 +1,16 @@
 import { randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
 import type { PoolClient } from "pg";
+import { assertOrderApprover, requestHash, type OrderActor } from "@/modules/orders/policy";
 import { query, transaction } from "@/lib/database";
 
-const RESTAURANT_SLUG = "patos-lanches";
+const RESTAURANT_SLUG = process.env.RESTAURANT_SLUG || "patos-lanches";
 
 type RestaurantRow = { id: string; name: string; whatsapp: string | null; service_rate_basis_points: number };
 type ProductRow = { id: string; name: string; description: string; category: string; kitchen_sector: string; available: boolean; featured: boolean; image_updated_at: Date | null };
 type VariantRow = { id: string; product_id: string; name: string; price_cents: number };
 type AddonRow = { id: string; product_id: string; name: string; price_cents: number };
 type InventoryItemRow = { id: string; name: string; category: string; unit: "un" | "g" | "kg" | "ml" | "L"; quantity: string; minimum_quantity: string; average_cost_cents: string; active: boolean };
-type RecipeRow = { variant_id: string; inventory_item_id: string; quantity: string; item_name?: string; available_quantity?: string; active?: boolean };
+type RecipeRow = { variant_id: string; inventory_item_id: string; quantity: string; item_name?: string; available_quantity?: string; active?: boolean; unit_cost_cents?: string };
 type StaffMemberRow = { id: string; name: string; role: "manager" | "waiter" | "kitchen" | "cashier" | "delivery"; pin_salt: string; pin_hash: string; active: boolean; created_at: string; updated_at: string };
 export type StaffMember = Omit<StaffMemberRow, "pin_salt" | "pin_hash">;
 export type StaffMemberRole = StaffMember["role"];
@@ -115,11 +116,11 @@ async function consumeInventoryForOrder(client: PoolClient, restaurantId: string
   const variantIds = [...new Set(items.map(item => item.variant.id))];
   if (!variantIds.length) return;
   const recipes = await client.query<RecipeRow>(
-    "SELECT prc.variant_id, prc.inventory_item_id, prc.quantity, i.name AS item_name, i.quantity AS available_quantity, i.active FROM product_recipe_components prc JOIN inventory_items i ON i.id = prc.inventory_item_id WHERE prc.variant_id = ANY($1::uuid[]) FOR UPDATE OF i",
-    [variantIds],
+    "SELECT prc.variant_id, prc.inventory_item_id, prc.quantity, i.name AS item_name, i.quantity AS available_quantity, i.active, i.average_cost_cents AS unit_cost_cents FROM product_recipe_components prc JOIN inventory_items i ON i.id = prc.inventory_item_id WHERE prc.variant_id = ANY($1::uuid[]) AND i.restaurant_id = $2 ORDER BY i.id FOR UPDATE OF i",
+    [variantIds, restaurantId],
   );
   const byVariant = Map.groupBy(recipes.rows, recipe => recipe.variant_id);
-  const required = new Map<string, { quantity: number; name: string; available: number; active: boolean }>();
+  const required = new Map<string, { quantity: number; name: string; available: number; active: boolean; unitCost: string }>();
   for (const item of items) for (const component of byVariant.get(item.variant.id) ?? []) {
     const existing = required.get(component.inventory_item_id);
     required.set(component.inventory_item_id, {
@@ -127,6 +128,7 @@ async function consumeInventoryForOrder(client: PoolClient, restaurantId: string
       name: component.item_name ?? "Ingrediente",
       available: Number(component.available_quantity),
       active: component.active ?? false,
+      unitCost: component.unit_cost_cents ?? "0",
     });
   }
   for (const requirement of required.values()) {
@@ -134,7 +136,7 @@ async function consumeInventoryForOrder(client: PoolClient, restaurantId: string
   }
   for (const [itemId, requirement] of required) {
     await client.query("UPDATE inventory_items SET quantity = quantity - $2, updated_at = now() WHERE id = $1", [itemId, requirement.quantity]);
-    await client.query("INSERT INTO inventory_movements (restaurant_id, inventory_item_id, type, quantity_delta, order_id, note) VALUES ($1,$2,'sale_consumption',$3,$4,$5)", [restaurantId, itemId, -requirement.quantity, orderId, "Baixa automática pela venda"]);
+    await client.query("INSERT INTO inventory_movements (restaurant_id, inventory_item_id, type, quantity_delta, order_id, note, unit_cost_cents) VALUES ($1,$2,'sale_consumption',$3,$4,$5,$6)", [restaurantId, itemId, -requirement.quantity, orderId, "Destinação para produção após aprovação", requirement.unitCost]);
   }
 }
 
@@ -178,13 +180,24 @@ export async function getCurrentEstimate() {
   return estimatedMinutes(Number(active.rows[0].count), 1);
 }
 
-export async function createOrder(input: CreateOrderInput) {
+export async function createOrder(input: CreateOrderInput, options: { idempotencyKey: string; actor?: OrderActor; sendToKitchen?: boolean }) {
+  if (options.sendToKitchen) {
+    if (!options.actor || input.source !== "waiter") throw new Error("Envio à cozinha exige um atendente autenticado.");
+    assertOrderApprover(options.actor);
+  }
+  const fingerprint = requestHash({ input, send: Boolean(options.sendToKitchen), actor: options.actor ?? null });
   if (!input.items.length) throw new Error("O pedido precisa ter ao menos um item.");
   if (input.fulfillment === "dine_in" && !input.tableNumber) throw new Error("Informe a mesa do pedido presencial.");
   if (input.fulfillment === "delivery" && !input.delivery?.addressLine1) throw new Error("Informe o endereço de entrega.");
 
   return transaction(async client => {
     const current = await restaurant(client);
+    await client.query("SELECT pg_advisory_xact_lock(hashtext($1))", [`order-request:${current.id}:${options.idempotencyKey}`]);
+    const repeated = await client.query<{ id: string; request_hash: string }>("SELECT id, request_hash FROM orders WHERE restaurant_id=$1 AND request_key=$2", [current.id, options.idempotencyKey]);
+    if (repeated.rows[0]) {
+      if (repeated.rows[0].request_hash !== fingerprint) throw new Error("Esta solicitação já foi usada com outros dados. Confira o pedido antes de reenviar.");
+      return orderReceipt(client, repeated.rows[0].id, current.id);
+    }
     await ensureCatalog(client, current.id);
     let tableId: string | null = null;
     if (input.tableNumber) {
@@ -217,29 +230,18 @@ export async function createOrder(input: CreateOrderInput) {
     });
     const subtotal = normalizedItems.reduce((sum, item) => sum + item.lineTotal, 0);
     const service = input.fulfillment === "dine_in" ? Math.round(subtotal * current.service_rate_basis_points / 10_000) : 0;
-    const sectors = [...new Set(normalizedItems.map(item => item.variant.kitchen_sector))];
-    const active = await client.query<{ count: string }>("SELECT count(*) FROM kitchen_tickets WHERE restaurant_id = $1 AND status IN ('new', 'preparing')", [current.id]);
-    const estimate = estimatedMinutes(Number(active.rows[0].count), sectors.length);
-    const counter = await client.query<{ order_number: string; queue_number: string }>(
-      "UPDATE restaurant_counters SET next_order_number = next_order_number + 1, next_queue_number = next_queue_number + 1, updated_at = now() WHERE restaurant_id = $1 RETURNING next_order_number - 1 AS order_number, next_queue_number - 1 AS queue_number",
-      [current.id],
-    );
+    const counter = await client.query<{ order_number: string }>(
+      "UPDATE restaurant_counters SET next_order_number=next_order_number+1, updated_at=now() WHERE restaurant_id=$1 RETURNING next_order_number-1 AS order_number", [current.id]);
     const orderNumber = Number(counter.rows[0].order_number);
-    const queueNumber = Number(counter.rows[0].queue_number);
     const insertedOrder = await client.query<{ id: string }>(
-      "INSERT INTO orders (restaurant_id, order_number, queue_number, source, fulfillment, status, table_id, customer_name, customer_phone, notes, estimated_minutes, subtotal_cents, service_cents, total_cents, confirmed_at) VALUES ($1,$2,$3,$4,$5,'confirmed',$6,$7,$8,$9,$10,$11,$12,$13,now()) RETURNING id",
-      [current.id, orderNumber, queueNumber, input.source, input.fulfillment, tableId, input.customer?.name ?? null, input.customer?.phone ?? null, input.notes ?? null, estimate, subtotal, service, subtotal + service],
-    );
-    const orderId = insertedOrder.rows[0].id;
-    await consumeInventoryForOrder(client, current.id, orderId, normalizedItems);
+      "INSERT INTO orders (restaurant_id,order_number,queue_number,source,fulfillment,status,table_id,customer_name,customer_phone,notes,subtotal_cents,service_cents,total_cents,approval_origin,request_key,request_hash) VALUES ($1,$2,NULL,$3,$4,'pending',$5,$6,$7,$8,$9,$10,$11,'pending',$12,$13) RETURNING id",
+      [current.id,orderNumber,input.source,input.fulfillment,tableId,input.customer?.name??null,input.customer?.phone??null,input.notes??null,subtotal,service,subtotal+service,options.idempotencyKey,fingerprint]);
+    const orderId=insertedOrder.rows[0].id;
     for (const item of normalizedItems) {
       await client.query(
         "INSERT INTO order_items (order_id, product_id, variant_id, product_name, variant_name, kitchen_sector, quantity, unit_price_cents, addons, note) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9::jsonb,$10)",
         [orderId, item.productId, item.variantId, item.variant.product_name, item.variant.name, item.variant.kitchen_sector, item.quantity, item.variant.price_cents, JSON.stringify(item.selectedAddons.map(addon => ({ id: addon.id, name: addon.name, priceCents: addon.price_cents }))), item.note ?? null],
       );
-    }
-    for (const sector of sectors) {
-      await client.query("INSERT INTO kitchen_tickets (restaurant_id, order_id, kitchen_sector, queue_number) VALUES ($1,$2,$3,$4)", [current.id, orderId, sector, queueNumber]);
     }
     if (input.fulfillment === "delivery" && input.delivery) {
       const delivery = input.delivery;
@@ -248,8 +250,66 @@ export async function createOrder(input: CreateOrderInput) {
         [orderId, delivery.addressLine1, delivery.addressLine2 ?? null, delivery.neighborhood ?? null, delivery.city ?? null, delivery.state ?? null, delivery.postalCode ?? null, delivery.reference ?? null, delivery.latitude ?? null, delivery.longitude ?? null, input.customer?.name ?? null, input.customer?.phone ?? null],
       );
     }
-    await client.query("INSERT INTO order_events (order_id, event_type, actor_role, detail) VALUES ($1,'order_confirmed',$2,$3::jsonb)", [orderId, input.source === "waiter" ? "waiter" : "customer", JSON.stringify({ queueNumber, fulfillment: input.fulfillment })]);
-    return { id: orderId, orderNumber, queueNumber, estimatedMinutes: estimate, totalCents: subtotal + service };
+    await client.query("INSERT INTO order_events(order_id,event_type,actor_role,detail) VALUES($1,'order_registered',$2,$3::jsonb)", [orderId,options.actor?.role??"customer",JSON.stringify({source:input.source,registeredBy:options.actor?.name??null})]);
+    if (options.sendToKitchen && options.actor) await approveOrderInTransaction(client, current.id, orderId, 1, options.actor);
+    return orderReceipt(client,orderId,current.id);
+  });
+}
+
+async function orderReceipt(client: PoolClient, orderId: string, restaurantId: string) {
+  const result=await client.query<{id:string;order_number:string;queue_number:string|null;estimated_minutes:number|null;total_cents:number;status:string;revision:number}>("SELECT id,order_number,queue_number,estimated_minutes,total_cents,status,revision FROM orders WHERE id=$1 AND restaurant_id=$2",[orderId,restaurantId]);
+  const o=result.rows[0];
+  if (!o) throw new Error("Pedido não encontrado.");
+  return {id:o.id,orderNumber:Number(o.order_number),queueNumber:o.queue_number===null?null:Number(o.queue_number),estimatedMinutes:o.estimated_minutes,totalCents:o.total_cents,status:o.status,revision:o.revision};
+}
+
+async function approveOrderInTransaction(client: PoolClient, restaurantId: string, orderId: string, revision: number, actor: OrderActor) {
+  assertOrderApprover(actor);
+  const result=await client.query<{status:string;revision:number;approval_origin:string}>("SELECT status,revision,approval_origin FROM orders WHERE id=$1 AND restaurant_id=$2 FOR UPDATE",[orderId,restaurantId]);
+  const order=result.rows[0];
+  if (!order) throw new Error("Pedido não encontrado.");
+  if (order.approval_origin==='staff' && order.status!=='cancelled') return orderReceipt(client,orderId,restaurantId);
+  if (order.status!=='pending') throw new Error("Este pedido não está aguardando aprovação.");
+  if (order.revision!==revision) throw new Error("Pedido alterado. Recarregue e confira antes de enviar.");
+  await client.query("SELECT restaurant_id FROM inventory_settings WHERE restaurant_id=$1 FOR UPDATE",[restaurantId]);
+  const items=(await client.query<{id:string;variant_id:string|null;product_id:string|null;quantity:number;kitchen_sector:string;addons:Array<{id:string}>}>("SELECT id,variant_id,product_id,quantity,kitchen_sector,addons FROM order_items WHERE order_id=$1 ORDER BY id",[orderId])).rows;
+  const normalized: Array<{variant:VariantRow;quantity:number}>=[];
+  for (const item of items) {
+    const variants=await client.query<VariantRow>("SELECT v.id,v.product_id,v.name,v.price_cents FROM menu_variants v JOIN menu_products p ON p.id=v.product_id WHERE v.id=$1 AND p.id=$2 AND p.restaurant_id=$3 AND p.available AND v.active FOR SHARE OF p,v",[item.variant_id,item.product_id,restaurantId]);
+    if (!variants.rows[0]) throw new Error("Um item não está mais disponível. Recuse o pedido e registre uma nova solicitação.");
+    if (item.addons.length) {
+      const addons=await client.query("SELECT id FROM product_addons WHERE product_id=$1 AND active AND id=ANY($2::uuid[]) FOR SHARE",[item.product_id,item.addons.map(a=>a.id)]);
+      if (addons.rowCount!==new Set(item.addons.map(a=>a.id)).size) throw new Error("Um adicional não está mais disponível.");
+    }
+    normalized.push({variant:variants.rows[0],quantity:item.quantity});
+    const components=(await client.query("SELECT i.id,i.name,i.unit,prc.quantity::text,i.average_cost_cents::text FROM product_recipe_components prc JOIN inventory_items i ON i.id=prc.inventory_item_id WHERE prc.variant_id=$1 AND i.restaurant_id=$2 ORDER BY i.id FOR SHARE OF i",[item.variant_id,restaurantId])).rows;
+    await client.query("UPDATE order_items SET cost_snapshot=$2::jsonb WHERE id=$1",[item.id,JSON.stringify({capturedAt:new Date().toISOString(),coverage:components.length?'partial':'absent',components,reason:'Receita base de ingredientes; adicionais, rendimento e embalagem ainda dependem do bloco de custos.'})]);
+  }
+  await consumeInventoryForOrder(client,restaurantId,orderId,normalized);
+  const sectors=[...new Set(items.map(i=>i.kitchen_sector))];
+  const count=(await client.query<{count:string}>("SELECT count(*) FROM kitchen_tickets WHERE restaurant_id=$1 AND status IN ('new','preparing')",[restaurantId])).rows[0].count;
+  const estimate=estimatedMinutes(Number(count),sectors.length);
+  const queue=(await client.query<{number:string}>("UPDATE restaurant_counters SET next_queue_number=next_queue_number+1,updated_at=now() WHERE restaurant_id=$1 RETURNING next_queue_number-1 AS number",[restaurantId])).rows[0].number;
+  await client.query("UPDATE orders SET status='confirmed',queue_number=$3,estimated_minutes=$4,confirmed_at=now(),approval_origin='staff',approved_by_name=$5,approved_by_role=$6,approved_by_staff_id=$7,updated_at=now() WHERE id=$1 AND restaurant_id=$2",[orderId,restaurantId,queue,estimate,actor.name,actor.role,actor.staffId??null]);
+  for(const sector of sectors) await client.query("INSERT INTO kitchen_tickets(restaurant_id,order_id,kitchen_sector,queue_number) VALUES($1,$2,$3,$4)",[restaurantId,orderId,sector,queue]);
+  await client.query("INSERT INTO order_events(order_id,event_type,actor_role,detail) VALUES($1,'order_approved',$2,$3::jsonb)",[orderId,actor.role,JSON.stringify({approvedBy:actor.name,staffId:actor.staffId??null,revision,queueNumber:Number(queue)})]);
+  return orderReceipt(client,orderId,restaurantId);
+}
+
+export async function approveOrder(orderId:string, revision:number, actor:OrderActor) {
+  return transaction(async client=>{const current=await restaurant(client);return approveOrderInTransaction(client,current.id,orderId,revision,actor);});
+}
+
+export async function rejectOrder(orderId:string, revision:number, reason:string, actor:OrderActor) {
+  assertOrderApprover(actor);
+  return transaction(async client=>{
+    const current=await restaurant(client);
+    const result=await client.query<{status:string;revision:number}>("SELECT status,revision FROM orders WHERE id=$1 AND restaurant_id=$2 FOR UPDATE",[orderId,current.id]);
+    const order=result.rows[0];
+    if(!order || order.status!=='pending' || order.revision!==revision) throw new Error("Pedido não está mais pendente nesta revisão. Recarregue a lista.");
+    await client.query("UPDATE orders SET status='cancelled',cancelled_at=now(),updated_at=now() WHERE id=$1",[orderId]);
+    await client.query("INSERT INTO order_events(order_id,event_type,actor_role,detail) VALUES($1,'order_rejected',$2,$3::jsonb)",[orderId,actor.role,JSON.stringify({reason,rejectedBy:actor.name,staffId:actor.staffId??null,revision})]);
+    return {id:orderId};
   });
 }
 
@@ -283,7 +343,7 @@ export async function updateKitchenTicket(ticketId: string, status: "preparing" 
 }
 
 type SnapshotOrderRow = {
-  id: string; order_number: string; queue_number: string; source: "waiter" | "public_menu" | "qr_menu"; fulfillment: "dine_in" | "pickup" | "delivery"; status: string;
+  id: string; revision: number; order_number: string; queue_number: string | null; source: "waiter" | "public_menu" | "qr_menu"; fulfillment: "dine_in" | "pickup" | "delivery"; status: string;
   table_number: number | null; customer_name: string | null; customer_phone: string | null; notes: string | null; estimated_minutes: number | null; subtotal_cents: number; service_cents: number; total_cents: number; paid_cents: number; payments: Array<{ method: string; amountCents: number }>; delivery_address_line1: string | null; delivery_neighborhood: string | null; delivery_reference: string | null; created_at: string;
   items: Array<{ id: string; product_id: string | null; variant_id: string | null; product_name: string; variant_name: string; kitchen_sector: string; quantity: number; unit_price_cents: number; addons: Array<{ id: string; name: string; priceCents: number }>; note: string | null }>;
 };
@@ -294,12 +354,12 @@ export async function getOperationSnapshot() {
     getPublicMenu(),
     query<{ number: number; label: string | null; active: boolean }>("SELECT number, label, active FROM dining_tables WHERE restaurant_id = $1 ORDER BY number", [current.id]),
     query<SnapshotOrderRow>(
-      `SELECT o.id, o.order_number, o.queue_number, o.source, o.fulfillment, o.status, t.number AS table_number, o.customer_name, o.customer_phone, o.notes, o.estimated_minutes, o.subtotal_cents, o.service_cents, o.total_cents, COALESCE((SELECT sum(p.amount_cents) FROM payments p WHERE p.order_id = o.id AND p.status = 'paid'), 0)::int AS paid_cents, COALESCE((SELECT json_agg(json_build_object('method', p.method, 'amountCents', p.amount_cents)) FROM payments p WHERE p.order_id = o.id AND p.status = 'paid'), '[]'::json) AS payments, max(d.address_line1) AS delivery_address_line1, max(d.neighborhood) AS delivery_neighborhood, max(d.reference) AS delivery_reference, o.created_at,
+      `SELECT o.id, o.revision, o.order_number, o.queue_number, o.source, o.fulfillment, o.status, t.number AS table_number, o.customer_name, o.customer_phone, o.notes, o.estimated_minutes, o.subtotal_cents, o.service_cents, o.total_cents, COALESCE((SELECT sum(p.amount_cents) FROM payments p WHERE p.order_id = o.id AND p.status = 'paid'), 0)::int AS paid_cents, COALESCE((SELECT json_agg(json_build_object('method', p.method, 'amountCents', p.amount_cents)) FROM payments p WHERE p.order_id = o.id AND p.status = 'paid'), '[]'::json) AS payments, max(d.address_line1) AS delivery_address_line1, max(d.neighborhood) AS delivery_neighborhood, max(d.reference) AS delivery_reference, o.created_at,
         COALESCE(json_agg(json_build_object('id', oi.id, 'product_id', oi.product_id, 'variant_id', oi.variant_id, 'product_name', oi.product_name, 'variant_name', oi.variant_name, 'kitchen_sector', oi.kitchen_sector, 'quantity', oi.quantity, 'unit_price_cents', oi.unit_price_cents, 'addons', oi.addons, 'note', oi.note) ORDER BY oi.created_at) FILTER (WHERE oi.id IS NOT NULL), '[]'::json) AS items
        FROM orders o LEFT JOIN dining_tables t ON t.id = o.table_id LEFT JOIN delivery_details d ON d.order_id = o.id LEFT JOIN order_items oi ON oi.order_id = o.id
-       WHERE o.restaurant_id = $1
+       WHERE o.restaurant_id = $1 AND (o.status NOT IN ('completed','cancelled') OR o.id IN (SELECT id FROM orders WHERE restaurant_id=$1 AND status IN ('completed','cancelled') ORDER BY created_at DESC LIMIT 200))
        GROUP BY o.id, t.number
-       ORDER BY o.created_at DESC LIMIT 200`,
+       ORDER BY o.created_at DESC`,
       [current.id],
     ),
     getKitchenQueue(),
@@ -311,7 +371,7 @@ export async function getOperationSnapshot() {
     products: menu.products,
     tables: tables.rows,
     orders: orders.rows.map(order => ({
-      id: order.id, orderNumber: Number(order.order_number), queueNumber: Number(order.queue_number), source: order.source, fulfillment: order.fulfillment, status: order.status,
+      id: order.id, revision: order.revision, orderNumber: Number(order.order_number), queueNumber: order.queue_number===null?null:Number(order.queue_number), source: order.source, fulfillment: order.fulfillment, status: order.status,
       tableNumber: order.table_number, customerName: order.customer_name, customerPhone: order.customer_phone, notes: order.notes, estimatedMinutes: order.estimated_minutes, paidCents: order.paid_cents, delivery: order.delivery_address_line1 ? { addressLine1: order.delivery_address_line1, neighborhood: order.delivery_neighborhood, reference: order.delivery_reference } : null,
       subtotalCents: order.subtotal_cents, serviceCents: order.service_cents, totalCents: order.total_cents, payments: order.payments, createdAt: order.created_at, items: order.items,
     })),
@@ -345,6 +405,8 @@ export async function closeTable(tableNumber: number, payments: Array<{ method: 
       [current.id, tableNumber],
     );
     if (!orders.rows.length) throw new Error("Não há pedidos em aberto nesta mesa.");
+    const pending = await client.query("SELECT 1 FROM orders o JOIN dining_tables t ON t.id=o.table_id WHERE o.restaurant_id=$1 AND t.number=$2 AND o.status='pending'",[current.id,tableNumber]);
+    if(pending.rowCount) throw new Error("Confira e envie ou recuse os pedidos pendentes antes de fechar esta conta.");
     const due = orders.rows.reduce((sum, order) => sum + order.total_cents, 0);
     const received = payments.reduce((sum, payment) => sum + payment.amountCents, 0);
     if (received < due) throw new Error("O valor recebido é menor que o total da conta.");
@@ -376,6 +438,7 @@ export async function recordExternalPayment(orderId: string, method: "Pix" | "Di
     );
     const order = result.rows[0];
     if (!order || order.fulfillment === "dine_in" || order.status === "cancelled") throw new Error("Pedido online não encontrado ou cancelado.");
+    if (order.status === "pending") throw new Error("Envie ou recuse o pedido antes de registrar o recebimento.");
     if (actor.role === "delivery" && order.fulfillment !== "delivery") throw new Error("A equipe de entrega só pode receber pedidos de entrega.");
     if (order.paid_cents >= order.total_cents) throw new Error("Este pedido já está pago.");
     if (order.fulfillment === "pickup" && order.status !== "ready") throw new Error("A retirada precisa estar pronta antes de fechar o pagamento.");

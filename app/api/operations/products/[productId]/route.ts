@@ -6,7 +6,7 @@ import { hasStaffSession } from "@/lib/staff-session";
 const bodySchema = z.object({ available: z.boolean() });
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ productId: string }> }) {
-  if (!hasStaffSession(request, ["manager"])) return Response.json({ error: "Acesso de gestão necessário." }, { status: 403 });
+  if (!(await hasStaffSession(request, ["manager"]))) return Response.json({ error: "Acesso de gestão necessário." }, { status: 403 });
   try {
     const { productId } = await params;
     const body: Record<string, unknown> = await request.json();

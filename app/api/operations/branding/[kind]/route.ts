@@ -7,7 +7,7 @@ function validKind(kind: string): kind is BrandImageKind {
 }
 
 export async function PUT(request: Request, { params }: { params: Promise<{ kind: string }> }) {
-  if (!hasStaffSession(request, ["manager"])) return Response.json({ error: "Acesso de gestão necessário." }, { status: 403 });
+  if (!(await hasStaffSession(request, ["manager"]))) return Response.json({ error: "Acesso de gestão necessário." }, { status: 403 });
   try {
     const { kind } = await params;
     if (!validKind(kind)) return Response.json({ error: "Imagem inválida." }, { status: 400 });
@@ -25,7 +25,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ kind
 }
 
 export async function DELETE(request: Request, { params }: { params: Promise<{ kind: string }> }) {
-  if (!hasStaffSession(request, ["manager"])) return Response.json({ error: "Acesso de gestão necessário." }, { status: 403 });
+  if (!(await hasStaffSession(request, ["manager"]))) return Response.json({ error: "Acesso de gestão necessário." }, { status: 403 });
   const { kind } = await params;
   if (!validKind(kind)) return Response.json({ error: "Imagem inválida." }, { status: 400 });
   return Response.json(await removeBrandImage(kind), { headers: { "Cache-Control": "no-store" } });

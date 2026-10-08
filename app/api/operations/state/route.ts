@@ -4,7 +4,7 @@ import { sessionFromRequest } from "@/lib/staff-session";
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
-  const session = sessionFromRequest(request);
+  const session = await sessionFromRequest(request);
   if (!session) return Response.json({ error: "Acesso da equipe necessário." }, { status: 401 });
   try {
     const snapshot = await getOperationSnapshot();
@@ -21,9 +21,9 @@ export async function GET(request: Request) {
     const roleSnapshot = session.role === "kitchen"
       ? { ...snapshot, tables: [], orders: kitchenOrders, kitchen: snapshot.kitchen.filter(ticket => kitchenOrderIds.has(ticket.orderId)), inventory: noInventory }
       : session.role === "waiter"
-        ? { ...snapshot, orders: ordersWithoutAddresses.filter(order => order.fulfillment === "dine_in"), kitchen: [], inventory: noInventory }
+        ? { ...snapshot, orders: ordersWithoutAddresses.filter(order => order.fulfillment === "dine_in" || order.status === "pending"), kitchen: [], inventory: noInventory }
         : session.role === "delivery"
-          ? { ...snapshot, products: [], tables: [], orders: snapshot.orders.filter(order => order.fulfillment === "delivery"), kitchen: [], inventory: noInventory }
+          ? { ...snapshot, products: [], tables: [], orders: snapshot.orders.filter(order => order.fulfillment === "delivery" && !["pending", "cancelled"].includes(order.status)), kitchen: [], inventory: noInventory }
           : { ...snapshot, orders: ordersWithoutAddresses, kitchen: [], inventory: noInventory };
     return Response.json(roleSnapshot, { headers: { "Cache-Control": "no-store" } });
   } catch {

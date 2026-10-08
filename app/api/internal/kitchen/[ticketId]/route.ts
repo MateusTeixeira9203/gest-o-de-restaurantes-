@@ -4,13 +4,13 @@ import { hasStaffSession } from "@/lib/staff-session";
 
 const bodySchema = z.object({ status: z.enum(["preparing", "ready"]) });
 
-function hasInternalAccess(request: Request) {
+async function hasInternalAccess(request: Request) {
   const secret = process.env.RESTAURANT_INTERNAL_API_KEY;
-  return hasStaffSession(request, ["kitchen", "manager"]) || Boolean(secret && request.headers.get("x-restaurant-internal-key") === secret);
+  return (await hasStaffSession(request, ["kitchen", "manager"])) || Boolean(secret && request.headers.get("x-restaurant-internal-key") === secret);
 }
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ ticketId: string }> }) {
-  if (!hasInternalAccess(request)) return Response.json({ error: "Não autorizado." }, { status: 401 });
+  if (!(await hasInternalAccess(request))) return Response.json({ error: "Não autorizado." }, { status: 401 });
   try {
     const { ticketId } = await params;
     const { status } = bodySchema.parse(await request.json());

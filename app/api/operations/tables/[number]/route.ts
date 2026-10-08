@@ -3,7 +3,7 @@ import { updateDiningTable } from "@/lib/restaurant-repository";
 import { hasStaffSession } from "@/lib/staff-session";
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ number: string }> }) {
-  if (!hasStaffSession(request, ["manager"])) return Response.json({ error: "Acesso de gestão necessário." }, { status: 403 });
+  if (!(await hasStaffSession(request, ["manager"]))) return Response.json({ error: "Acesso de gestão necessário." }, { status: 403 });
   try {
     const number = Number((await params).number);
     if (!Number.isInteger(number) || number < 1 || number > 200) throw new Error("Mesa inválida.");

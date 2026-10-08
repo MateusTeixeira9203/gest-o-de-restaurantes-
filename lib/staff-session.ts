@@ -1,3 +1,4 @@
+import { query } from "./database";
 import { createHmac, timingSafeEqual } from "node:crypto";
 
 export const STAFF_SESSION_COOKIE = "patos_staff_session";
@@ -45,13 +46,21 @@ export function verifyStaffSession(token?: string | null): SessionPayload | null
   }
 }
 
-export function sessionFromRequest(request: Request) {
+export async function sessionFromRequest(request: Request) {
   const cookie = request.headers.get("cookie") ?? "";
   const token = cookie.split(";").map(item => item.trim()).find(item => item.startsWith(`${STAFF_SESSION_COOKIE}=`))?.slice(STAFF_SESSION_COOKIE.length + 1);
-  return verifyStaffSession(token);
+  const session = verifyStaffSession(token);
+  if (!session) return null;
+  if (session.role === "admin" && !session.staffId) return session.username === process.env.RESTAURANT_ADMIN_USER ? session : null;
+  if (!session.staffId) return null;
+  const member = (await query<{name:string; role:string; updated_at:Date}>(
+    "SELECT s.name,s.role,s.updated_at FROM staff_members s JOIN restaurants r ON r.id=s.restaurant_id WHERE s.id=$1 AND s.active AND r.slug=$2",
+    [session.staffId, process.env.RESTAURANT_SLUG || "patos-lanches"])).rows[0];
+  const issuedAt = session.expiresAt - 43200000;
+  return member && member.role === session.role && member.name === session.username && new Date(member.updated_at).getTime() <= issuedAt ? session : null;
 }
 
-export function hasStaffSession(request: Request, roles?: StaffRole[]) {
-  const session = sessionFromRequest(request);
+export async function hasStaffSession(request: Request, roles?: StaffRole[]) {
+  const session = await sessionFromRequest(request);
   return Boolean(session && (!roles || session.role === "admin" || roles.includes(session.role)));
 }

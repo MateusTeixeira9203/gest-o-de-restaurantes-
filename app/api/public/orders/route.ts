@@ -35,7 +35,8 @@ const orderSchema = z.object({
 export async function POST(request: Request) {
   try {
     const payload = orderSchema.parse(await request.json());
-    const order = await createOrder(payload);
+    const idempotencyKey = z.string().uuid().parse(request.headers.get("idempotency-key"));
+    const order = await createOrder(payload, { idempotencyKey });
     return Response.json({ order }, { status: 201, headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     if (error instanceof z.ZodError) return Response.json({ error: "Dados do pedido inválidos.", details: error.flatten() }, { status: 400 });

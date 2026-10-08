@@ -5,7 +5,7 @@ import { hasStaffSession } from "@/lib/staff-session";
 const schema = z.object({ variantId: z.string().uuid(), components: z.array(z.object({ itemId: z.string().uuid(), quantity: z.number().positive() })).max(60) });
 
 export async function PUT(request: Request, { params }: { params: Promise<{ productId: string }> }) {
-  if (!hasStaffSession(request, ["manager"])) return Response.json({ error: "Acesso de gestão necessário." }, { status: 403 });
+  if (!(await hasStaffSession(request, ["manager"]))) return Response.json({ error: "Acesso de gestão necessário." }, { status: 403 });
   try {
     await params;
     return Response.json(await replaceVariantRecipe(schema.parse(await request.json())));

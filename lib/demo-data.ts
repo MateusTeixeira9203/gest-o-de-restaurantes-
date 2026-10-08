@@ -35,11 +35,11 @@ const orderItem = (productId: string, variantId: string, quantity: number, note?
   return { id: `demo-${productId}-${variantId}-${quantity}-${note ?? ""}`, productId, productName: p.name, variantId, variantName: variant.name, sector: p.sector, quantity, unitPrice: variant.price, addons: [], note };
 };
 const demoOrders: Order[] = [
-  { id: "o181", number: 181, tableId: "02", status: "delivered", source: "waiter", createdAt: new Date(DEMO_NOW - 35 * 60000).toISOString(), items: [orderItem("pizza-frango", "g", 1), orderItem("coca-2l", "un", 1)], stockApplied: true },
-  { id: "o182", number: 182, tableId: "03", status: "preparing", source: "qr", createdAt: new Date(DEMO_NOW - 12 * 60000).toISOString(), items: [orderItem("pizza-portuguesa", "m", 1, "Sem azeitona"), orderItem("pastel-carne", "un", 2)], stockApplied: true },
-  { id: "o183", number: 183, tableId: "04", status: "ready", source: "waiter", createdAt: new Date(DEMO_NOW - 8 * 60000).toISOString(), items: [orderItem("pizza-calabresa", "g", 1, "Sem cebola")], stockApplied: true },
-  { id: "o184", number: 184, tableId: "08", status: "delivered", source: "waiter", createdAt: new Date(DEMO_NOW - 28 * 60000).toISOString(), items: [orderItem("pastel-carne", "un", 2)], stockApplied: true },
-  { id: "o180", number: 180, tableId: "05", status: "delivered", source: "waiter", createdAt: new Date(DEMO_NOW - 48 * 60000).toISOString(), items: [orderItem("pizza-marguerita", "m", 1), orderItem("suco", "copo", 2)], stockApplied: true },
+  { id: "o181", number: 181, tableId: "02", status: "delivered", source: "waiter", createdAt: new Date(DEMO_NOW - 35 * 60000).toISOString(), items: [orderItem("pizza-frango", "g", 1), orderItem("coca-2l", "un", 1)], revision: 1, stockApplied: true },
+  { id: "o182", number: 182, tableId: "03", status: "preparing", source: "qr", createdAt: new Date(DEMO_NOW - 12 * 60000).toISOString(), items: [orderItem("pizza-portuguesa", "m", 1, "Sem azeitona"), orderItem("pastel-carne", "un", 2)], revision: 1, stockApplied: true },
+  { id: "o183", number: 183, tableId: "04", status: "ready", source: "waiter", createdAt: new Date(DEMO_NOW - 8 * 60000).toISOString(), items: [orderItem("pizza-calabresa", "g", 1, "Sem cebola")], revision: 1, stockApplied: true },
+  { id: "o184", number: 184, tableId: "08", status: "delivered", source: "waiter", createdAt: new Date(DEMO_NOW - 28 * 60000).toISOString(), items: [orderItem("pastel-carne", "un", 2)], revision: 1, stockApplied: true },
+  { id: "o180", number: 180, tableId: "05", status: "delivered", source: "waiter", createdAt: new Date(DEMO_NOW - 48 * 60000).toISOString(), items: [orderItem("pizza-marguerita", "m", 1), orderItem("suco", "copo", 2)], revision: 1, stockApplied: true },
 ];
 
 export const createDemoState = (): RestaurantState => ({

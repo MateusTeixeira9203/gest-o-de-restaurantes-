@@ -10,7 +10,7 @@ const schema = z.object({
 }).refine(value => Object.keys(value).length > 0, "Informe uma alteração.");
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ memberId: string }> }) {
-  if (!hasStaffSession(request, ["manager"])) return Response.json({ error: "Acesso de gestão necessário." }, { status: 403 });
+  if (!(await hasStaffSession(request, ["manager"]))) return Response.json({ error: "Acesso de gestão necessário." }, { status: 403 });
   try {
     const { memberId } = await params;
     return Response.json({ member: await updateStaffMember(memberId, schema.parse(await request.json())) });
