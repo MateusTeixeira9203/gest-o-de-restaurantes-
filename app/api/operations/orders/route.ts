@@ -2,7 +2,7 @@ import { z } from "zod";
 import { createOrder } from "@/lib/restaurant-repository";
 import { hasStaffSession, sessionFromRequest } from "@/lib/staff-session";
 
-const itemSchema = z.object({ productId: z.string().uuid(), variantId: z.string().uuid(), quantity: z.number().int().min(1).max(50), addonIds: z.array(z.string().uuid()).max(12).optional(), note: z.string().trim().max(280).optional() });
+const itemSchema = z.object({ productId: z.string().uuid(), variantId: z.string().uuid(), quantity: z.number().int().min(1).max(50), addonIds: z.array(z.string().uuid()).max(12).refine(ids=>new Set(ids).size===ids.length,"Adicional repetido.").optional(), note: z.string().trim().max(280).optional() });
 const bodySchema = z.object({ tableNumber: z.number().int().positive().max(200), items: z.array(itemSchema).min(1).max(40), sendToKitchen: z.literal(true), notes: z.string().trim().max(500).optional() });
 
 export async function POST(request: Request) {

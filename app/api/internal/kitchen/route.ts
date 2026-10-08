@@ -1,3 +1,4 @@
+import { restaurantContext } from "@/modules/tenancy/context";
 import { getKitchenQueue } from "@/lib/restaurant-repository";
 import { hasStaffSession } from "@/lib/staff-session";
 
@@ -5,7 +6,7 @@ export const dynamic = "force-dynamic";
 
 async function hasInternalAccess(request: Request) {
   const secret = process.env.RESTAURANT_INTERNAL_API_KEY;
-  return (await hasStaffSession(request, ["kitchen", "manager"])) || Boolean(secret && request.headers.get("x-restaurant-internal-key") === secret);
+  return (await hasStaffSession(request, ["kitchen", "manager"])) || Boolean(secret && request.headers.get("x-restaurant-internal-key") === secret && (await restaurantContext()).slug === (process.env.RESTAURANT_SLUG || "patos-lanches"));
 }
 
 export async function GET(request: Request) {

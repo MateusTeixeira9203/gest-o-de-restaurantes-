@@ -14,11 +14,11 @@ type KitchenTicket = {
 type RemoteProduct = { id: string; name: string; description: string; category: string; sector: string; available: boolean; featured: boolean; imageUrl: string | null; variants: Array<{ id: string; name: string; priceCents: number; stockAvailable: boolean }>; addons: Array<{ id: string; name: string; priceCents: number }> };
 type Branding = { logoUrl: string | null; coverUrl: string | null };
 type Snapshot = {
-  restaurant: { name: string; whatsapp: string; serviceRate: number };
+  restaurant: { name: string; whatsapp: string; serviceRate: number; plan: "essential"|"professional"; accentColor:string };
   branding: Branding;
   products: RemoteProduct[];
   tables: Array<{ number: number; label: string | null; active: boolean }>;
-  orders: Array<{ id: string; revision: number; orderNumber: number; source: "waiter" | "public_menu" | "qr_menu"; fulfillment: "dine_in" | "pickup" | "delivery"; status: Order["status"]; tableNumber: number | null; customerName: string | null; subtotalCents: number; serviceCents: number; totalCents: number; paidCents: number; payments: Array<{ method: "pix" | "cash" | "debit" | "credit"; amountCents: number }>; delivery: { addressLine1: string; neighborhood: string | null; reference: string | null } | null; createdAt: string; items: Array<{ id: string; product_id: string | null; variant_id: string | null; product_name: string; variant_name: string; kitchen_sector: string; quantity: number; unit_price_cents: number; addons: Array<{ id: string; name: string; priceCents: number }>; note: string | null }> }>;
+  orders: Array<{ id: string; revision: number; servedAt: string | null; orderNumber: number; source: "waiter" | "public_menu" | "qr_menu"; fulfillment: "dine_in" | "pickup" | "delivery"; status: Order["status"]; tableNumber: number | null; customerName: string | null; subtotalCents: number; serviceCents: number; totalCents: number; paidCents: number; payments: Array<{ method: "pix" | "cash" | "debit" | "credit"; amountCents: number }>; delivery: { addressLine1: string; neighborhood: string | null; reference: string | null } | null; createdAt: string; items: Array<{ id: string; product_id: string | null; variant_id: string | null; product_name: string; variant_name: string; kitchen_sector: string; quantity: number; unit_price_cents: number; addons: Array<{ id: string; name: string; priceCents: number }>; note: string | null }> }>;
   kitchen: KitchenTicket[];
   inventory: { enabled: boolean; items: Array<{ id: string; name: string; category: string; unit: "un" | "g" | "kg" | "ml" | "L"; quantity: number; minimumQuantity: number; averageCostCents: number; active: boolean }>; movements: Array<{ id: string; itemId: string; type: "initial" | "purchase" | "sale_consumption" | "cancellation_return" | "loss" | "adjustment"; quantityDelta: number; note: string | null; createdAt: string }>; recipes: Array<{ variantId: string; itemId: string; quantity: number }> };
 };
@@ -38,6 +38,7 @@ type StoreContextValue = {
   branding: Branding;
   kitchen: KitchenTicket[];
   ready: boolean;
+  plan: "essential" | "professional";
   authenticated: boolean;
   session: StaffSession | null;
   refresh: () => Promise<boolean>;
@@ -64,7 +65,7 @@ type StoreContextValue = {
 };
 
 const StoreContext = createContext<StoreContextValue | null>(null);
-const baseState: RestaurantState = { settings: { name: "Patos Lanches", whatsapp: "", serviceRate: 10, tableCount: 0 }, tables: [], products: [], orders: [], stock: [], movements: [], sales: [], nextOrderNumber: 1 };
+const baseState: RestaurantState = { settings: { name: "Gestor Food", whatsapp: "", serviceRate: 10, tableCount: 0 }, tables: [], products: [], orders: [], stock: [], movements: [], sales: [], nextOrderNumber: 1 };
 
 function productFromRemote(product: RemoteProduct): Product {
   return {
@@ -86,7 +87,7 @@ function tableStatus(orders: Order[], tableId: string): TableStatus {
 function stateFromSnapshot(snapshot: Snapshot, previous: RestaurantState): RestaurantState {
   const recipesByVariant = Map.groupBy(snapshot.inventory.recipes, recipe => recipe.variantId);
   const orders: Order[] = snapshot.orders.map(order => ({
-    id: order.id, revision: order.revision, number: order.orderNumber, tableId: order.tableNumber ? String(order.tableNumber).padStart(2, "0") : `externo-${order.id}`,
+    id: order.id, revision: order.revision, servedAt: order.servedAt, subtotalCents: order.subtotalCents, serviceCents: order.serviceCents, totalCents: order.totalCents, paidCents: order.paidCents, number: order.orderNumber, tableId: order.tableNumber ? String(order.tableNumber).padStart(2, "0") : `externo-${order.id}`,
     status: order.status, source: order.source === "waiter" ? "waiter" : "qr", fulfillment: order.fulfillment, customerName: order.customerName ?? undefined, delivery: order.delivery ? { addressLine1: order.delivery.addressLine1, neighborhood: order.delivery.neighborhood ?? undefined, reference: order.delivery.reference ?? undefined } : undefined, paid: order.paidCents >= order.totalCents, createdAt: order.createdAt, stockApplied: false,
     items: order.items.map(item => ({
       id: item.id, productId: item.product_id ?? "", productName: item.product_name, variantId: item.variant_id ?? "", variantName: item.variant_name,
@@ -138,6 +139,9 @@ export function RestaurantStoreProvider({ children }: { children: React.ReactNod
   const [branding, setBranding] = useState<Branding>({ logoUrl: null, coverUrl: null });
   const [kitchen, setKitchen] = useState<KitchenTicket[]>([]);
   const [ready, setReady] = useState(false);
+  const [plan,setPlan]=useState<"essential"|"professional">("essential");
+  const [accent,setAccent]=useState("#171814");
+  useEffect(()=>{document.documentElement.style.setProperty("--brand-accent",accent);const rgb=accent.slice(1).match(/../g)!.map(x=>parseInt(x,16)/255).map(v=>v<=0.04045?v/12.92:((v+0.055)/1.055)**2.4);const luminance=rgb[0]*.2126+rgb[1]*.7152+rgb[2]*.0722;document.documentElement.style.setProperty("--brand-on-accent",luminance>.179?"#111111":"#ffffff");},[accent]);
   const [authenticated, setAuthenticated] = useState(false);
   const [session, setSession] = useState<StaffSession | null>(null);
   const [inventoryEnabled, setInventoryEnabledState] = useState(false);
@@ -145,7 +149,8 @@ export function RestaurantStoreProvider({ children }: { children: React.ReactNod
   const loadPublicMenu = useCallback(async () => {
     const response = await fetch("/api/public/menu", { cache: "no-store" });
     if (!response.ok) return;
-    const menu = await response.json() as { restaurant: { name: string; whatsapp: string | null }; branding: Branding; products: RemoteProduct[] };
+    const menu = await response.json() as { restaurant: { name: string; whatsapp: string | null; accentColor:string }; branding: Branding; products: RemoteProduct[] };
+    setAccent(menu.restaurant.accentColor);
     setBranding(menu.branding ?? { logoUrl: null, coverUrl: null });
     setState(previous => ({ ...previous, settings: { ...previous.settings, name: menu.restaurant.name, whatsapp: menu.restaurant.whatsapp ?? "" }, products: menu.products.map(productFromRemote) }));
   }, []);
@@ -155,6 +160,7 @@ export function RestaurantStoreProvider({ children }: { children: React.ReactNod
     if (response.status === 401 || response.status === 403) { setAuthenticated(false); setSession(null); return false; }
     if (!response.ok) return false;
     const snapshot = await response.json() as Snapshot;
+    setPlan(snapshot.restaurant.plan);setAccent(snapshot.restaurant.accentColor);
     setBranding(snapshot.branding ?? { logoUrl: null, coverUrl: null });
     setState(previous => stateFromSnapshot(snapshot, previous));
     setKitchen(snapshot.kitchen);
@@ -166,6 +172,7 @@ export function RestaurantStoreProvider({ children }: { children: React.ReactNod
   useEffect(() => {
     void (async () => {
       if (publicMenuPage) { await loadPublicMenu(); setReady(true); return; }
+      await loadPublicMenu();
       const response = await fetch("/api/auth/session", { cache: "no-store" });
       const current = await response.json().catch(() => null) as { authenticated?: boolean; username?: string | null; role?: StaffRole | null; staffId?: string | null } | null;
       if (current?.authenticated && current.username && current.role) {
@@ -223,9 +230,13 @@ export function RestaurantStoreProvider({ children }: { children: React.ReactNod
   }, [refresh]);
 
   const payTable = useCallback(async (tableId: string, payments: Payment[]) => {
-    const response = await fetch("/api/operations/payments", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ tableNumber: Number(tableId), payments: payments.map(payment => ({ method: payment.method, amountCents: Math.round(payment.amount * 100) })) }) });
+    const payload=JSON.stringify({tableNumber:Number(tableId),payments:payments.map(payment=>({method:payment.method,amountCents:Math.round(payment.amount*100)}))});
+    const intent="table-payment:"+payload;
+    const key=orderRequests.current.get(intent)??crypto.randomUUID();orderRequests.current.set(intent,key);
+    const response = await fetch("/api/operations/payments", { method: "POST", headers: { "content-type": "application/json", "idempotency-key":key }, body: payload });
     if (!response.ok) return { ok: false as const, message: await readError(response) };
     const body = await response.json() as { changeCents: number };
+    orderRequests.current.delete(intent);
     await refresh();
     return { ok: true as const, change: body.changeCents / 100 };
   }, [refresh]);
@@ -244,11 +255,15 @@ export function RestaurantStoreProvider({ children }: { children: React.ReactNod
   }, [refresh]);
 
   const updateOrderStatus = useCallback(async (orderId: string, status: Order["status"]): Promise<Result> => {
-    if (status === "delivered") return { ok: true, number: 0 };
+    if (status === "delivered") {
+      const response=await fetch(`/api/operations/orders/${orderId}/serve`,{method:"POST"});
+      if(!response.ok)return {ok:false,message:await readError(response)};
+      await refresh();return {ok:true,number:0};
+    }
     const ticket = kitchen.find(item => item.orderId === orderId && item.status !== "ready");
     if (!ticket || (status !== "preparing" && status !== "ready")) return { ok: false, message: "Não foi possível localizar a comanda da cozinha." };
     return updateKitchenTicket(ticket.id, status);
-  }, [kitchen, updateKitchenTicket]);
+  }, [kitchen, updateKitchenTicket, refresh]);
 
   const toggleProduct = useCallback(async (productId: string): Promise<Result> => {
     const product = state.products.find(item => item.id === productId);
@@ -304,7 +319,7 @@ export function RestaurantStoreProvider({ children }: { children: React.ReactNod
 
   const resetDemo = useCallback(() => { void refresh(); }, [refresh]);
 
-  const value = useMemo<StoreContextValue>(() => ({ state, branding, kitchen, ready, authenticated, session, refresh, login, logout, createOrder, createPublicOrder, reviewOrder, cancelOrder, payTable, updateKitchenTicket, updateDeliveryStatus, updateOrderStatus, toggleProduct, updateSettings, createTable, createProduct, inventoryEnabled, setInventoryEnabled, createInventoryItem, moveInventory, saveRecipe, resetDemo }), [state, branding, kitchen, ready, authenticated, session, refresh, login, logout, createOrder, createPublicOrder, reviewOrder, cancelOrder, payTable, updateKitchenTicket, updateDeliveryStatus, updateOrderStatus, toggleProduct, updateSettings, createTable, createProduct, inventoryEnabled, setInventoryEnabled, createInventoryItem, moveInventory, saveRecipe, resetDemo]);
+  const value = useMemo<StoreContextValue>(() => ({ state, branding, kitchen, ready, plan, authenticated, session, refresh, login, logout, createOrder, createPublicOrder, reviewOrder, cancelOrder, payTable, updateKitchenTicket, updateDeliveryStatus, updateOrderStatus, toggleProduct, updateSettings, createTable, createProduct, inventoryEnabled, setInventoryEnabled, createInventoryItem, moveInventory, saveRecipe, resetDemo }), [state, branding, kitchen, ready, plan, authenticated, session, refresh, login, logout, createOrder, createPublicOrder, reviewOrder, cancelOrder, payTable, updateKitchenTicket, updateDeliveryStatus, updateOrderStatus, toggleProduct, updateSettings, createTable, createProduct, inventoryEnabled, setInventoryEnabled, createInventoryItem, moveInventory, saveRecipe, resetDemo]);
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }
 

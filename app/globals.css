@@ -254,3 +254,8 @@ body{background:var(--patos-cream)}
 .delivery-items span{font-weight:400;color:#77776f}
 .delivery-checkout-label{display:flex;align-items:center;gap:.5rem;border:1px solid #f0d28d;border-radius:.75rem;background:#fff8e8;padding:.65rem .8rem;color:#8b550c;font-size:.78rem;font-weight:750}
 @media(prefers-reduced-motion:reduce){.manage-sidebar nav a,.manage-sidebar nav a::before{transition:none}.manage-title{animation:none}}
+
+/* Restaurant identity; text color follows luminance of the selected accent. */
+.primary-button{background:var(--brand-accent,#171814);color:var(--brand-on-accent,#fff)}
+.primary-button:hover{background:var(--brand-accent,#171814);color:var(--brand-on-accent,#fff);filter:brightness(.96)}
+.manage-content,.manage-page{min-width:0}

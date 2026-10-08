@@ -36,6 +36,11 @@ export interface OrderItem {
 }
 export interface Order {
   revision: number;
+  subtotalCents?: number;
+  serviceCents?: number;
+  totalCents?: number;
+  paidCents?: number;
+  servedAt?: string | null;
   id: string;
   number: number;
   tableId: string;

@@ -5,7 +5,7 @@ const itemSchema = z.object({
   productId: z.string().uuid(),
   variantId: z.string().uuid(),
   quantity: z.number().int().min(1).max(50),
-  addonIds: z.array(z.string().uuid()).max(12).optional(),
+  addonIds: z.array(z.string().uuid()).max(12).refine(ids=>new Set(ids).size===ids.length,"Adicional repetido.").optional(),
   note: z.string().trim().max(280).optional(),
 });
 
