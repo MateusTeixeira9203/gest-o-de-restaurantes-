@@ -259,3 +259,17 @@ body{background:var(--patos-cream)}
 .primary-button{background:var(--brand-accent,#171814);color:var(--brand-on-accent,#fff)}
 .primary-button:hover{background:var(--brand-accent,#171814);color:var(--brand-on-accent,#fff);filter:brightness(.96)}
 .manage-content,.manage-page{min-width:0}
+
+/* Verified touch targets and keyboard focus for the daily service flow. */
+.icon-button { min-width:44px; min-height:44px; }
+.quantity { height:auto; min-height:52px; }
+.quantity button { width:44px; height:44px; }
+.quantity button:disabled { opacity:.45; cursor:not-allowed; }
+button:focus-visible, a:focus-visible, summary:focus-visible { outline:2px solid currentColor; outline-offset:3px; }
+@media(max-width:720px){
+  .primary-button,.secondary-button,.dark-button,.text-button,.category-chip,.sector-tabs button { min-height:44px; }
+  .quantity { gap:.5rem; }
+  .form-input,.text-area,.admin-field input,.admin-field select,.admin-field textarea { font-size:16px; }
+}
+
+[data-slot="dialog-close"], [data-slot="sheet-content"] > button { min-width:44px; min-height:44px; display:grid; place-items:center; top:.25rem; right:.25rem; }

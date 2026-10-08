@@ -861,12 +861,13 @@ export function FinanceWorkspace({
       </header>
       <nav
         aria-label="Seções financeiras"
-        className="flex gap-2 overflow-x-auto pb-2"
+        className="flex flex-wrap gap-2 pb-2"
       >
         {tabs.map(([id, label]) => (
           <button
             key={id}
-            className={`whitespace-nowrap rounded-xl px-4 py-2 text-sm font-medium ${tab === id ? "bg-neutral-900 text-white" : "border bg-white"}`}
+            aria-pressed={tab === id}
+            className={`min-h-11 whitespace-nowrap rounded-xl px-4 py-2 text-sm font-medium ${tab === id ? "bg-neutral-900 text-white" : "border bg-white"}`}
             onClick={() => setTab(id)}
           >
             {label}
