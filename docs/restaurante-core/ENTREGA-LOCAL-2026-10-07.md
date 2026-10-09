@@ -1,6 +1,6 @@
 # Gestor Food 0.2 — entrega local para validação
 
-Data: 7 de outubro de 2026. Esta entrega é um MVP funcional ampliado, não a conclusão de todos os itens do manual. Aceite do proprietário, emissão fiscal real e publicação continuam pendentes.
+Entrega original: 7 de outubro de 2026. Publicação: 9 de outubro de 2026. Este é um MVP funcional ampliado, não a conclusão de todos os itens do manual. Aceite do proprietário e emissão fiscal real continuam pendentes.
 
 ## Como abrir
 
@@ -8,7 +8,7 @@ Na pasta `restaurante-mvp`, execute `./scripts/dev-local.sh` e abra `http://loca
 
 Comece por **Gestão → Financeiro → Caixa** ou **Operação → Caixa**: abrir o caixa é obrigatório antes de registrar recebimentos. Informe o fundo físico e, separadamente, o saldo bancário inicial. Sem saldo inicial bancário, o sistema avisa que a projeção considera apenas os movimentos cadastrados.
 
-O banco é o Neon existente. Não foi criado outro projeto ou banco. Alterações são locais, com commits; não houve push nem deploy. O endereço publicado ainda utiliza o código anterior, embora o schema compartilhado tenha recebido migrações aditivas. Portanto, o teste desta versão é no localhost.
+O banco é o Neon existente. Não foi criado outro projeto ou banco. Na entrega de 07/10 as alterações eram locais. Em 09/10, após autorização, os nove commits foram enviados à main do GitHub e a Vercel publicou o commit 3a70b3e6077ab049d3eafdb5805aad5b0639c855. O aplicativo público agora contém este recorte; o teste local continua disponível.
 
 ## Fluxos implementados nesta entrega
 
@@ -74,6 +74,24 @@ Os testes de integração de aprovação, financeiro e isolamento foram repetido
 
 Todos os dados criados nesta simulação são temporários e foram removidos. Os testes não emitem notas, transferem dinheiro, enviam WhatsApp nem usam dados de clientes reais.
 
+## Publicação autorizada — 09/10/2026
+
+Aplicação: [Gestor Food / Patos Lanches](https://gest-o-de-restaurantes-opal.vercel.app). GitHub: `MateusTeixeira9203/gest-o-de-restaurantes-`, branch `main`. Versão de aplicação: `3a70b3e6077ab049d3eafdb5805aad5b0639c855`. Vercel: projeto `prj_0EpAH5HhSqc8SQyTZi1JN7TMd5ZL`, deployment `dpl_9MkFG7xD42xt4hwFjmfxB39ghyg7`, alvo `production`, estado `READY`, alias público confirmado. Migrações novas nesta publicação: nenhuma. Atualizações posteriores apenas deste manual/relato não alteram o código da versão de aplicação verificada.
+
+| Critério dirigido no endereço público | Estado | Evidência |
+| --- | --- | --- |
+| Disponibilidade e banco | PASSA | Health 200 e database connected; cardápio 200 com marca Patos |
+| Financeiro sem autenticação | PASSA | HTTP 403 sem conteúdo financeiro |
+| Pedido público pendente | PASSA | Pedido sintético 201/pending; zero tickets e estoque intacto |
+| Aprovação autorizada | PASSA | Sem login 403; gerente sintético 200; um ticket e uma porção consumida |
+| Cancelamento do pedido de teste | PASSA | API 200 e cleanup por IDs exclusivos |
+| Conta financeira persistida | PASSA | Conta sintética R$ 12,34 criada, retornada na leitura e valor 1234 conferido no PostgreSQL; cancelamento 200 |
+| Limpeza | PASSA | Apenas registros sintéticos desta execução removidos em transação |
+| Turno completo pelo navegador publicado | NÃO TESTADO | O turno completo anterior foi no localhost |
+| Homologação fiscal e pagamentos externos | NÃO TESTADO | Integrações ainda não implementadas |
+
+Esta verificação não é auditoria completa do produto nem aceite do usuário. Não foram feitas cobranças, emissões fiscais, alteração de credenciais reais ou novo schema. Para conter defeito desta versão, identificar o fluxo e aplicar correção dirigida; voltar ao código antigo pode restaurar ausência de aprovação obrigatória e não é rollback seguro automático.
+
 ## Pendências para o produto completo
 
 ### 1. Fiscal e contabilidade fiscal — B08 / parte de B09
@@ -110,6 +128,6 @@ Os planos já controlam capacidades, mas faltam gestão de licenças, versões/d
 
 ### 5. Aceite e liberação — B10
 
-Faltam seus testes de uso, conferência dos cadastros/custos e saldos reais, ensaio de restauração, testes de pico/concorrência em volume representativo, operação com impressora e equipamentos do restaurante e validação de queda/retomada de conexão. Também faltam push, deploy e teste do endereço publicado, a realizar em uma etapa de publicação autorizada.
+Faltam seus testes de uso, conferência dos cadastros/custos e saldos reais, ensaio de restauração, testes de pico/concorrência em volume representativo, operação com impressora e equipamentos do restaurante e validação de queda/retomada de conexão. Push, deploy e verificação dirigida do endereço público foram concluídos em 09/10; o turno completo no navegador publicado e o aceite do piloto permanecem pendentes.
 
 A apresentação pode usar este MVP local e seus fluxos manuais. O produto completo do manual continua aberto; não anunciar emissão fiscal, cobranças ou conciliação automática como disponíveis.

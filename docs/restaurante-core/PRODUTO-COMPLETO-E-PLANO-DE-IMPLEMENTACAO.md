@@ -1,12 +1,12 @@
 # Gestor Food produto completo e plano de implementação
 
-Versão 1.1 • 7 de outubro de 2026 • Primeiro piloto em Minas Gerais • Alvo de avaliação no sábado 10 de outubro de 2026
+Versão 1.2 • 9 de outubro de 2026 • Primeiro piloto em Minas Gerais • Alvo de avaliação no sábado 10 de outubro de 2026
 
 Este é o documento mestre para transformar a base do Patos Lanches em um produto de operação e gestão de restaurantes, personalizável por estabelecimento, com planos Essencial e Profissional. Ele define o produto completo acordado até aqui e divide sua construção em blocos que podem ser implementados, testados pelo proprietário do produto e corrigidos antes da próxima entrega.
 
 Sua função é ser o **manual do produto e contrato de escopo para desenvolvimento e validação**: visão, nome, marca, design, funcionalidades, regras, arquitetura, dados, integrações, operação, entregas e critérios de aceite. Uma implementação deve poder ser conferida contra esta base, e uma mudança de direção precisa ficar registrada nela.
 
-**Estado atual: MVP local 0.2 implementado para validação.** A existência de um recurso neste documento não significa que ele está concluído. O recorte entregue, as evidências e todas as pendências estão em [Entrega local de 07/10/2026](ENTREGA-LOCAL-2026-10-07.md). O quadro da seção 19 foi atualizado; seu aceite permanece pendente. Fiscal real e integrações automáticas não estão disponíveis.
+**Estado atual: MVP 0.2 publicado em 09/10/2026, com verificação dirigida; aceite do usuário pendente.** A existência de um recurso neste documento não significa que ele está concluído. O recorte entregue, as evidências e todas as pendências estão em [Entrega local de 07/10/2026](ENTREGA-LOCAL-2026-10-07.md). O quadro da seção 19 foi atualizado; seu aceite permanece pendente. Fiscal real e integrações automáticas não estão disponíveis.
 
 Este arquivo passa a ser a referência principal de escopo, sequência e aceite. Os documentos anteriores permanecem como apoio. Em caso de divergência, prevalecem a instrução mais recente do proprietário e sua incorporação neste documento. Mudanças futuras devem atualizar a versão, o bloco afetado e os testes, evitando manter duas definições concorrentes.
 
@@ -892,6 +892,35 @@ Todos os blocos abaixo começam como **planejados**. Cada um só muda de estado 
 
 **Aceite de homologação:** fluxo e exceções comprovados no provedor. **Aceite de produção:** emitente/configurações corretos, canais da rotina cobertos, equipamento e procedimento de contingência definidos e primeira operação real autorizada conferida. Um aceite não substitui o outro. **Fica depois:** notas de fornecedores, apuração tributária e operações fiscais não definidas para o piloto.
 
+#### B08 — avaliação Focus e próximo recorte, 09/10/2026
+
+**Decisão do usuário:** avaliar a Focus NFe para adiantar a operação fiscal. Isso autoriza pesquisa e preparação técnica, não contratação nem emissão de documentos reais. Provedor ainda não contratado. Responsável pela implementação/integração: Codex nesta tarefa; enquadramento e classificações: restaurante e contador; aceite de uso: proprietário do produto.
+
+**Atual / desejado / lacuna:** não existe emissor no aplicativo publicado; o objetivo é emitir documentos das vendas e entregar XMLs ao contador; faltam perfil do emitente, matriz fiscal por canal, implementação, credenciais e homologação.
+
+**Avaliação verificada:** a documentação oferece emissão, consulta por referência e cancelamento de NFC-e; consulta retorna estado e caminhos dos arquivos. HTTP bem-sucedido não basta para declarar autorização. Homologação e produção têm endereços diferentes. Fontes: [emissão](https://doc.focusnfe.com.br/reference/emitir_nfce), [consulta](https://doc.focusnfe.com.br/reference/consultar_nfce), [cancelamento](https://doc.focusnfe.com.br/reference/cancelar_nfce), [ambientes](https://doc.focusnfe.com.br/reference/ambiente).
+
+**Custo consultado em 09/10/2026:** plano Retail anunciado por R$ 62,90/mês, um emitente, 500 NFC-e e 100 NF-e; excedentes de R$ 0,055/NFC-e e R$ 0,16/NF-e. Simulações aritméticas, considerando somente volume de NFC-e e nenhuma outra cobrança: 500/mês = R$ 62,90; 1.500 = R$ 117,90; 3.000 = R$ 200,40; 6.000 = R$ 365,40. A Focus informa aceitar certificado A1. Confirmar proposta e custos antes da contratação; o valor não está incluído na licença vitalícia do Gestor Food. Fonte: [preços oficiais](https://focusnfe.com.br/precos/).
+
+**Trade-off:** terceirizar a comunicação fiscal reduz a integração direta com a SEFAZ, mas mantém dependência de disponibilidade, preços e suporte do fornecedor. A API não resolve cadastro tributário incorreto nem substitui a validação do contador. Recomendação: experimentar homologação para um restaurante; evitar contratar um pacote multiempresa antes de conhecer o volume.
+
+**Matriz fiscal MG:** a orientação oficial distingue varejo elegível de comércio eletrônico e apresenta restrições para NFC-e nas vendas pela internet. Não classificar automaticamente todo delivery ou cardápio online como NFC-e. Definir com o contador documento por canal, destinatário e operação; casos sem classificação ficam bloqueados no fiscal, preservando o fluxo operacional. Credenciamento, certificado e CSC precisam ser confirmados. Fonte: [SEF-MG, perguntas frequentes](https://portalsped.fazenda.mg.gov.br/spedmg/nfce/Perguntas-Frequentes/respostas_i/index.html).
+
+**Primeira subentrega proposta:** perfil fiscal por restaurante e versão por produto; painel de pendências; vínculo entre venda/documento; adaptador Focus separado; referência persistente por restaurante, venda, modelo e ambiente; estados preparado/enviando/processando/autorizado/rejeitado/resultado desconhecido/cancelado. Começar por ambiente de homologação e operações cuja matriz esteja validada. Persistir intenção antes da chamada e consultar a mesma referência quando a resposta for incerta; arquivos privados, sem tokens no navegador ou logs. Detalhar schema e rotas ao iniciar a implementação deste recorte.
+
+**Preservar:** aprovação da cozinha, consumo de estoque, recebimento e resultado independentes do estado fiscal; a emissão não cria outra venda ou outro pagamento. **Fora desta subentrega:** cobranças bancárias, troca de maquininha, apuração tributária, promessa de cobertura de todo canal e emissão real sem homologação.
+
+| Critério do próximo recorte | Estado inicial / ação | Resultado esperado e efeito proibido | Verificação / estado atual |
+| --- | --- | --- | --- |
+| Configuração incompleta | Emitente sem cadastro ou credenciais; tentar emitir | Listar pendências; nenhuma chamada fiscal | Teste local com transporte controlado / NÃO TESTADO |
+| Emissão válida | Venda e matriz válidas; emitir em homologação | Documento vinculado com resposta real; sem novo pagamento | Provedor + API + banco + recarga / NÃO TESTADO |
+| Resultado incerto | Timeout após envio; repetir consulta | Reutilizar referência e recuperar estado; não gerar nota duplicada | Transporte controlado e homologação / NÃO TESTADO |
+| Rejeição fiscal | Provedor recusa conteúdo | Exibir rejeição acionável; não chamar HTTP 201 de autorização | Fixtures de resposta e homologação / NÃO TESTADO |
+| Isolamento | Usuário de outro restaurante acessa nota/XML | Recusar acesso sem revelar dados ou alterar estado | Identidades distintas e API direta / NÃO TESTADO |
+| Cancelamento e arquivos | Nota autorizada; cancelar/baixar arquivos | Evento e arquivos rastreáveis; falha continua pendente | Homologação e armazenamento privado / NÃO TESTADO |
+
+Nenhuma credencial, certificado, contrato ou emissão externa foi criado durante esta avaliação. Reversão da futura subentrega: desabilitar novas emissões, manter consultas e arquivos dos documentos existentes; nunca apagar documentos fiscais para voltar uma versão.
+
 ### B09 Exportações e trabalho com o contador
 
 **Objetivo:** entregar informações financeiras e fiscais completas, por período, sem depender de copiar telas.
@@ -935,6 +964,12 @@ Todos os blocos abaixo começam como **planejados**. Cada um só muda de estado 
 **Verificação técnica:** evento falso é recusado; evento duplicado não altera saldo; recebedor/valor/moeda errados não quitam venda; evento atrasado não regride estado; timeout é consultado antes de nova cobrança; reembolso de registro não se confunde com devolução bancária.
 
 **Aceite:** um provedor e meios declarados testados de ponta a ponta, incluindo recebível, taxa e repasse conforme APIs disponíveis. **Dependências:** conta autorizada, compatibilidade e credenciais. **Fica depois:** universalizar maquininhas, TEF não contratado e novos provedores sem testes específicos.
+
+#### Sequência recomendada para automação financeira, 09/10/2026
+
+O usuário informou não conhecer ainda a maquininha/banco do piloto. Manter B11 como dependente de compatibilidade, sem escolher provedor por conveniência técnica. Recomendação para decisão: (1) continuar registrando meios manualmente; (2) implementar B12 com um extrato/layout confirmado, prévia e fila de divergências; (3) avaliar Pix integrado com referência própria e confirmação bancária; (4) só depois integrar terminal/TEF/SmartPOS suportado pelo equipamento real. Importação sem ambiguidade pode facilitar conferência, mas comprovante ou valor semelhante não prova que uma venda foi liquidada. Não prometer compatibilidade universal.
+
+**Complementos independentes a priorizar após o recorte fiscal:** parcelas simples de contas e vencimentos em B05; integração da compra física com obrigação financeira em B06; depois recorrências e devoluções parciais conforme necessidade do piloto. Cada um continua sendo uma subentrega com critérios próprios; nenhuma dessas capacidades novas foi implementada nesta publicação.
 
 ### B12 Conciliação financeira
 
@@ -1122,7 +1157,7 @@ Ensaiar no celular e no desktop. Para impressão, testar o modelo real, largura,
 
 Aceite de uso e validação técnica são campos independentes. Você pode gostar da tela e ainda haver um cálculo errado; um teste técnico pode passar e o fluxo continuar confuso. A liberação exige as duas dimensões para o escopo acordado. Subpartes podem ter estados distintos, como fiscal em homologação aceito e fiscal em produção bloqueado.
 
-### 19.2 Quadro atualizado em 07/10/2026
+### 19.2 Quadro atualizado em 09/10/2026
 
 | Bloco | Implementação | Verificação técnica | Seu aceite | Dependência a acompanhar |
 | --- | --- | --- | --- | --- |
@@ -1134,9 +1169,9 @@ Aceite de uso e validação técnica são campos independentes. Você pode gosta
 | B05 | Parcial: contas e baixas manuais | Baixa parcial, saldo, estorno e cancelamento testados | Pendente | Recorrência, parcelas, anexos e contas bancárias |
 | B06 | Parcial: receitas por porção e custo histórico | Snapshot preservado após mudança de custo | Pendente | Conversões, rendimento e integração de compras |
 | B07 | Parcial: período e resultados gerenciais | Consultas reais; custos incompletos identificados | Pendente | Métricas adicionais e validação dos cadastros |
-| B08 | Não implementado | Bloqueado para emissão real | Pendente | Emitente, contador, provedor, A1/CSC e integração |
+| B08 | Não implementado; avaliação Focus registrada | Emissão e homologação NÃO TESTADAS | Pendente | Matriz fiscal MG, emitente, contador, provedor, A1/CSC e integração |
 | B09 | CSV financeiro implementado | Exportação de 205 lançamentos extras conferida | Pendente | XML/ZIP e pacote contábil completo |
-| B10 | Parcial: testes e localhost | APIs, banco, navegador e build verificados | Pendente | Seu aceite, restauração, volume, hardware e deploy |
+| B10 | Parcial: MVP publicado em 09/10 | Deploy 3a70b3e READY; pedidos e conta financeira verificados no endereço público | Pendente | Seu aceite, restauração, volume, hardware e auditoria ampliada |
 | B11 | Evolução não implementada | Pendente | Pendente | Escolher provedor e implementar integração |
 | B12 | Conciliação manual de cartão implementada | Repasse líquido, taxa e repetição testados | Pendente | Importação e conciliação automáticas |
 | B13 | Parcial: domínios e contexto por restaurante | Dois restaurantes sintéticos testados no mesmo banco | Pendente | RLS, onboarding, domínio real e auditoria ampliada |
@@ -1378,6 +1413,7 @@ Consultas de referência desta consolidação: 07/10/2026. Não copiar regras de
 
 | Versão | Data | Alteração | Estado |
 | --- | --- | --- | --- |
+| 1.2 | 09/10/2026 | Publicação do MVP 0.2, avaliação Focus, matriz fiscal MG e sequência recomendada para pagamentos/complementos | Publicação verificada; fiscal não implementado e aceite pendente |
 | 1.1 | 07/10/2026 | MVP local 0.2, autorização de commits/migrações, evidências e pendências por bloco | Teste do proprietário e publicação pendentes |
 | 1.0 | 07/10/2026 | Consolidação do produto completo, contrato de design, arquitetura, regras, 16 blocos, dependências, plano até sábado e aceite por testes | Documento criado; implementação e aceites ainda pendentes |
 
