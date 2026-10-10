@@ -1,12 +1,12 @@
 # Gestor Food produto completo e plano de implementação
 
-Versão 1.2 • 9 de outubro de 2026 • Primeiro piloto em Minas Gerais • Alvo de avaliação no sábado 10 de outubro de 2026
+Versão 1.3 • 9 de outubro de 2026 • Primeiro piloto em Minas Gerais • Alvo de avaliação no sábado 10 de outubro de 2026
 
 Este é o documento mestre para transformar a base do Patos Lanches em um produto de operação e gestão de restaurantes, personalizável por estabelecimento, com planos Essencial e Profissional. Ele define o produto completo acordado até aqui e divide sua construção em blocos que podem ser implementados, testados pelo proprietário do produto e corrigidos antes da próxima entrega.
 
 Sua função é ser o **manual do produto e contrato de escopo para desenvolvimento e validação**: visão, nome, marca, design, funcionalidades, regras, arquitetura, dados, integrações, operação, entregas e critérios de aceite. Uma implementação deve poder ser conferida contra esta base, e uma mudança de direção precisa ficar registrada nela.
 
-**Estado atual: MVP 0.2 publicado em 09/10/2026, com verificação dirigida; aceite do usuário pendente.** A existência de um recurso neste documento não significa que ele está concluído. O recorte entregue, as evidências e todas as pendências estão em [Entrega local de 07/10/2026](ENTREGA-LOCAL-2026-10-07.md). O quadro da seção 19 foi atualizado; seu aceite permanece pendente. Fiscal real e integrações automáticas não estão disponíveis.
+**Estado atual: MVP 0.2 publicado em 09/10/2026; incremento local de fechamento/Pix estático/cozinha em `e9bc3d0`, ainda não publicado; aceite do usuário pendente.** A existência de um recurso neste documento não significa que ele está concluído. O recorte entregue, as evidências e todas as pendências estão em [Entrega local de 07/10/2026](ENTREGA-LOCAL-2026-10-07.md). O quadro da seção 19 foi atualizado; seu aceite permanece pendente. Fiscal real e integrações automáticas não estão disponíveis.
 
 Este arquivo passa a ser a referência principal de escopo, sequência e aceite. Os documentos anteriores permanecem como apoio. Em caso de divergência, prevalecem a instrução mais recente do proprietário e sua incorporação neste documento. Mudanças futuras devem atualizar a versão, o bloco afetado e os testes, evitando manter duas definições concorrentes.
 
@@ -51,7 +51,7 @@ O manual fixa o produto conhecido, não torna imutáveis todas as escolhas antes
 
 ## 2 Definição do produto
 
-Gestor Food é o nome provisório da plataforma. Patos Lanches é o primeiro estabelecimento atendido, com sua própria marca. Uma choperia ou outro restaurante terá identidade, cardápio, equipe, configurações e dados próprios, usando a mesma base mantida pela plataforma.
+Gestor Food é o nome provisório da plataforma. O produto é um core reutilizável para três restaurantes inicialmente; Patos Lanches fornece a identidade da demonstração, não regras exclusivas do produto. Cada estabelecimento é uma configuração do mesmo core, sem fork por cliente. Uma choperia ou outro restaurante terá identidade, cardápio, equipe, configurações e dados próprios, usando a mesma base mantida pela plataforma.
 
 O produto deve organizar o trabalho desde o pedido até o atendimento, registrar os efeitos no estoque e no financeiro e dar ao proprietário informação confiável para tomar decisões. O dono precisa saber quanto vendeu, recebeu, gastou, tem a pagar, tem a receber e quanto cada produto contribui para pagar as despesas e formar resultado.
 
@@ -176,9 +176,9 @@ Upgrade habilita menus e ações na mesma base, preservando dados. Redução de 
 
 ### 5.3 Licença e serviços recorrentes
 
-A intenção de licença vitalícia precisa definir direito de uso, versão, módulos, número de estabelecimentos, suporte, atualizações, correções e condições de hospedagem. Licença e prestação continuada de serviço são registros separados. A venda da licença não deve ser misturada às refeições vendidas pelos restaurantes.
+**Decisão comercial atualizada pelo proprietário em 09/10/2026:** os três primeiros clientes terão licença vitalícia; os seguintes terão assinatura mensal. Valores finais ainda não definidos. Modalidade de cobrança e pacote de funcionalidades são dimensões independentes; não criar outra base de código para clientes vitalícios. A licença vitalícia precisa definir direito de uso, versão, módulos, número de estabelecimentos, suporte, atualizações, correções e condições de hospedagem. Licença e prestação continuada de serviço são registros separados. A venda da licença não deve ser misturada às refeições vendidas pelos restaurantes.
 
-R$ 2.400 e R$ 4.500 são referências anteriores, ainda não preços finais aprovados. Parcelamento, taxas, juros e líquido recebido dependem da contratação comercial. Não é necessário implantar checkout da plataforma para validar o piloto; a ativação pode ser feita por procedimento administrativo auditado.
+R$ 2.400 e R$ 4.500 são referências anteriores, ainda não preços finais aprovados. Os R$ 225/R$ 295 mensais do documento complementar também são referências, sem aprovação de preço final. A afirmação de que o Profissional fica igual para os dois ainda precisa ser esclarecida: pode se referir às modalidades vitalícia/mensal ou à equiparação dos planos Essencial/Profissional; preservar a matriz existente até essa decisão. Parcelamento, taxas, juros e líquido recebido dependem da contratação comercial. Não é necessário implantar checkout da plataforma para validar o piloto; a ativação pode ser feita por procedimento administrativo auditado.
 
 Antes de comercializar, calcular implantação, treinamento, hospedagem, banco, armazenamento, backup, suporte e manutenção de integrações. Fiscal terá custo do restaurante. A responsabilidade pelas demais despesas recorrentes permanece aberta e precisa ser refletida no contrato.
 
@@ -257,7 +257,7 @@ Toda tela de consulta precisa de carregamento, vazio, sucesso, erro e falta de p
 | Endereço público futuro | Host cadastrado e verificado; domínio definitivo ainda não escolhido |
 | Marca em documentos fiscais | Dados do emitente e conteúdo do documento; não substituir razão social por nome da plataforma |
 
-Giro Food e outras alternativas mencionadas não foram escolhidas. Não renomear código, banco, domínio ou conta de provedor em função de sugestão de nome. Disponibilidade de marca/domínio deverá ser verificada antes de uma adoção comercial definitiva.
+O proprietário sugeriu Comando Inteligente e Telecomanda em 09/10/2026; são candidatos, sem escolha final. Comanda Inteligente é uma alternativa de redação a avaliar. Giro Food e outras alternativas mencionadas não foram escolhidas. Não renomear código, banco, domínio ou conta de provedor em função de sugestão de nome. Disponibilidade de marca/domínio deverá ser verificada antes de uma adoção comercial definitiva.
 
 Usar português brasileiro, moeda BRL com vírgula decimal, datas legíveis e verbos diretos. Termos preferidos: “Enviar para cozinha”, “Registrar recebimento”, “Confirmar retirada”, “Saiu para entrega”, “Baixar conta”, “Fechar caixa”, “Consultar nota” e “Exportar para o contador”. Explicar “baixa” na tela financeira como registro de pagamento/recebimento; não usar a palavra para sugerir quitação de tributo.
 
@@ -415,7 +415,7 @@ Pedido pendente pode ser revisado. Alteração após aprovação não reescreve 
 
 ### 8.3 Mesas e comandas
 
-Mesa é o local; comanda é a conta/visita; pedido é uma rodada de itens. Fechar uma visita não altera visitas anteriores. Uma comanda pode ter vários pedidos e vários pagamentos. Saldo a pagar deriva das alocações, não de um total editável sem origem.
+Mesa é o local; comanda é a conta/visita; pedido é uma rodada de itens. Requisito reforçado em 09/10/2026: permitir comandas numeradas independentes de mesa e operação por mesas, no mesmo produto. Recomendação de modelagem a validar na implementação: número operacional reutilizável após encerramento, identificação interna única por visita e nenhuma duplicidade ativa do mesmo número dentro do restaurante. Isso é requisito, não comprovação de implementação atual. Fechar uma visita não altera visitas anteriores. Uma comanda pode ter vários pedidos e vários pagamentos. Saldo a pagar deriva das alocações, não de um total editável sem origem.
 
 Salão: abrir comanda, lançar, aprovar, produzir, servir, receber e encerrar. Recebimento antecipado é permitido quando configurado, mas não remove tickets. Encerrar operacionalmente exige tratar todos os itens e resolver o saldo ou transferi-lo explicitamente para obrigação autorizada.
 
@@ -814,6 +814,12 @@ Todos os blocos abaixo começam como **planejados**. Cada um só muda de estado 
 
 ### B04 Caixa recebimentos e razão gerencial
 
+**Recorte autorizado em 09/10/2026 — fechamento pelo garçom e teste de uso.** Responsável: Codex; aceite: proprietário. Entregar tela Fechar conta com saldo, recebimentos parciais/mistos, QR Pix estático configurável e indicação explícita de confirmação manual; preservar autorização antes da cozinha, setores independentes, atendimento após pagamento e financeiro sem duplicidade. Provedor Pix/maquininha ainda não identificado: não escolher conta, cobrar ou anunciar retorno automático. Fiscal externo continua condicionado ao B08 e à configuração/homologação. O pedido de fluxo livre permite avançar um ticket diretamente de fila para pronto quando apropriado, sem remover a aprovação inicial nem registrar entrega antes de pronto.
+
+Critérios deste recorte: (1) pedido autorizado entra na fila; avançar um setor não altera outro; só todos prontos liberam entrega; (2) pagamento parcial deixa saldo e não conclui pedidos não quitados; repetição não duplica; (3) Pix representa valor parcial ou total e recebedor configurado, sem criar pagamento; alteração de conta invalida confirmação desatualizada; (4) só gestor configura recebedor, e outro restaurante não acessa dados; (5) navegador → API → banco → recarga, com identidades sintéticas de garçom/cozinha/gestor e cleanup exclusivo. Estado inicial: NÃO TESTADO para novas capacidades; testes anteriores não são aceite deste recorte. Resultado local em 09/10: critérios 1–5 PASSA nos cenários dirigidos abaixo; aceite do usuário pendente. Reversão: desabilitar geração Pix e retornar a recebimento manual preservando pagamentos e trilha; schema aditivo não deve ser excluído para reverter UI.
+
+**Evidência do recorte em 09/10/2026:** localhost sobre Neon, registros sintéticos isolados, código `e9bc3d0`, migration `e6b36e6`, sobre base Git `8c1cd07`. `tests/checkout.integration.mjs` passou duas vezes integralmente: três tenants, cookies cruzados recusados, configuração restrita ao gestor, QR sem pagamento, saldo parcial, concorrência idempotente, rejeição de saldo desatualizado, setores independentes e fechamento. Aprovação, financeiro e tenancy também passaram nesta revisão. No navegador, gestor configurou Pix fictício e abriu R$ 100; garçom enviou dois itens de setores distintos (R$ 50 + R$ 5 de serviço), registrou R$ 10 de Pix antes do preparo; cozinha finalizou cada setor; garçom viu pronto, entregou e quitou R$ 30 no cartão + R$ 20 em espécie, com R$ 5 de troco. Mesa livre após recarga; SQL confirmou uma venda, pagamentos de R$ 55, razão balanceado e caixa esperado/contado de R$ 115. Tela de fechamento conferida em 390 px, sem transbordamento horizontal. Pix real em aplicativo bancário, falha de resposta no navegador, maquininha e emissão fiscal: NÃO TESTADO; integrações automáticas ainda NÃO IMPLEMENTADAS. Não é uma auditoria completa de todos os blocos.
+
 **Objetivo:** registrar dinheiro, quitar o consumidor e fechar o turno com números explicáveis.
 
 **Construção:** contas financeiras básicas, gaveta, turno, abertura, fundo e origem, recebimentos múltiplos/parciais, troco, suprimento, sangria, despesa em espécie, contagem e fechamento. Integrar uma vez os eventos de venda e pagamento ao razão. Preservar adiantamento antes do atendimento e recebível de cartão após quitação do consumidor. Registrar custódia de valores recebidos pelo entregador e prestação de contas.
@@ -905,6 +911,8 @@ Todos os blocos abaixo começam como **planejados**. Cada um só muda de estado 
 **Trade-off:** terceirizar a comunicação fiscal reduz a integração direta com a SEFAZ, mas mantém dependência de disponibilidade, preços e suporte do fornecedor. A API não resolve cadastro tributário incorreto nem substitui a validação do contador. Recomendação: experimentar homologação para um restaurante; evitar contratar um pacote multiempresa antes de conhecer o volume.
 
 **Matriz fiscal MG:** a orientação oficial distingue varejo elegível de comércio eletrônico e apresenta restrições para NFC-e nas vendas pela internet. Não classificar automaticamente todo delivery ou cardápio online como NFC-e. Definir com o contador documento por canal, destinatário e operação; casos sem classificação ficam bloqueados no fiscal, preservando o fluxo operacional. Credenciamento, certificado e CSC precisam ser confirmados. Fonte: [SEF-MG, perguntas frequentes](https://portalsped.fazenda.mg.gov.br/spedmg/nfce/Perguntas-Frequentes/respostas_i/index.html).
+
+**Acesso e pagamento da Focus — avaliação de 09/10/2026:** propor botão “Acessar minha conta Focus” para o [painel oficial](https://app-v2.focusnfe.com.br/), com autenticação do cliente no provedor. A Focus informa envio de faturas por e-mail e pagamento exclusivamente por boleto ou Pix, sem cartão ([cobranças oficiais](https://focusnfe.com.br/precos/cobrancas/)). Não foi confirmado endpoint de faturamento, link direto para fatura ou login único; não prometer esses recursos. O conector fiscal do nosso backend usa credencial própria do restaurante, guardada de forma segura, e não a senha de login do painel. Emissão e pagamento da assinatura Focus são fluxos distintos. O custo fiscal externo permanece do restaurante inclusive para licença vitalícia.
 
 **Primeira subentrega proposta:** perfil fiscal por restaurante e versão por produto; painel de pendências; vínculo entre venda/documento; adaptador Focus separado; referência persistente por restaurante, venda, modelo e ambiente; estados preparado/enviando/processando/autorizado/rejeitado/resultado desconhecido/cancelado. Começar por ambiente de homologação e operações cuja matriz esteja validada. Persistir intenção antes da chamada e consultar a mesma referência quando a resposta for incerta; arquivos privados, sem tokens no navegador ou logs. Detalhar schema e rotas ao iniciar a implementação deste recorte.
 

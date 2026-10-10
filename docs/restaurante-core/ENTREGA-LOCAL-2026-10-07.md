@@ -131,3 +131,42 @@ Os planos já controlam capacidades, mas faltam gestão de licenças, versões/d
 Faltam seus testes de uso, conferência dos cadastros/custos e saldos reais, ensaio de restauração, testes de pico/concorrência em volume representativo, operação com impressora e equipamentos do restaurante e validação de queda/retomada de conexão. Push, deploy e verificação dirigida do endereço público foram concluídos em 09/10; o turno completo no navegador publicado e o aceite do piloto permanecem pendentes.
 
 A apresentação pode usar este MVP local e seus fluxos manuais. O produto completo do manual continua aberto; não anunciar emissão fiscal, cobranças ou conciliação automática como disponíveis.
+
+
+## Incremento do core — 09/10/2026, fechamento e cozinha
+
+Estado: código local `e9bc3d0`, migration `e6b36e6`, sobre a base `8c1cd07`; não publicada nesta revisão. Aceite do usuário pendente. O core atende configurações de restaurantes distintos; Patos Lanches continua apenas como identidade da demonstração. Não houve definição de novo nome comercial.
+
+- Fechar conta pelo garçom ou caixa, com saldo que inclui serviço e desconta recebimentos anteriores; pagamento parcial, misto e troco em espécie.
+- QR Pix estático e copia-e-cola, com valor e recebedor configurados pelo gestor de cada restaurante. Conferência bancária manual; gerar QR não cria pagamento. QR estático não expira nem impede novo pagamento; confirmar recebedor e valor no banco antes do uso real.
+- Cozinha por ticket/setor: fila → preparo → pronto, com atalho explícito para item já pronto. Garçom só pode entregar depois de todos os setores prontos. Pagamento não encerra produção; recebimento parcial não conclui pedido servido com saldo.
+- API protege configurações, isola restaurantes e rejeita confirmação com versão de saldo antiga. Repetição da mesma intenção de recebimento retorna o resultado já gravado.
+
+### Verificação desta revisão
+
+| Critério | Resultado e evidência |
+| --- | --- |
+| Três restaurantes independentes | PASSA — configuração Pix, permissões e cookies cruzados exercidos diretamente por API |
+| QR sem baixa automática | PASSA — payload/CRC contra vetor oficial BCB e ausência de pagamento no banco após geração |
+| Parcial, misto, troco e repetição | PASSA — duas execuções completas de `test:checkout`, com requisições simultâneas e saldo desatualizado |
+| Setores e entrega | PASSA — API e navegador com Cozinha/Pizzaria; cada ticket independente; entrega bloqueada antes de todos prontos |
+| Turno no navegador | PASSA — abertura R$ 100, conta R$ 55, Pix R$ 10, crédito R$ 30, dinheiro líquido R$ 15; caixa esperado/contado R$ 115 |
+| Persistência | PASSA — mesa livre após recarga; SQL confirmou pedido concluído, uma receita, pagamentos R$ 55 e razão balanceado |
+| Regressões existentes | PASSA — aprovação, financeiro e isolamento; financeiro inclui estorno, conciliação manual, CSV e entrega |
+| Responsividade do fechamento | PASSA — 390 px, QR e controles legíveis, sem rolagem horizontal |
+| Build, tipos e lint | PASSA — build de produção e TypeScript; lint sem erros, com três avisos preexistentes |
+| Preservação do demonstrativo | PASSA — 146 registros originais em 19 tabelas comparados com backup, sem diferenças; contadores excluídos explicitamente |
+| Integrações externas | NÃO TESTADO — não houve Pix bancário, terminal nem emissão fiscal real |
+| Auditoria integral do manual | NÃO TESTADO — verificação dirigida do recorte; outros blocos mantêm suas pendências |
+
+Migration aditiva `0013_payment_receiving_settings.sql` aplicada no Neon existente, após backup `outputs/backups/pre-checkout-20261009.dump` e ensaio transacional com rollback. Não habilita Pix nos restaurantes existentes. Restore do backup não foi ensaiado. Os dados de QA foram criados em tenants sintéticos e removidos ao concluir; o cadastro do demonstrativo foi preservado.
+
+### Seu teste e personalização
+
+Execute `./scripts/dev-local.sh`. Em Gestão → Configurações, cadastre a chave Pix, nome e cidade do recebedor do restaurante. Abra um turno de caixa; faça um pedido pelo garçom, acompanhe os setores na cozinha, entregue e use Fechar conta. Antes de receber clientes, confira o QR no aplicativo bancário com o responsável pela conta; os testes feitos aqui usam uma chave fictícia.
+
+Para os três restaurantes: obter identidade visual, domínio, cardápio/preços, mesas, setores, equipe/papéis e dados Pix de cada um. Cadastro e onboarding em escala ainda precisam de processo administrativo próprio.
+
+Pendências de implementação: adaptador Focus NFe, configuração fiscal por emitente, estados de emissão/rejeição/cancelamento, XML/DANFE privado e exportação fiscal; Pix com confirmação automática; conectores de terminais compatíveis; comandas numeradas independentes de mesa; demais lacunas do manual. Não basta cadastrar credenciais para esses recursos funcionarem.
+
+Dependências a obter: conta/contratação Focus, certificado e credenciamento/CSC aplicáveis, dados tributários validados pelo contador; banco/provedor Pix, marca/modelo e credenciamento das maquininhas. Custos e compatibilidade devem ser confirmados por restaurante antes da oferta comercial. Nenhuma contratação ou cobrança externa foi feita.
