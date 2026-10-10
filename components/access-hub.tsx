@@ -17,7 +17,7 @@ export function AccessHub({ name, logoUrl, areas, username, actions }: {
       <div className="access-hub-shell">
         <header className="access-hub-header">
           <div className="access-hub-brand">
-            <Image src={logoUrl || "/comanda-inteligente-mark.svg"} alt={`Logo de ${name}`} width={48} height={48} unoptimized priority />
+            <Image src={logoUrl || "/restio-mark.svg"} alt={`Logo de ${name}`} width={48} height={48} unoptimized priority />
             <div><p>{name}</p><span>Operação e gestão do restaurante</span></div>
           </div>
           <div className="access-hub-actions"><Link href="/menu" className="secondary-button">Abrir cardápio</Link>{actions}</div>
@@ -38,7 +38,7 @@ export function AccessHub({ name, logoUrl, areas, username, actions }: {
             ))}
           </nav>
         </section>
-        <footer className="access-hub-footer"><span>Comanda Inteligente</span><span>O acesso às áreas depende da sua permissão.</span></footer>
+        <footer className="access-hub-footer"><span>Restio</span><span>O acesso às áreas depende da sua permissão.</span></footer>
       </div>
     </main>
   );

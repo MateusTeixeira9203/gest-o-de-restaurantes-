@@ -12,7 +12,7 @@ const statusLabels = { available: "Livre", occupied: "Ocupada", preparing: "Prep
 
 export function TableQrDialog({ table, open, onOpenChange }: { table: Table | null; open: boolean; onOpenChange: (open: boolean) => void }) {
   const { state } = useRestaurant();
-  const filename = state.settings.name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "comanda-inteligente";
+  const filename = state.settings.name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "restio";
   const [image, setImage] = useState("");
   const url = table && typeof window !== "undefined" ? `${window.location.origin}/menu/mesa/${table.number}` : "";
   useEffect(() => { if (!open || !url) return; let cancelled = false; void import("qrcode").then(module => module.default.toDataURL(url, { width: 360, margin: 2, errorCorrectionLevel: "M" })).then(value => { if (!cancelled) setImage(value); }).catch(() => toast.error("Não foi possível gerar o QR Code.")); return () => { cancelled = true; }; }, [open, url]);

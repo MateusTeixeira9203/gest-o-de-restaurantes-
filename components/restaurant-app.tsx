@@ -61,7 +61,7 @@ function OperationHome() {
   return <AccessHub name={state.settings.name} logoUrl={branding.logoUrl} areas={visibleAreas} username={session?.username} actions={session ? <button onClick={() => void logout()} className="secondary-button">Trocar usuário</button> : undefined} />;
 }
 
-function Brand({ dark = false, subtitle = "Operação & gestão" }: { dark?: boolean; subtitle?: string }) { const { state, branding } = useRestaurant(); return <div className="flex items-center gap-3"><span className="brand-mark"><Image src={branding.logoUrl || "/comanda-inteligente-mark.svg"} alt={`Logo de ${state.settings.name}`} width={112} height={112} priority unoptimized={Boolean(branding.logoUrl)} className="brand-logo" /></span><div><p className={`font-semibold tracking-tight ${dark ? "text-white" : "text-[#171814]"}`}>{state.settings.name}</p><p className={`text-xs ${dark ? "text-white/40" : "text-neutral-500"}`}>{subtitle}</p></div></div>; }
+function Brand({ dark = false, subtitle = "Operação & gestão" }: { dark?: boolean; subtitle?: string }) { const { state, branding } = useRestaurant(); return <div className="flex items-center gap-3"><span className="brand-mark"><Image src={branding.logoUrl || "/restio-mark.svg"} alt={`Logo de ${state.settings.name}`} width={112} height={112} priority unoptimized={Boolean(branding.logoUrl)} className="brand-logo" /></span><div><p className={`font-semibold tracking-tight ${dark ? "text-white" : "text-[#171814]"}`}>{state.settings.name}</p><p className={`text-xs ${dark ? "text-white/40" : "text-neutral-500"}`}>{subtitle}</p></div></div>; }
 
 function WaiterTables() {
   const { state } = useRestaurant();

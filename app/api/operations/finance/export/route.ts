@@ -19,7 +19,7 @@ export async function GET(request: Request) {
     return new Response(await financeExport(p.from, p.to), {
       headers: {
         "Content-Type": "text/csv; charset=utf-8",
-        "Content-Disposition": `attachment; filename="comanda-inteligente-financeiro-${p.from}-${p.to}.csv"`,
+        "Content-Disposition": `attachment; filename="restio-financeiro-${p.from}-${p.to}.csv"`,
         "Cache-Control": "no-store",
       },
     });

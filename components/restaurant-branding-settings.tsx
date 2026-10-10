@@ -14,7 +14,7 @@ function BrandingImage({ kind }: { kind: BrandKind }) {
   const [busy, setBusy] = useState(false);
   const isLogo = kind === "logo";
   const customUrl = isLogo ? branding.logoUrl : branding.coverUrl;
-  const imageUrl = customUrl || (isLogo ? "/comanda-inteligente-mark.svg" : "/menu-hero.png");
+  const imageUrl = customUrl || (isLogo ? "/restio-mark.svg" : "/menu-hero.png");
 
   async function upload(file: File | undefined) {
     if (!file) return;

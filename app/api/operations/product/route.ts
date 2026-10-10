@@ -9,7 +9,7 @@ export async function GET(request: Request) {
   const r = await restaurantContext();
   return Response.json(
     {
-      name: "Comanda Inteligente",
+      name: "Restio",
       restaurant: r.name,
       plan: r.plan,
       status: r.product_status,

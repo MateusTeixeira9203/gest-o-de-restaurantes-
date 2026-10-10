@@ -2,11 +2,11 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Comanda Inteligente — Gestão para Restaurantes",
+  title: "Restio — Gestão de restaurantes",
   description: "Gestão de restaurantes: salão, cozinha, caixa e financeiro.",
   icons: {
-    icon: "/favicon.svg?v=comanda-2",
-    shortcut: "/favicon.svg?v=comanda-2",
+    icon: "/favicon.svg?v=restio-1",
+    shortcut: "/favicon.svg?v=restio-1",
   },
 };
 

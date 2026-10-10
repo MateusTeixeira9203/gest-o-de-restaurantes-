@@ -1,4 +1,4 @@
-# Comanda Inteligente produto completo e plano de implementação
+# Restio produto completo e plano de implementação
 
 Versão 1.5 • 10 de outubro de 2026 • Primeiro piloto em Minas Gerais • Alvo de avaliação no sábado 10 de outubro de 2026
 
@@ -53,7 +53,7 @@ O manual fixa o produto conhecido, não torna imutáveis todas as escolhas antes
 
 ## 2 Definição do produto
 
-Comanda Inteligente — Gestão para Restaurantes é o nome aprovado da plataforma em 10/10/2026. O produto é um core reutilizável para três restaurantes inicialmente; A demonstração usa a marca Comanda Inteligente; a identidade de cada cliente é configurada na implantação. Cada estabelecimento é uma configuração do mesmo core, sem fork por cliente. Uma choperia ou outro restaurante terá identidade, cardápio, equipe, configurações e dados próprios, usando a mesma base mantida pela plataforma.
+Restio — Gestão de restaurantes é o nome aprovado da plataforma em 10/10/2026. O produto é um core reutilizável para três restaurantes inicialmente; A demonstração usa a marca Restio; a identidade de cada cliente é configurada na implantação. Cada estabelecimento é uma configuração do mesmo core, sem fork por cliente. Uma choperia ou outro restaurante terá identidade, cardápio, equipe, configurações e dados próprios, usando a mesma base mantida pela plataforma.
 
 O produto deve organizar o trabalho desde o pedido até o atendimento, registrar os efeitos no estoque e no financeiro e dar ao proprietário informação confiável para tomar decisões. O dono precisa saber quanto vendeu, recebeu, gastou, tem a pagar, tem a receber e quanto cada produto contribui para pagar as despesas e formar resultado.
 
@@ -95,7 +95,7 @@ Compras avançadas, importação de XML de fornecedores, controle por barril, co
 
 | Assunto | Decisão atual |
 | --- | --- |
-| Produto | Comanda Inteligente — Gestão para Restaurantes; não renomear automaticamente o restaurante |
+| Produto | Restio — Gestão de restaurantes; não renomear automaticamente o restaurante |
 | Primeiro estabelecimento | Patos Lanches, em Minas Gerais |
 | Infraestrutura | Reaproveitar GitHub, Next.js, Neon PostgreSQL e Vercel existentes |
 | Ambiente de trabalho | Usar o projeto e banco atuais, pois o proprietário informou que a operação comercial ainda não começou |
@@ -198,7 +198,7 @@ Antes de comercializar, calcular implantação, treinamento, hospedagem, banco, 
 
 Patos pode ter um visual de lanchonete e choperia outro visual, com bar e cozinha separados. Bebida de 300 ml e 500 ml são variantes com consumos distintos. Recurso específico deve virar configuração ou módulo reutilizável quando fizer sentido, não código espalhado testando o nome do cliente.
 
-Não permitir JavaScript arbitrário em configurações. Prévia de marca deve preservar contraste, legibilidade, estados de erro e uso no celular. A marca Comanda Inteligente aparece onde fizer sentido comercial; a operação mostra claramente o restaurante ativo.
+Não permitir JavaScript arbitrário em configurações. Prévia de marca deve preservar contraste, legibilidade, estados de erro e uso no celular. A marca Restio aparece onde fizer sentido comercial; a operação mostra claramente o restaurante ativo.
 
 ## 7 Pessoas e mapa de telas
 
@@ -249,8 +249,8 @@ Toda tela de consulta precisa de carregamento, vazio, sucesso, erro e falta de p
 
 | Elemento | Definição |
 | --- | --- |
-| Nome da plataforma | Comanda Inteligente — Gestão para Restaurantes |
-| Nome da demonstração | Comanda Inteligente; clientes recebem nome e identidade próprios na implantação |
+| Nome da plataforma | Restio — Gestão de restaurantes |
+| Nome da demonstração | Restio; clientes recebem nome e identidade próprios na implantação |
 | Nome dos planos | Essencial e Profissional |
 | Descrição funcional | Operação e gestão para restaurantes |
 | Título no aplicativo do cliente | Nome do restaurante seguido da área, por exemplo Patos Lanches — Caixa |
@@ -306,7 +306,7 @@ O contrato visual abaixo consolida a direção atual. O aceite estético da impl
 
 Imagem de produto não substitui nome, preço e disponibilidade. Não aplicar contraste fraco para combinar com uma marca. Logotipo não pode ocupar o espaço de operação necessário no celular. Tema escuro global é evolução; painéis de produção podem ter preset específico se validado na rotina.
 
-**Correção do hub solicitada em 10/10/2026 — responsável: Codex.** Estado encontrado: a rota pública `/` ainda usa cores marrom/dourado fixas e título de campanha; `/operacao` mantém outra composição para o mesmo acesso. Desejado: hub compacto e claro, fundo neutro, cartões brancos, destaque verde, título “Acesso da equipe” e orientação explícita de login. Os cinco atalhos públicos (garçom, cozinha, caixa, entregas e gestão) e o cardápio público permanecem; a entrada autenticada preserva filtragem por papel e troca de usuário. Unificar a apresentação sem mudar autenticação, permissões, rotas ou dados. Símbolo padrão: comanda com confirmação em verde, compartilhado pelo cabeçalho e favicon; logos próprios de clientes continuam prioritários. Aceite: visitante escolhe cada área → login correspondente, sem acesso operacional indevido; cardápio → público; sessão autenticada → mesma filtragem e destinos; desktop e 390 px → sem sobreposição/transbordamento; favicon e marca padrão novos após recarga. Verificação local sintética e leitura publicada; reversão por commit visual, sem migração. Complemento solicitado: seta “Voltar ao início” na confirmação, bloqueio e formulário de login; voltar limpa somente o destino de navegação pendente, sem alterar sessão/permissões. Novo nome comercial está em discussão; manter Comanda Inteligente até decisão explícita. **Resultado local: PASSA** para build/TypeScript, lint dos componentes alterados, cinco destinos públicos, bloqueio sem sessão nas quatro áreas operacionais, login da equipe/gestão, cardápio público e retorno da confirmação e formulário ao hub. Sessão admin mantém os cinco atalhos e troca de usuário. Hub e formulário em 390 px sem transbordamento horizontal; seta com área de 44 px. NÃO TESTADO nesta rodada: login com cada papel individual, equipamento físico e nova jornada de pedidos/pagamentos; regras de acesso existentes foram preservadas. Aprovação do nome e aceite estético permanecem pendentes.
+**Correção do hub solicitada em 10/10/2026 — responsável: Codex.** Estado encontrado: a rota pública `/` ainda usa cores marrom/dourado fixas e título de campanha; `/operacao` mantém outra composição para o mesmo acesso. Desejado: hub compacto e claro, fundo neutro, cartões brancos, destaque verde, título “Acesso da equipe” e orientação explícita de login. Os cinco atalhos públicos (garçom, cozinha, caixa, entregas e gestão) e o cardápio público permanecem; a entrada autenticada preserva filtragem por papel e troca de usuário. Unificar a apresentação sem mudar autenticação, permissões, rotas ou dados. Símbolo padrão: comanda com confirmação em verde, compartilhado pelo cabeçalho e favicon; logos próprios de clientes continuam prioritários. Aceite: visitante escolhe cada área → login correspondente, sem acesso operacional indevido; cardápio → público; sessão autenticada → mesma filtragem e destinos; desktop e 390 px → sem sobreposição/transbordamento; favicon e marca padrão novos após recarga. Verificação local sintética e leitura publicada; reversão por commit visual, sem migração. Complemento solicitado: seta “Voltar ao início” na confirmação, bloqueio e formulário de login; voltar limpa somente o destino de navegação pendente, sem alterar sessão/permissões. Nome confirmado pelo proprietário: **Restio**, assinatura **Gestão de restaurantes**. Aplicar em metadados, hub, configurações, marca padrão e demonstração, preservando nomes e logos próprios de outros clientes. Somente a demonstração local/publicada terá o campo de nome atualizado pela API, com backup e comparação dos demais dados antes/depois. **Resultado local: PASSA** para build/TypeScript, lint dos componentes alterados, cinco destinos públicos, bloqueio sem sessão nas quatro áreas operacionais, login da equipe/gestão, cardápio público e retorno da confirmação e formulário ao hub. Sessão admin mantém os cinco atalhos e troca de usuário. Hub e formulário em 390 px sem transbordamento horizontal; seta com área de 44 px. NÃO TESTADO nesta rodada: login com cada papel individual, equipamento físico e nova jornada de pedidos/pagamentos; regras de acesso existentes foram preservadas. Nome aprovado; aceite estético permanece pendente. **Renomeação Restio — PASSA local:** build/TypeScript, lint sem erros (aviso anterior de `<img>` no QR), login admin até Dashboard, título/novo símbolo e nome da demonstração após recarga. API confirmou que somente o nome mudou, com hash idêntico dos demais dados antes/depois. Evidências e backup privados em `outputs/restio/`. A publicação e sua conferência serão registradas no relatório de entrega; disponibilidade comercial da marca/domínio não foi verificada.
 
 ### 7.5 Estrutura das telas e navegação
 
@@ -1511,7 +1511,7 @@ Alterações futuras devem registrar versão, motivação, blocos afetados e dec
 
 ### Incremento de 10/10 — Comanda Inteligente e recebimentos integrados
 
-Responsável: execução e integração nesta tarefa. Nome comercial aprovado: **Comanda Inteligente — Gestão para Restaurantes**. A identidade de cada restaurante permanece configurável, sem renomear cadastros ou domínios dos clientes.
+Responsável: execução e integração nesta tarefa. Nome comercial aprovado: **Restio — Gestão de restaurantes**. A identidade de cada restaurante permanece configurável, sem renomear cadastros ou domínios dos clientes.
 
 Escopo: preparar a ligação entre uma cobrança do provedor, seus pedidos originais e o caixa original; aplicar somente confirmação persistida e validada pelo servidor; listar pendências de conferência no financeiro. A API pública não aceita valor, estado pago ou identificador externo como prova de recebimento. Produção dos conectores permanece desabilitada até homologação específica. Conciliação do depósito líquido e taxas é distinta da confirmação da venda e continua manual até contrato de adquirente definido.
 
