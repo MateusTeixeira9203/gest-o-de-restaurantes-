@@ -271,26 +271,33 @@ Evitar jargões como tenant, webhook, idempotência e payload nas telas de opera
 
 ### 7.4 Direção visual
 
+**Direção atual aprovada em 10/10/2026: verde neutro e clareza no produto inteiro.** Substitui a referência anterior creme/dourado na demonstração Comanda Inteligente. Responsável: Codex. Contrato visual: fundo `#F5F7F6`, superfícies brancas, texto `#1D2923`, verde `#23745B`, verde suave `#EAF3ED` e lateral `#172923`; cor primária do cliente continua configurável. Cartões de toda a aplicação usam bordas discretas, raio de 14 px, espaçamento de 16–20 px, título/contexto antes do valor e ações agrupadas no rodapé quando aplicável. Não impor altura vazia a indicadores; números tabulares e valores longos devem caber. Reduzir sombras, gradientes decorativos e movimento de cartões. Financeiro agrupa os oito indicadores existentes em saldos atuais, movimento do período e contas em aberto; nenhuma fórmula muda. Avisos, estados fiscais e estados de pedido mantêm texto e cores semânticas próprias.
+
+Escopo: tema global, cards de gestão/operação/cardápio, organização dos indicadores financeiros e cor da demonstração. Preservar campos, ações, rotas, permissões, transições, dados, marca Comanda Inteligente e personalização por cliente. Sem migração, emissão fiscal ou mudanças financeiras. Aceite: navegar e recarregar → mesmas informações/ações em grupos claros; oito indicadores → valores iguais aos da API; telas em 360/390/430 px → sem transbordamento da página; menu/abas/diálogo → abrir, teclado/Escape e voltar sem perda; configurações antes/depois → somente cor muda. Verificação em banco local sintético, navegador e publicação, com fonte e cor computadas; build e testes financeiros proporcionais à reorganização. Reversão por commit do visual e configuração anterior da cor, sem reverter dados. Resultados do agente e aceite estético do proprietário são separados.
+
+
+**Verificação desta revisão — PASSA no recorte local (10/10/2026):** build/TypeScript e lint dos componentes alterados; integração financeira com caixa, troco, idempotência, liquidação, estorno, conciliação e razão balanceado; oito valores da interface iguais aos da API; oito abas financeiras acessíveis; dez telas de gestão em 360/390/430 px sem transbordamento da página; menu desktop e móvel, Escape e diálogo de edição sem salvar alterações. Cartões de salão (15 mesas), caixa e cardápio verificados no navegador. Contraste calculado do verde sobre branco: 5,64:1; texto secundário sobre fundo: 5,55:1. Configuração local da demonstração alterou somente a cor, com estado operacional idêntico antes/depois. Evidências privadas em `outputs/green-design/` (capturas, medidas, comparação dos valores, preservação e logs). NÃO TESTADO nesta rodada: cozinha com tickets ativos, dispositivos físicos e nova carga concorrente completa; a cozinha foi conferida vazia, e os estados semânticos foram preservados no CSS. A publicação deve ser reconciliada com o commit e verificada por leitura, separadamente do aceite estético do proprietário.
+
 O design deve evoluir a base atual: superfícies claras, texto escuro, destaque moderado da marca, cartões legíveis e boa densidade operacional. A gestão prioriza leitura de valores; a operação prioriza ação rápida e identificação de estado. Não substituir a interface inteira por um conceito novo antes de validar o trabalho existente.
 
-Inspeção da implementação em 10/10/2026: a identidade atual sobrepõe o tema inicial com fundo creme `#FFF8EB`, texto `#17130E`, cartões brancos, lateral escura e detalhes dourados/laranja (`#FFBD18` / `#EC6A14`). A ação principal respeita a cor configurada por restaurante. A pilha é Inter/system-ui; Inter não está embutida, portanto o sistema usa a fonte disponível no dispositivo. Estes valores descrevem a continuidade visual atual, não uma identidade obrigatória para todos os clientes.
+A demonstração utiliza a paleta verde neutra definida acima; a referência creme/dourado foi substituída pela decisão mais recente do proprietário. A ação principal respeita a cor configurada por restaurante. A pilha é Inter/system-ui; Inter não está embutida, portanto o sistema usa a fonte disponível no dispositivo.
 
-O contrato visual abaixo é a **definição proposta para implementação e teste**. Os valores podem ser ajustados no primeiro bloco visual mediante seu feedback, preservando hierarquia, estados, acessibilidade e consistência.
+O contrato visual abaixo consolida a direção atual. O aceite estético da implementação continua sujeito ao feedback do proprietário, preservando hierarquia, estados, acessibilidade e consistência.
 
 | Token ou padrão | Referência inicial | Uso |
 | --- | --- | --- |
-| Fundo de aplicação | `#FFF8EB` ou neutro equivalente do tema | Área externa ao conteúdo |
+| Fundo de aplicação | `#F5F7F6` | Área externa ao conteúdo |
 | Superfície | `#FFFFFF` | Formulários, listas e cartões |
-| Texto principal | `#17130E` | Valores, rótulos e títulos |
+| Texto principal | `#1D2923` | Valores, rótulos e títulos |
 | Texto secundário | Cinza escuro com contraste validado | Contexto e observações, sem esconder avisos |
-| Ação principal | Escuro da base ou cor de marca validada | Uma ação dominante por contexto |
-| Destaque de marca | Dourado/laranja da demonstração; configurável | Identidade, seleção e detalhes, não estado financeiro |
+| Ação principal | Verde neutro ou cor de marca validada | Uma ação dominante por contexto |
+| Destaque de marca | Verde neutro `#23745B`; configurável | Identidade, seleção e detalhes, não estado financeiro |
 | Sucesso | Verde com ícone e texto | Ação efetivada e estado concluído |
 | Atenção | Âmbar com ícone e texto | Pendência/espera, sem depender só de cor |
 | Erro ou risco de perda | Vermelho com texto objetivo | Falha, rejeição e ação destrutiva |
 | Informação | Azul ou neutro distinto | Contexto e orientações |
 | Espaçamento | Escala de 4, 8, 12, 16, 24 e 32 px | Alinhamento e consistência |
-| Cantos | Aproximadamente 12 px em controles e 16 px em cartões | Continuidade com a base, sem excesso de decoração |
+| Cantos | 8–12 px em controles e 14 px em cartões | Continuidade com a base, sem excesso de decoração |
 | Tipografia | Inter quando disponível; fallback system-ui | Uma família principal e números tabulares em valores |
 | Corpo e controles | Referência de 16 px para formulários; 14–16 px para listas | Leitura e toque no celular |
 | Títulos | Hierarquia aproximada 24–32 px, 20–24 px e 16–18 px | Não competir com os valores da operação |

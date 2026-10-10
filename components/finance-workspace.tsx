@@ -640,31 +640,41 @@ function Summary({ data }: { data: FinancialSnapshot }) {
   const receivable = open
     .filter((d) => d.kind === "receivable")
     .reduce((sum, d) => sum + Number(d.amount_cents) - Number(d.paid_cents), 0);
+  const groups = [
+    { title: "Saldos atuais", items: [
+      ["Banco / Pix", amountOf("bank")],
+      ["Dinheiro", amountOf("cash")],
+      ["Cartões a liquidar", amountOf("cards")],
+    ] },
+    { title: "Movimentação no período", items: [
+      ["Recebimentos no período", Number(data.metrics.receipts_cents)],
+      ["Saídas no período", Number(data.metrics.outflows_cents)],
+      ["Receita líquida de estornos", Number(data.metrics.revenue_cents)],
+    ] },
+    { title: "Contas em aberto", items: [
+      ["Contas a pagar", payable],
+      ["Outras contas a receber", receivable],
+    ] },
+  ];
   return (
-    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-      {[
-        ["Banco / Pix", amountOf("bank")],
-        ["Dinheiro", amountOf("cash")],
-        ["Cartões a liquidar", amountOf("cards")],
-        ["Contas a pagar", payable],
-        ["Outras contas a receber", receivable],
-        ["Recebimentos no período", Number(data.metrics.receipts_cents)],
-        ["Saídas no período", Number(data.metrics.outflows_cents)],
-        ["Receita líquida de estornos", Number(data.metrics.revenue_cents)],
-      ].map(([label, value]) => (
-        <div
-          key={label}
-          className="rounded-2xl border border-neutral-200 bg-white p-4"
-        >
-          <p className="text-sm text-neutral-500">{label}</p>
-          <strong className="mt-2 block text-2xl tracking-tight">
-            {brl(value)}
-          </strong>
-        </div>
+    <div className="finance-summary">
+      {groups.map(({ title, items }) => (
+        <section key={title} className="finance-summary-group" aria-label={title}>
+          <h3>{title}</h3>
+          <div className={`finance-summary-grid${items.length === 2 ? " accounts" : ""}`}>
+            {items.map(([label, value]) => (
+              <div key={label} className="finance-summary-card">
+                <p>{label}</p>
+                <strong>{brl(value)}</strong>
+              </div>
+            ))}
+          </div>
+        </section>
       ))}
     </div>
   );
 }
+
 function ServicePayout({
   data,
   run,

@@ -140,7 +140,7 @@ export function RestaurantStoreProvider({ children }: { children: React.ReactNod
   const [kitchen, setKitchen] = useState<KitchenTicket[]>([]);
   const [ready, setReady] = useState(false);
   const [plan,setPlan]=useState<"essential"|"professional">("essential");
-  const [accent,setAccent]=useState("#171814");
+  const [accent,setAccent]=useState("#23745b");
   useEffect(()=>{document.documentElement.style.setProperty("--brand-accent",accent);const rgb=accent.slice(1).match(/../g)!.map(x=>parseInt(x,16)/255).map(v=>v<=0.04045?v/12.92:((v+0.055)/1.055)**2.4);const luminance=rgb[0]*.2126+rgb[1]*.7152+rgb[2]*.0722;document.documentElement.style.setProperty("--brand-on-accent",luminance>.179?"#111111":"#ffffff");},[accent]);
   const [authenticated, setAuthenticated] = useState(false);
   const [session, setSession] = useState<StaffSession | null>(null);
