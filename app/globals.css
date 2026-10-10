@@ -453,7 +453,7 @@ button:disabled{cursor:not-allowed}
 .settings-navigation button{display:flex;align-items:center;gap:12px;padding:15px 14px;border:1px solid transparent;border-radius:12px;text-align:left;color:#58685e;background:transparent;min-height:68px}
 .settings-navigation button:hover{background:#edf3ef}.settings-navigation button[aria-pressed=true]{background:#e6f0ea;color:#245b45;border-color:#cbded2}
 .settings-navigation strong,.settings-navigation small{display:block}.settings-navigation strong{font-size:.875rem;font-weight:650}.settings-navigation small{font-size:.75rem;font-weight:400;margin-top:3px;color:#66766b}
-.settings-content{min-width:0;max-width:1000px}.settings-section{display:grid;gap:20px}
+.settings-content{min-width:0;max-width:1000px}.settings-section{display:grid;grid-template-columns:minmax(0,1fr);gap:20px}.settings-section>*,.fiscal-settings .admin-field{min-width:0}.fiscal-settings select{max-width:100%}
 .settings-workspace [hidden],.fiscal-settings [hidden]{display:none!important}
 .settings-workspace .settings-card{padding:26px;border-radius:16px;background:white;border:1px solid #dce5df;min-width:0}
 .settings-workspace .settings-card>h3,.fiscal-settings-heading h3{font-size:1.12rem;font-weight:650;letter-spacing:-.015em}
