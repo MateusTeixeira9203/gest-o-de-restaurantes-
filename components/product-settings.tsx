@@ -24,7 +24,7 @@ export function ProductSettings() {
   if (!value) return null;
   return (
     <section className="settings-card">
-      <h3>Restio · Produto e identidade</h3>
+      <h3>Cor do restaurante</h3>
       <p className="mt-2 text-sm text-neutral-500">
         Plano {value.plan === "professional" ? "Profissional" : "Essencial"}. A
         marca do restaurante permanece em toda a operação.
@@ -38,7 +38,7 @@ export function ProductSettings() {
         />
       </label>
       {session?.role === "admin" && (
-        <label>
+        <details className="settings-advanced"><summary>Plano contratado · administração</summary><label>
           <span>Plano contratado</span>
           <select
             value={value.plan}
@@ -47,7 +47,7 @@ export function ProductSettings() {
             <option value="essential">Essencial</option>
             <option value="professional">Profissional</option>
           </select>
-        </label>
+        </label></details>
       )}
       <button
         className="primary-button"
@@ -73,7 +73,7 @@ export function ProductSettings() {
           }
         }}
       >
-        Salvar identidade e plano
+        Salvar personalização
       </button>
     </section>
   );

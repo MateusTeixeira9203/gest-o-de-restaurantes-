@@ -188,8 +188,10 @@ export function Settings({
   data,
   run,
   busy,
+  section = "company",
 }: {
   data: Overview;
+  section?: "company" | "tax";
   run: (command: unknown) => Promise<boolean>;
   busy: boolean;
 }) {
@@ -210,8 +212,8 @@ export function Settings({
   );
   return (
     <div className="space-y-5">
-      <details className="command-card workspace-details p-5">
-        <summary>Dados do restaurante e regras de emissão</summary>
+      <section hidden={section !== "company"} className="settings-card">
+        <h3>Dados de quem emite a nota</h3><p>Esta é a empresa do restaurante. Preencha uma vez; os dados serão usados nas próximas emissões.</p>
         <form
           className="space-y-4"
           onSubmit={(e) => {
@@ -342,16 +344,16 @@ export function Settings({
             </div>
           </details>
           <button disabled={busy} className="primary-button">
-            Salvar emitente
+            Salvar dados da empresa
           </button>
           <p className="text-sm text-neutral-500">
             Certificado, CSC e credenciais são configurados por canal seguro no
             provedor/servidor. Não informe segredos nestes campos.
           </p>
         </form>
-      </details>
-      <details className="command-card workspace-details p-5">
-        <summary>Classificação dos produtos</summary>
+      </section>
+      <section hidden={section !== "tax"} className="settings-card">
+        <h3>Impostos dos produtos</h3><p>Configuração técnica de implantação, com orientação do contador.</p>
         <form
           className="space-y-4"
           onSubmit={(e) => {
@@ -547,7 +549,7 @@ export function Settings({
             Salvar classificação
           </button>
         </form>
-      </details>
+      </section>
     </div>
   );
 }
@@ -652,8 +654,8 @@ function CancelFiscal({
 export function RecipientFields({value,onChange}:{value:FiscalOptions;onChange:(v:FiscalOptions)=>void}) {
   const field=(key: keyof FiscalOptions["recipient"],label:string)=><label key={key} className="admin-field"><span>{label}</span><input value={value.recipient[key]} onChange={e=>onChange({...value,recipient:{...value.recipient,[key]:e.target.value}})}/></label>;
   return <details className="my-3 rounded-lg border p-3">
-    <summary>Adicionar CPF/CNPJ e dados do consumidor</summary>
-    <p className="my-2 text-sm">Informe quando solicitado ou exigido pela operação. Os dados pertencem somente a esta conta.</p>
+    <summary>Incluir CPF/CNPJ do consumidor</summary>
+    <p className="my-2 text-sm">Na venda presencial comum, estes campos podem ficar em branco. Preencha quando o cliente solicitar ou quando a operação exigir. São os dados do cliente, não os do restaurante.</p>
     <div className="grid gap-3 sm:grid-cols-2">{field("name","Nome do consumidor")}{field("document","CPF/CNPJ (números)")}</div>
     <details className="mt-4"><summary>Endereço e informações adicionais</summary>
       <div className="mt-3 grid gap-3 sm:grid-cols-2">{([["street","Logradouro"],["number","Número"],["district","Bairro"],["city","Município"],["cityCode","Código IBGE"],["uf","UF"],["zip","CEP"],["ie","Inscrição estadual (se aplicável)"]] as const).map(([key,label])=>field(key,label))}</div>
@@ -833,7 +835,7 @@ function ChannelRules({
         </div>
       ))}
       <p className="text-sm text-neutral-500">
-        Use Salvar emitente para gravar a matriz.
+        Use Salvar dados da empresa para gravar a matriz.
       </p>
     </details>
   );

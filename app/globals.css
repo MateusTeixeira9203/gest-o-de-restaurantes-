@@ -446,3 +446,31 @@ button:disabled{cursor:not-allowed}
 @media(max-width:640px){.fiscal-sales-header{align-items:flex-start}.fiscal-secondary-actions{width:100%;justify-content:flex-start}.fiscal-filters{grid-template-columns:1fr 1fr}.fiscal-filters>label:first-child{grid-column:1/-1}.fiscal-search{grid-column:1}.fiscal-account-row{grid-template-columns:20px minmax(0,1fr) auto;padding:16px;gap:12px}.fiscal-account-row>input{grid-column:1;grid-row:1}.fiscal-account-name{grid-column:2;grid-row:1}.fiscal-account-row>strong{grid-column:3;grid-row:1}.fiscal-account-row time{grid-column:2;grid-row:2}.fiscal-status{grid-column:3;grid-row:2;max-width:125px}.fiscal-row-actions{grid-column:2/-1;justify-content:flex-start}.fiscal-batch-bar{align-items:stretch}.fiscal-batch-bar button{width:100%}.fiscal-connection span{display:block}.fiscal-filters input,.fiscal-filters select{font-size:16px}}
 
 .fiscal-batch-bar{position:sticky;top:12px;z-index:20;box-shadow:0 4px 16px #203c2810}
+
+/* Settings: one category at a time, with the same spacing and controls as operations. */
+.settings-shell{display:grid;grid-template-columns:210px minmax(0,1fr);gap:28px;align-items:start}
+.settings-navigation{display:grid;gap:6px;position:sticky;top:20px}
+.settings-navigation button{display:flex;align-items:center;gap:12px;padding:15px 14px;border:1px solid transparent;border-radius:12px;text-align:left;color:#58685e;background:transparent;min-height:68px}
+.settings-navigation button:hover{background:#edf3ef}.settings-navigation button[aria-pressed=true]{background:#e6f0ea;color:#245b45;border-color:#cbded2}
+.settings-navigation strong,.settings-navigation small{display:block}.settings-navigation strong{font-size:.875rem;font-weight:650}.settings-navigation small{font-size:.75rem;font-weight:400;margin-top:3px;color:#66766b}
+.settings-content{min-width:0;max-width:1000px}.settings-section{display:grid;gap:20px}
+.settings-workspace [hidden],.fiscal-settings [hidden]{display:none!important}
+.settings-workspace .settings-card{padding:26px;border-radius:16px;background:white;border:1px solid #dce5df;min-width:0}
+.settings-workspace .settings-card>h3,.fiscal-settings-heading h3{font-size:1.12rem;font-weight:650;letter-spacing:-.015em}
+.settings-workspace .settings-card>p,.fiscal-settings-heading p{color:#66746b;font-size:.875rem;line-height:1.6;margin-top:6px}
+.settings-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 20px}
+.settings-short-field{max-width:220px}.settings-save-row{display:flex;justify-content:flex-start;padding-top:20px;margin-top:20px;border-top:1px solid #e8ede9}
+.settings-workspace .settings-card label>span{font-size:.8rem;color:#45574b;font-weight:600}
+.settings-workspace .settings-card input:not([type=checkbox]):not([type=file]):not([type=color]),.settings-workspace .settings-card select{min-height:44px;background:#fff;border-color:#d5dfd8;border-radius:10px}
+.settings-workspace .settings-card input[type=checkbox]{width:18px;height:18px;padding:0;margin:0;flex-shrink:0;accent-color:#23745b}
+.settings-workspace .settings-card .settings-toggle{display:flex;align-items:center;gap:12px;padding:16px;border-radius:12px;border:1px solid #dce5df;background:#f4f8f5;font-size:.875rem;margin-top:22px}
+.settings-link-actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:20px}
+.settings-workspace .settings-hint{font-size:.8rem;color:#6b786f;line-height:1.6;margin-top:16px}
+.settings-advanced{border-top:1px solid #e5ece7;padding-top:16px;margin-top:20px}.settings-advanced summary{cursor:pointer;font-size:.85rem;font-weight:600;color:#53665a}
+.fiscal-settings-heading{display:flex;justify-content:space-between;gap:16px;align-items:start;flex-wrap:wrap}
+.fiscal-setup-status{padding:18px 20px;border:1px solid #d7e3da;background:#f0f6f2;border-radius:12px;color:#355642}.fiscal-setup-status strong{font-size:.9rem}.fiscal-setup-status p{font-size:.8rem;margin-top:5px}
+.fiscal-setup-help{display:grid;gap:18px;margin:20px 0}.fiscal-setup-help strong,.fiscal-setup-help span{display:block}.fiscal-setup-help strong{font-size:.9rem}.fiscal-setup-help span{font-size:.85rem;line-height:1.6;color:#617065;margin-top:4px}
+.fiscal-issuer-note{padding:12px 14px;background:#f1f6f3;border-radius:10px;color:#4b6153;font-size:.8rem;line-height:1.6}
+.settings-workspace .brand-upload-grid{grid-template-columns:1fr}.settings-workspace .settings-brand-intro>span{display:none}
+@media(max-width:900px){.settings-shell{grid-template-columns:1fr;gap:20px}.settings-navigation{display:flex;overflow-x:auto;position:static;padding-bottom:4px;gap:6px}.settings-navigation button{flex-shrink:0;min-height:44px;padding:10px 14px}.settings-navigation small{display:none}.settings-navigation svg{width:18px}.settings-navigation strong{white-space:nowrap}}
+@media(max-width:640px){.settings-workspace .settings-card{padding:20px}.settings-form-grid{grid-template-columns:1fr}.settings-short-field{max-width:none}.settings-workspace .settings-card input:not([type=checkbox]):not([type=file]),.settings-workspace .settings-card select{font-size:16px}.settings-save-row button{width:100%;justify-content:center}.settings-link-actions{display:grid}.settings-link-actions>a,.settings-link-actions>button{justify-content:center}.fiscal-settings .workspace-tabs{max-width:100%}}
