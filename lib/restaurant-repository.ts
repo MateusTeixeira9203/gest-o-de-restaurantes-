@@ -366,9 +366,7 @@ export async function getPublicMenu() {
       accentColor: current.accent_color,
     },
     branding: {
-      logoUrl:
-        imageVersion("logo") ||
-        (current.slug === "patos-lanches" ? "/patos-lanches-logo.png" : null),
+      logoUrl: imageVersion("logo"),
       coverUrl: imageVersion("cover"),
     },
     products: productResult.rows.map<PublicMenuProduct>((product) => {

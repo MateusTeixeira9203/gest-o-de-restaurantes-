@@ -53,7 +53,7 @@ O manual fixa o produto conhecido, não torna imutáveis todas as escolhas antes
 
 ## 2 Definição do produto
 
-Comanda Inteligente — Gestão para Restaurantes é o nome aprovado da plataforma em 10/10/2026. O produto é um core reutilizável para três restaurantes inicialmente; Patos Lanches fornece a identidade da demonstração, não regras exclusivas do produto. Cada estabelecimento é uma configuração do mesmo core, sem fork por cliente. Uma choperia ou outro restaurante terá identidade, cardápio, equipe, configurações e dados próprios, usando a mesma base mantida pela plataforma.
+Comanda Inteligente — Gestão para Restaurantes é o nome aprovado da plataforma em 10/10/2026. O produto é um core reutilizável para três restaurantes inicialmente; A demonstração usa a marca Comanda Inteligente; a identidade de cada cliente é configurada na implantação. Cada estabelecimento é uma configuração do mesmo core, sem fork por cliente. Uma choperia ou outro restaurante terá identidade, cardápio, equipe, configurações e dados próprios, usando a mesma base mantida pela plataforma.
 
 O produto deve organizar o trabalho desde o pedido até o atendimento, registrar os efeitos no estoque e no financeiro e dar ao proprietário informação confiável para tomar decisões. O dono precisa saber quanto vendeu, recebeu, gastou, tem a pagar, tem a receber e quanto cada produto contribui para pagar as despesas e formar resultado.
 
@@ -250,7 +250,7 @@ Toda tela de consulta precisa de carregamento, vazio, sucesso, erro e falta de p
 | Elemento | Definição |
 | --- | --- |
 | Nome da plataforma | Comanda Inteligente — Gestão para Restaurantes |
-| Nome do piloto | Patos Lanches; preservar cadastro e grafia configurada no restaurante |
+| Nome da demonstração | Comanda Inteligente; clientes recebem nome e identidade próprios na implantação |
 | Nome dos planos | Essencial e Profissional |
 | Descrição funcional | Operação e gestão para restaurantes |
 | Título no aplicativo do cliente | Nome do restaurante seguido da área, por exemplo Patos Lanches — Caixa |
@@ -264,6 +264,10 @@ Em 10/10/2026 o proprietário aprovou **Comanda Inteligente**, com o complemento
 Usar português brasileiro, moeda BRL com vírgula decimal, datas legíveis e verbos diretos. Termos preferidos: “Enviar para cozinha”, “Registrar recebimento”, “Confirmar retirada”, “Saiu para entrega”, “Baixar conta”, “Fechar caixa”, “Consultar nota” e “Exportar para o contador”. Explicar “baixa” na tela financeira como registro de pagamento/recebimento; não usar a palavra para sugerir quitação de tributo.
 
 Evitar jargões como tenant, webhook, idempotência e payload nas telas de operação. Mensagem de erro deve dizer o que aconteceu, se a ação foi gravada e qual o próximo passo possível. Não usar “Tudo certo” quando somente o envio foi aceito e ainda falta autorização.
+
+**Atualização de identidade solicitada em 10/10/2026 — responsável: Codex.** A demonstração deixa de usar nome e logo do Patos Lanches e passa a usar Comanda Inteligente, com o monograma CI existente e a capa genérica de gastronomia já utilizada, que não contém marca do cliente. Escopo: apresentação, marca padrão e nome do arquivo QR por restaurante. Preservar paleta/layout revisados, personalização de outros clientes, IDs e slug técnicos, domínios, sessões, equipe, produtos, preços, pedidos, saldos e emitente fiscal. Critérios: entrar/recarregar gestão, operação e cardápio → nova marca consistente; baixar QR → nome do restaurante no arquivo; restaurante sem logo → marca padrão CI, nunca logo de outro cliente; restaurante com logo → arquivo configurado preservado. Verificação local sintética e leitura do site publicado, sem emitir nota ou alterar pagamentos. Reversão: commit visual e backup privado das configurações/imagens antes da atualização, sem reverter dados operacionais.
+
+**Gate local da troca de marca: PASSA.** Build/TypeScript e teste de isolamento por domínio passaram; lint dos arquivos alterados sem erros (um aviso anterior no QR). Após renomear a demonstração sintética e remover seu logo, API pública e gestão retornaram Comanda Inteligente e logo nulo, acionando o monograma padrão. Comparação completa do estado operacional antes/depois, excluindo apenas nome e URL do logo, foi idêntica. Interface de entrada e gestão mostra a nova marca; diálogo QR aponta para a mesma mesa e gera `comanda-inteligente-mesa-1.png`. O arquivo não foi salvo em disco nesta rodada. Evidência local e backup de marca: `outputs/core-brand/`; atualização do tenant publicado deve usar as mesmas APIs e verificar novamente nome/logo e preservação do estado.
 
 ### 7.4 Direção visual
 
