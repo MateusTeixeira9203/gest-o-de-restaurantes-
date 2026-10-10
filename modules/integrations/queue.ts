@@ -54,9 +54,19 @@ export async function dispatch(client: PoolClient, restaurantId: string, id: str
   if (!claimed) return readOperation(client,restaurantId,id);
   let result: Result;
   try {
+    if (claimed.first_attempt && provider.prepareSubmission) {
+      const payload = provider.prepareSubmission(claimed);
+      validatePayload(payload);
+      if (Buffer.byteLength(canonical(payload)) > 128_000) throw new Error("Conteúdo muito grande.");
+      // payload_hash identifies the original intent; transport timestamps are stamped once,
+      // persisted before the network call and reused by every recovery consultation.
+      const saved = await client.query("UPDATE integration_operations SET payload=$4 WHERE restaurant_id=$1 AND id=$2 AND lease_token=$3", [restaurantId,id,lease,payload]);
+      if (!saved.rowCount) return readOperation(client,restaurantId,id);
+      claimed.payload=payload;
+    }
     result = claimed.first_attempt ? await provider.submit(claimed) : await provider.consult(claimed);
     if (!["unknown","pending","succeeded","failed","cancelled"].includes(result.status) || !/^[a-zA-Z0-9_.-]{1,100}$/.test(result.code)) throw new Error("Invalid normalized response");
-    result = {status:result.status,code:result.code,...(result.externalId ? {externalId:result.externalId.slice(0,200)} : {})};
+    result = {status:result.status,code:result.code,...(typeof result.message==="string"?{message:result.message.slice(0,500)}:{}),...(result.externalId ? {externalId:result.externalId.slice(0,200)} : {})};
   } catch {
     // Never store raw errors: provider errors may contain credentials or fiscal personal data.
     result = {status:"unknown",code:"provider_result_unknown"};

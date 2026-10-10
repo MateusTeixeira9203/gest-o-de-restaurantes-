@@ -5,6 +5,7 @@ export type Json = null | boolean | number | string | Json[] | { [key: string]: 
 export type Result = {
   status: "unknown" | "pending" | "succeeded" | "failed" | "cancelled";
   code: string;
+  message?: string;
   // Only normalized, non-secret evidence. Never persist entire provider responses.
   externalId?: string;
 };
@@ -17,6 +18,7 @@ export type Operation = {
   reference: string;
   payload: Record<string, Json>;
   status: Status;
+  result?: Result | null;
   lease_token: string | null;
 };
 export interface Provider {
@@ -25,6 +27,7 @@ export interface Provider {
   environment: Environment;
   restaurantId: string;
   enabled: boolean;
+  prepareSubmission?(operation: Operation): Record<string, Json>;
   submit(operation: Operation): Promise<Result>;
   consult(operation: Operation): Promise<Result>;
 }

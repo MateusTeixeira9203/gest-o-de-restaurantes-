@@ -1,0 +1,25 @@
+import assert from 'node:assert/strict';
+import {randomUUID} from 'node:crypto';
+import {spawnSync} from 'node:child_process';
+import {mkdtemp,writeFile,rm} from 'node:fs/promises';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
+import {buildFiscal} from '../modules/fiscal/builder.ts';
+import {emptyIssuer} from '../modules/fiscal/schema.ts';
+import {zipFiles} from '../modules/fiscal/zip.ts';
+import {focusHomologation} from '../modules/fiscal/focus.ts';
+const issuer={cnpj:'12345678000123',legalName:'QA',ie:'QA',regime:'1',accountant:'QA',reviewed:true,presentialApproved:true};
+const sale={id:'a',order_number:'1',source:'waiter',fulfillment:'dine_in',status:'completed',subtotal_cents:1000,total_cents:1000,service_cents:0,delivery_fee_cents:0};
+const item={id:'i',order_id:'a',product_id:'p',product_name:'QA',variant_name:'QA',quantity:2,unit_price_cents:500,addons:[]};
+const receipt={order_id:'a',method:'cash',amount_cents:1000};
+const tax={ncm:'19059090',cfop:'5102',origin:'0',icms:'102',pis:'07',cofins:'07',cest:'',reviewed:true};
+const build=(i=issuer,s=sale,t=tax,items=[item],payments=[receipt])=>buildFiscal(i,[s],items,payments,{p:t});
+assert.deepEqual(build().blockers,[]);assert.equal(build().payload.items[0].valor_bruto,'10.00');assert.equal(build().payload.formas_pagamento[0].valor_pagamento,'10.00');
+for(const s of [{source:'public_menu'},{fulfillment:'delivery'},{service_cents:100},{status:'cancelled'},{total_cents:900}])assert.ok(build(issuer,{...sale,...s}).blockers.length);
+assert.ok(build(emptyIssuer).blockers.length);assert.ok(build(issuer,sale,{...tax,icms:'00'}).blockers.length);assert.ok(build(issuer,sale,tax,[{...item,addons:[{name:'Extra',priceCents:100}]}]).blockers.length);assert.ok(build(issuer,sale,tax,[item],[]).blockers.length);
+const op={id:randomUUID(),restaurant_id:'qa',environment:'homologation',kind:'fiscal',provider:'focus',reference:'gf_'+'1'.repeat(32),status:'prepared',lease_token:null,payload:{fiscal_action:'cancel',original_reference:'gf_'+'2'.repeat(32),cnpj_emitente:issuer.cnpj,justificativa:'Cancelamento fictício de teste'}};
+let response={status:'cancelado'};let seen;
+const provider=focusHomologation({restaurantId:'qa',issuerCnpj:issuer.cnpj,token:'fake',enabled:true,taxProfileValidated:true},async(url,init)=>{seen={url,init};return new Response(JSON.stringify(response),{status:200});});
+assert.equal((await provider.submit(op)).status,'succeeded');assert.equal(seen.init.method,'DELETE');assert.ok(seen.url.endsWith(op.payload.original_reference));assert.deepEqual(JSON.parse(seen.init.body),{justificativa:op.payload.justificativa});response={status:'autorizado',chave_nfe:'1'.repeat(44)};assert.equal((await provider.consult(op)).status,'unknown');assert.equal(seen.init.method,'GET');
+const temp=await mkdtemp(join(tmpdir(),'gf-zip-'));try{const file=join(temp,'test.zip');await writeFile(file,zipFiles([{name:'indice.json',content:Buffer.from('{"incomplete":true}')},{name:'documentos/a.xml',content:Buffer.from('<QA/>')}]));const unzip=spawnSync('unzip',['-t',file],{encoding:'utf8'});assert.equal(unzip.status,0,unzip.stdout+unzip.stderr);const contents=spawnSync('unzip',['-p',file,'indice.json'],{encoding:'utf8'});assert.deepEqual(JSON.parse(contents.stdout),{incomplete:true});}finally{await rm(temp,{recursive:true});}
+console.log('PASS: mapper exact cents, unsupported cases blocked, cancellation transport/uncertainty, ZIP format and contents.');
