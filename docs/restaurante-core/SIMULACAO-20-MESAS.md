@@ -108,3 +108,155 @@ Aceite desta reexecução: AC01–AC05 PASSAM neste ambiente; leitura persistida
 Commit de aplicação `936d34455233d49fc1771d6b76bc8062a266fb6c`, já enviado ao GitHub. Rodada `2026-10-10T14-42-43.506Z`, no mesmo ambiente local isolado: **PASSA**. Foram 468 chamadas HTTP, zero erros, pico 23 simultâneas; 60 pedidos completos e 120 tickets. p95 de criação 253 ms, pagamento final 212 ms, atualização 60 ms. Caixa contado e esperado R$705,00; vendas, recebimentos, estoque e razão conferidos. Preservação das entidades anteriores PASSA. Evidências em `outputs/stress-20/2026-10-10T14-42-43.506Z/`.
 
 A segunda suíte de regressão também passou no build final: aprovação/entrega, financeiro, isolamento, checkout, compras/planejamento, fiscal HTTP, ciclo fiscal com transporte controlado, recebimentos integrados e dois garçons. A carga não foi enviada ao endpoint público ou ao Neon compartilhado.
+
+
+## Novo ensaio solicitado — cinco garçons e quinze mesas
+
+Responsável: Codex, sem delegação. Contrato desta execução: parametrizar o harness existente e simular cinco identidades independentes em quinze mesas, três rodadas sobrepostas, cozinha por setor, serviço, pagamentos parciais e repetição idempotente, recarga e fechamento. Código da aplicação preservado, sem emissão ou cobrança externas. Ambiente: build de produção correspondente à aplicação 936d344 (HEAD 2d0aa1a altera apenas documentação), cópia PostgreSQL 18 local via socket, separada do Neon.
+
+Aceite: 45 pedidos e 90 tickets concluídos; nenhum efeito antes da aprovação, nenhuma duplicação após repetição; vendas/recebimentos iguais, caixa sem diferença, razão balanceado e estoque compatível com consumo. Comparar registros anteriores, conferir nova conexão e relatar erros/latências. Dados sintéticos desta simulação ficam retidos na cópia isolada. Resultado inicial: NÃO TESTADO. Critérios e resultados serão registrados nesta seção, sem outro documento concorrente.
+
+### Resultado SIM-15 / cinco garçons — 10/10/2026
+
+**PASSA** na execução completa `2026-10-10T14-49-27.339Z`. Cinco identidades de garçom, três cozinhas e um gerente; quinze mesas; três rodadas, 45 pedidos e 90 tickets. 354 requisições HTTP, zero erros, pico de 23 simultâneas. p95 de criação: 187 ms; pagamento final: 182 ms; atualização operacional: 130 ms. Tempos locais, não extrapolar para a Vercel/Neon ou celulares reais.
+
+Nova conexão PostgreSQL confirmou: quinze mesas com exatamente três pedidos concluídos cada; 45 números de pedido/fila distintos; 90 movimentos de consumo; 45 reconhecimentos de venda; saldo recebido igual ao total em todos os pedidos. Caixa contado/esperado iguais, razão balanceado e estoques corretos no relatório da rodada. Comparação das entidades anteriores conferidas permanece igual. Critérios de pedido, cozinha, pagamento, estoque, isolamento/preservação e persistência: PASSAM neste ambiente.
+
+Primeira tentativa `2026-10-10T14-48-54.359Z`: 45 pedidos foram servidos; três fechamentos receberam 400 porque a adaptação do **harness** usou cinco como módulo de uma lista de quatro meios de pagamento. Causa identificada no script; aplicação recusou o corpo inválido. Correção separou quantidade de garçons e quantidade de meios; repetição integral acima passou. Não foi defeito encontrado no código do produto. Os dois conjuntos sintéticos e os relatórios estão retidos na cópia local.
+
+Evidências: `outputs/stress-15/2026-10-10T14-49-27.339Z/report.json`, `http.jsonl`, `reconnected-verification.json`; tentativa inicial no diretório homônimo de 14:48:54. Harness agora admite `STRESS_TABLES=15 STRESS_WAITERS=5 RUN_RETAINED_STRESS=15`; nesta execução `STRESS_REQUIRE_LOCAL=true` exige PostgreSQL via socket, e `work/local-qa-run.mjs` aponta aplicação e gerador para a cópia isolada. Padrão de 20 mesas/quatro garçons preservado.
+
+A aplicação não foi alterada por este ensaio. NÃO TESTADO nesta rodada: browser simultâneo de cinco celulares, rede dos clientes, infraestrutura Vercel sob carga, hardware e provedores externos. Não executar a carga sobre o banco operacional para reproduzir estes números.
+
+Testes adicionais PASSAM: `approval.integration.mjs` (aprovação, negativas, repetição, cancelamento e entrega); `checkout.integration.mjs` (três restaurantes, parcial/misto, Pix sem baixa automática e fechamento); `two-waiters.integration.mjs` (duas identidades disputam a mesma conta: um fechamento aceito, outro recusado, repetição sem duplicação); `payment-settlement.integration.mjs` (quatro confirmações simultâneas, caixa fechado, referência externa repetida e dados falsificados pelo cliente). Evidência via APIs reais e PostgreSQL isolado. Não foram detectados novos defeitos na aplicação nesses cenários.
+
+
+## Auditoria pela interface — cinco garçons / quinze mesas
+
+Contrato aprovado pelo usuário: abrir o site e operar o roteiro pelas telas, com cinco sessões independentes, cozinha e gestão; SQL apenas para preparar dados sintéticos e conferir persistência. Responsável: Codex, sem delegação. Aplicação compilada 936d344, banco PostgreSQL local isolado, fixture `qa-core-browser-9473b656`. Subdomínios g1–g5.localhost mantêm cookies independentes, todos mapeados ao mesmo restaurante de teste; cozinha/gestão/cliente usam origens distintas. Sem alteração de código da aplicação, produção, notas ou cobranças externas. Alterações anteriores do harness e relatório preservadas.
+
+Aceite por etapa: login correto e permissões; três mesas por garçom; produtos/quantidades/adicionais/observações; envio e aprovação antes da cozinha; preparo/pronto/entrega; rodadas sobrepostas; parcial/misto/troco/Pix conferido manualmente; corrida de fechamento e recarga; gestão/estoque/caixa; preparação fiscal e pendências/exportação. Nenhuma duplicação, perda de pedido ou diferença financeira é aceitável. Evidência: estado renderizado, resultado gravado e recarga. PASSA/NÃO PASSA/NÃO TESTADO por etapa; distinguir defeito de produto, fixture e limitação da automação. Situação inicial: NÃO TESTADO.
+
+### Resultado da auditoria pela interface — 10/10/2026
+
+**Gate: NÃO PASSA integralmente.** O ciclo operacional e a persistência passaram no recorte executado; dois defeitos de interface foram reproduzidos. Não houve correção de aplicação nesta auditoria. Entrega para revisão do usuário, sem equivalência a homologação fiscal ou aceite de produção.
+
+Ambiente: Chrome com cinco sessões de garçom em origens distintas, simultaneamente abertas; cozinha, gestor e cliente adicionais. Mesmo restaurante sintético `qa-core-browser-9473b656`, build `E5l4gRsRK_PDVZ-BA87ML` da aplicação `936d344`; HEAD `2d0aa1a` contém alteração documental. Next em `127.0.0.1:3100`; PostgreSQL 18 local via socket, sem escritas/carga na Vercel ou no Neon. As ações de operação foram cliques e formulários no navegador; nenhum pedido, aprovação, preparo, serviço, pagamento ou fechamento foi substituído por script de API. SQL usado somente na preparação sintética e na conferência posterior de persistência.
+
+#### Percurso realmente executado
+
+1. Entrar pela tela de equipe com Garcom QA 1–5, Cozinha QA e Gestor QA. As cinco sessões conservaram acesso independente. Garçom 3 tentou abrir diretamente a gestão fiscal e recebeu **Área não liberada**.
+2. Gestor abriu caixa com R$100,00. Garçons distribuídos: 1 → mesas 01–03; 2 → 04–06; 3 → 07–09; 4 → 10–12; 5 → 13–15.
+3. Três ondas de cinco envios pelas telas, com cliques de envio disparados conjuntamente por onda. Mesa 01 recebeu duas unidades de Prato QA, adicional Queijo extra QA e observação. As demais receberam pratos ou pizzas. Quinze pedidos numerados e persistidos, sem perda ou duplicação. As sessões ficaram abertas durante a produção e cobranças; não são cinco celulares físicos nem prova de capacidade máxima.
+4. Cozinha confirmou preparo, marcou pronto; salão sinalizou retirada; garçons marcaram servido. Os quinze pedidos chegaram a concluído após pagamento. Mesa 01: R$50,60, pagamento parcial R$20,00 em dinheiro, recarga, saldo R$30,60 e QR Pix para esse valor; confirmação manual sintética. Mesa 06: R$13,00 Pix + R$20,00 dinheiro. Mesas 09 e 12: crédito/débito manuais; restantes Pix manual.
+5. Conferência intermediária: quinze pedidos concluídos, R$416,00 de itens + R$41,60 de serviço = R$457,60 recebidos, 17 registros de pagamento. Estoques Pizza 191 e Prato 193, partindo de 200 cada; quinze movimentos consumiram dezesseis unidades. Pedido público #16 apareceu pendente, com zero tickets e sem consumo adicional, até aprovação pela gestão.
+6. Pedido público de retirada #16 foi aprovado na gestão, preparado pela cozinha e recebido no caixa por R$20,00 em dinheiro. QR da mesa 01 abriu cardápio com número identificado. Nova rodada interna #17: prato + pizza, dois tickets. Só um setor pronto não habilitou servir; após ambos prontos o garçom recebeu a ação. Pedido do cliente pelo QR #18 ficou pendente, apareceu no salão e foi aprovado pelo Garcom QA 2. Cobrança da mesa foi bloqueada enquanto havia pendência: **Confira os pedidos pendentes antes de receber**.
+7. Dois garçons abriram o fechamento de R$77,00 da mesa 01 antes de receber; houve tentativa de confirmação concorrente e repetição com cotação antiga. Uma sessão quitou os pedidos; banco conservou somente R$77,00 para #17/#18. Pagamento antes da entrega manteve os pedidos no atendimento; marcar servido liberou a mesa. A outra sessão conservou saldo antigo na interface — defeito abaixo.
+8. Gestão/estoque e financeiro conferidos. Resultado gerencial rotulado parcial, com aviso de custos/taxas pendentes; adicional sem custo cadastrado não foi apresentado como custo completo. Cartões permaneceram a liquidar. Preparação fiscal agrupou #17/#18, registrou onze bloqueios e manteve envio desabilitado. Nenhuma operação externa criada. Clique no pacote do contador gerou evento `exported` no servidor, mas arquivo baixado/conteúdo ZIP não foi comprovado pelo navegador.
+9. Gestor contou R$160,00, fechou caixa e recarregou. Cozinha vazia e mesa 01 livre permaneceram após recarga; banco confirmou dezoito pedidos concluídos e caixa sem diferença.
+
+#### Inconsistências confirmadas
+
+**UI-01 — P1: adicionais não aparecem na cozinha. NÃO PASSA.** Pedido #5 tinha duas unidades e adicional Queijo extra QA, visível no carrinho/comanda e persistido em `order_items.addons`. O cartão da cozinha mostrou produto, quantidade e observação, mas omitiu o adicional, inclusive após confirmar preparo. Consequência: cozinha pode preparar sem um ingrediente pago pelo cliente. `components/kitchen-board.tsx:12` renderiza nome/variação/quantidade/observação, sem adicionais. Corrigir transporte/renderização conforme necessário, mantendo observações e separação por setor. Regressão exigida: pedido com adicionais diferentes em dois itens, conferência no cartão e após recarga.
+
+**UI-02 — P1: fechamento mantém saldo antigo quando outro garçom recebe. NÃO PASSA na interface; integridade financeira PASSA.** Duas sessões abriram R$77,00 da mesma mesa. Após uma receber, a outra atualizou o resumo dos pedidos para recebido R$55,00 + R$22,00, mas manteve formulário e confirmação de R$77,00; ao servir os pedidos o resumo ficou vazio e a cobrança antiga permaneceu. Repetição não criou pagamentos extras. Foi necessário fechar o modal e clicar **Atualizar saldo** para mostrar **Não há saldo a receber**. Mecanismo no código: `components/account-checkout.tsx:29` carrega cotação na montagem, enquanto o resumo usa estado atualizado; tratamento de falha em `receive()` não invalida automaticamente cotação/modal. Corrigir sincronização/invalidação e mensagem persistente ao detectar conta alterada, preservando chave idempotente e tratamento de resposta incerta. Não apagar a intenção em falha de rede desconhecida. Regressão exigida: dois garçons, conta alterada/paga por outro, QR e modal invalidados, nenhum segundo recebimento.
+
+#### Melhorias de operação, sem classificá-las como falha financeira
+
+- **Aprovar na própria comanda:** pedido pendente aparece no detalhe somente com Cancelar; a aprovação fica no salão. Adicionar acesso direto à conferência reduz idas e voltas e evita chegar ao fechamento bloqueado sem saber onde resolver.
+- **Detalhar adicionais no resumo de cobrança:** o total de #5 incluiu corretamente os R$6,00 de adicional, porém o resumo de fechamento mostrou apenas `2× Prato QA · Individual` por R$46,00. Discriminar adicional ajuda o cliente a conferir o valor.
+- **Prioridade fiscal de produto:** serviço de mesa e origem QR constaram como bloqueios do mapeamento atual, além dos cadastros faltantes. Não basta receber CNPJ/certificado para esses casos: é necessário completar e validar o tratamento com contador/provedor antes de anunciar emissão integral. O bloqueio observado é a proteção esperada, não homologação concluída.
+- **Pacote do contador:** evento de exportação persistiu; falta evidência de arquivo recebido e aberto. Repetir download em navegador/dispositivo do piloto e conferir índice, pendências e arquivos autorizados reais quando existirem.
+
+#### Gate por critério
+
+| Critério | Estado | Evidência / limite |
+|---|---|---|
+| Login e cinco sessões de garçom | PASSA | Cinco logins pela tela; quinze mesas, três por garçom |
+| Bloqueio visual de acesso fiscal para garçom | PASSA | URL direta mostrou Área não liberada; não substitui auditoria completa de todas as APIs/perfis |
+| Pedido, quantidade e observação | PASSA | Carrinho, comanda, cozinha e banco; adicional preservado no pedido |
+| Informação completa para produção | NÃO PASSA | UI-01: adicional ausente na cozinha |
+| Aprovação de cliente antes da produção | PASSA | #16 pendente com zero tickets; #18 aprovado pelo garçom; cozinha somente após aprovação |
+| Preparo, dois setores, pronto e entrega | PASSA | #17 exigiu os dois setores; pronto apareceu no salão; serviço persistido |
+| Quinze mesas / ondas sobrepostas / nova rodada | PASSA | 15 pedidos iniciais + #16–18; nova abertura da mesa 01 sem trazer conta anterior |
+| Parcial, misto, Pix e cartões manuais | PASSA | Parcial com recarga, misto, QR sem baixa automática, quatro meios registrados |
+| Troco com valor entregue superior ao saldo | NÃO TESTADO | Não houve pagamento excedente nesta rodada de navegador |
+| Concorrência e repetição de fechamento | NÃO PASSA no UX | Banco sem recebimento duplicado; UI-02 manteve cotação antiga |
+| Estoque, financeiro e caixa | PASSA | Conferência independente de valores, consumo, razão e fechamento; não cobre compras/recorrências nesta rodada |
+| Persistência após recarga e nova conexão | PASSA | Saldo parcial, mesa livre, cozinha vazia, caixa fechado e SQL final |
+| Preparação fiscal e bloqueios | PASSA | Um documento agrupado, onze bloqueios, `operation_id=null` |
+| Download e conteúdo do pacote contador | NÃO TESTADO integralmente | Clique e evento `exported` confirmados; arquivo no cliente não comprovado |
+| Focus/SEFAZ, banco Pix e maquininha externos | NÃO TESTADO | Nenhuma emissão/cobrança externa; não homologados por este ensaio |
+
+#### Evidências finais e limites
+
+`outputs/browser-audit/final.json`, conferido por nova conexão somente leitura: **18 pedidos concluídos**, **19 tickets**, **20 registros de pagamento**, **R$554,60 recebidos** = R$506,00 de itens + R$48,60 de serviço. Meios: dinheiro R$60,00; Pix R$428,60; crédito R$33,00; débito R$33,00. Caixa: abertura R$100,00 + dinheiro R$60,00 = contado/esperado R$160,00. Estoques: 190 unidades de cada insumo; dezenove movimentos, vinte unidades consumidas. Zero lançamentos desequilibrados e zero saldo de vendas a receber. Documento fiscal de dois pedidos em homologação, sem operação externa; eventos prepared/exported uma vez cada.
+
+Snapshots SQL intermediários: `before-public-approval.json`, `after-checkout-race.json`, `before-shift-close.json`; conferidor local `work/browser-audit-verify.mjs`. Diretórios de evidência/fixture ignorados pelo Git, sem PIN/cookie nos relatórios versionados. Dados sintéticos preservados; aplicação e Postgres de QA serão encerrados ao terminar, sem apagar a cópia.
+
+Ocorrências da automação: servidor local precisou ser reiniciado antes dos lançamentos; algumas ações rápidas em modais atingiram limite da ferramenta. Estado visível foi conferido antes de retomar, sem interpretar timeout do clique como erro HTTP da aplicação. O primeiro conferidor SQL leu a chave incorreta da fixture (`rid` em vez de `id`), retornou vazio e foi corrigido antes de qualquer conclusão; artefato intermediário refeito. Aguardar download expirou em dez segundos, apesar do evento de exportação no servidor. Não inferir falha do ZIP somente desse limite.
+
+Limites: não mediu cinco dispositivos físicos, impressão, visual mobile, turno prolongado, perda de internet, Vercel/Neon sob carga, cancelamento/estorno, estoque insuficiente, compras, recorrências, importação fiscal, troco excedente, matriz completa de permissões/isolamento ou integrações externas. Os testes anteriores de API são evidência separada e não foram reclassificados como browser. Não há garantia de “100%”; recomenda-se corrigir UI-01/UI-02, repetir os dois cenários e completar os itens não verificados antes do piloto operacional.
+
+### Correção UI-01/UI-02 e nova rodada — contrato de execução
+
+Autorizado pelo usuário após revisão da auditoria: corrigir os dois defeitos e procurar novas falhas com regressão e estresse. Responsável Codex, sem delegação. Escopo: preservar adicionais do snapshot histórico na consulta/tela de cozinha; invalidar saldo, QR e confirmação antigos quando a conta mudar; conservar a intenção idempotente quando houver resposta incerta. Inclui detalhamento de adicionais no fechamento como consumidor direto. Não altera tributos, permissões, estoque, preço, migrações ou integrações externas. Aprovação dentro da comanda permanece melhoria separada.
+
+Aceite: (1) itens iguais com adicionais/observações distintos chegam separados à cozinha e persistem após recarga; proibido misturar adicionais ou expor dados de outro restaurante; (2) pagamento/novo pedido em outra sessão atualiza ou bloqueia imediatamente a cotação quando o snapshot da conta muda, retira QR e fecha confirmação; proibido usar saldo conhecido como antigo; (3) confirmação concorrente/repetida não duplica recebimento e resultado incerto conserva chave/corpo originais; (4) fluxo completo, parcial/misto/troco, negativa de aprovação/estoque e carga local conferidos no banco. Ambiente exclusivamente local isolado com dados sintéticos. API e navegador serão registrados separadamente. Publicação e aceite do usuário não são presumidos pelo teste local. Resultado inicial: NÃO TESTADO.
+
+#### Resultado da correção e regressão — 10/10/2026
+
+**UI-01 e UI-02: PASSA no recorte local executado.** Base HEAD `2d0aa1a` + alterações locais não commitadas; build Next `3Hqj_TsPA1wzgn3y0yRmO`, porta 3100, PostgreSQL 18 via socket isolado. Nenhuma migration, chamada externa, push ou publicação nesta rodada. Relato anterior preservado acima como evidência antes da correção.
+
+Implementação: a consulta e o cartão da cozinha transportam/renderizam os adicionais históricos de cada item. O fechamento também os discrimina. O checkout observa identidade, total, recebido e pendência dos pedidos ativos; mudança invalida formulário/QR/confirmação e busca nova cotação. Mudança apenas de preparo não descarta os valores digitados. Erro conclusivo de pagamento recarrega a cotação; resposta desconhecida conserva o corpo/chave da intenção para repetição idempotente, sem liberar edição da cobrança.
+
+**Navegador real, quatro sessões:** Garcom QA 1, Garcom QA 2, Cozinha QA e Gestor QA, logados pela tela. Não se repetiram as quinze mesas da rodada anterior via navegador; esta regressão acrescentou três pedidos (#19–21) na mesa 01, além da carga maior por API descrita abaixo.
+
+- #19: dois Prato QA separados, um com Queijo extra QA/observação A e outro sem adicional/observação B. Carrinho, cozinha após recarga e fechamento mostraram a associação correta. Total R$47,30.
+- Dois garçons abriram a mesma cotação. Garçom 1 manteve confirmação de R$47,30 aberta; garçom 2 recebeu R$10,00 Pix manual sintético. Sem recarga manual, a primeira sessão fechou a confirmação, mostrou aviso e saldo R$37,30.
+- Garçom 1 exibiu QR de R$37,30; garçom 2 lançou #20 (pizza, R$33,00 com serviço). A primeira sessão removeu o QR e recalculou R$70,30. Preparo/entrega prosseguiram sem apagar a edição do pagamento. Entrada de R$100,00 em dinheiro mostrou troco R$29,70; persistiu R$70,30 líquido. Ambos os pedidos terminaram entregues/quitados e mesa livre após recarga. Caixa abriu com zero e fechou esperado/contado R$70,30, diferença zero.
+- #21: nova conta de R$22,00. Garçom 1 deixou confirmação aberta; garçom 2 quitou via Pix manual antes do preparo. A primeira sessão fechou automaticamente o modal e exibiu **Não há saldo a receber**, sem botão para confirmar valor antigo. A cozinha ainda preparou e o garçom entregou normalmente. Novo caixa zero fechou zero, sem incorporar o Pix ao dinheiro físico.
+
+Conferência independente somente leitura: `outputs/browser-audit/after-fixes-final.json`. **21 pedidos concluídos**, incluindo os dezoito anteriores preservados exatamente; três novos pedidos somaram **R$102,30** recebidos (R$70,30 dinheiro + R$32,00 Pix). Estoque final Prato 187 e Pizza 189; antes desta regressão havia 190 de cada. Zero lançamentos desequilibrados; três caixas fechados sem diferença. Snapshot intermediário `after-fixes.json`; imagens `after-fixes-caixa.jpg` e `after-fixes-saldo.jpg` no mesmo diretório. Fixtures retidas; evidências locais ignoradas pelo Git.
+
+**Carga e negativas via API, separadas da prova de interface:**
+
+- `restaurant-stress.integration.mjs`: cinco identidades de garçom, vinte mesas, três ondas, sessenta pedidos, 120 tickets, R$3.080,00 quitados, zero erros HTTP, estoque e razão corretos, outros restaurantes preservados. Pico observado 23 requisições simultâneas. Criação por garçom p95 295 ms (máximo 330 ms); pagamento final p95 270 ms (máximo 307 ms). Evidência retida `outputs/stress-20/2026-10-10T16-35-04.047Z/report.json` e `http.jsonl`. Mede este cenário local, não capacidade máxima nem latência de Vercel/Neon.
+- `checkout.integration.mjs`: PASSA. Parcial, misto, troco, setores, entrega, cotação antiga e repetição. Nova regressão altera o nome do adicional no catálogo após a venda e consulta a cozinha duas vezes: snapshot original, preço, quantidade e observações permanecem associados ao item correto.
+- `approval.integration.mjs`: PASSA. Pedido público pendente sem cozinha/estoque, autorização, aprovação concorrente, rejeição, custo histórico, cancelamento preparado e revogação de sessão.
+- `two-waiters.integration.mjs`: PASSA. Mesas distintas e mesma mesa, requisições sobrepostas, disputa de quitação com uma resposta 200 e outra 400, replay sem pagamento extra e razão equilibrado.
+- `order-concurrency.integration.mjs`: PASSA. Três ondas de vinte criações/aprovações simultâneas. Nova negativa disputa uma única unidade entre duas intenções: uma criação 201 e uma rejeição 400; estoque zero, sem pedido parcial. Aprovação pública posterior sem estoque mantém pedido pendente, sem ticket ou financeiro adicional. Primeiro ensaio do teste novo esperava erroneamente 200 em criação; corrigido para o contrato 201 e executado novamente com sucesso. Não foi defeito da aplicação.
+- `payment-settlement.integration.mjs`: PASSA. Quatro confirmações concorrentes de evidência sintética resultam em uma baixa; identidade externa duplicada, conta cancelada, provedor pendente, caixa fechado, perfil/tenant incorretos e evidência forjada pelo cliente não produzem recebimento indevido. Não envolve banco/maquininha real.
+- `tenancy.integration.mjs`: PASSA. Domínio desconhecido, cookie de outro restaurante, produto/escrita cruzados e restrições do plano no backend.
+- Build e typecheck: PASSA. Lint sem erros; três avisos preexistentes em `inventory-management.tsx` e `management-tables.tsx`.
+
+| Critério desta correção | Estado final | Limite |
+|---|---|---|
+| Adicionais separados e históricos na cozinha | PASSA | Navegador + recarga + regressão de API com alteração posterior de catálogo |
+| Pagamento parcial/total por outra sessão | PASSA | Saldo recalculado ou sem saldo; confirmação antiga descartada |
+| Novo pedido durante QR aberto | PASSA | QR removido, saldo atualizado antes de nova cobrança |
+| Repetição/concorrência sem dinheiro duplicado | PASSA | API com identidades distintas e SQL após navegador |
+| Resposta de rede perdida após pagamento | NÃO TESTADO na interface | Preservação de intenção revisada no código; replay testado na API, sem injeção de queda no navegador |
+| Preparo, entrega, troco, caixa e persistência | PASSA | Novos pedidos #19–21 e conferência independente |
+| Última unidade/estoque insuficiente | PASSA | API local; efeito recusado sem vazamento para cozinha/financeiro |
+| Pacote do contador no dispositivo | NÃO TESTADO integralmente | Nova espera de download expirou em 15 s; não prova falha da aplicação nem sucesso do arquivo |
+
+**Melhorias/pontos restantes:** repetir o troco também no modal final de confirmação em dinheiro (hoje correto na etapa anterior e no banco); aprovação diretamente na comanda continua melhoria separada. Permanecem as lacunas fiscais e de homologação descritas acima. Não foi identificado novo erro de integridade no recorte concluído. Queda de internet, turno prolongado, dispositivos físicos/mobile, impressão, arquivo ZIP recebido no cliente e provedores externos continuam sem prova nesta rodada. Mudanças locais prontas para revisão; aceite do usuário e publicação pendentes. Reversão do patch é somente de código, sem alteração de schema/dados reais.
+
+### Fechamento das três pendências e publicação — contrato de execução
+
+Usuário autorizou troco no modal, teste do download fiscal, perda de conexão em pagamento e, condicionados ao sucesso, commit/push. Responsável Codex. Preservar cálculo/baixa, permissões, isolamento e intenção idempotente; não alterar schema ou integrações externas. Aceite: modal discrimina valor entregue, troco e líquido; ZIP baixado pela interface abre com CRC válido, índice e pendências compatíveis com o tenant; perda antes do processamento não recebe e perda depois de gravar não duplica ao repetir. Conferir UI, chave/corpo repetidos e SQL em fixture local; nunca induzir falha em produção. Publicação autorizada das correções acumuladas com commits por assunto; verificar SHA/deploy e fluxo público seguro depois. Resultados e limites serão registrados abaixo.
+
+#### Evidências de fechamento — 10/10/2026
+
+Build final local `-fMDSrIbNjRzQTcUSiTik`, PostgreSQL isolado, Chrome/Vivaldi com sessões de garçom/cozinha/gestão. **PASSA nos três critérios**, com assistência do usuário no download. Sem migrations ou chamadas a Focus/bancos. Testes não equivalem a emissão fiscal homologada.
+
+1. **Troco no modal — PASSA:** conta de R$22,00, valor entregue R$50,00, troco R$28,00 e líquido R$22,00 visíveis na confirmação. Repetido para saldo R$23,00: R$50,00 entregue, R$27,00 troco e R$23,00 aplicado. Só o líquido entrou no caixa. Imagens em `outputs/payment-network/troco-confirmacao.jpg` e `troco-recuperacao-final.jpg`.
+2. **ZIP fiscal baixado — PASSA com assistência:** Vivaldi bloqueou/aguardou a navegação de download (`ERR_BLOCKED_BY_CLIENT`); o painel interno de downloads é inacessível à ferramenta. Nenhuma proteção foi desativada. Usuário confirmou o salvamento e forneceu `fiscal-homologacao (1).zip`. Arquivo de 3.979 bytes, SHA-256 `fbe30d5f0f64645b3f0f47461f252a838d19615bd228f81caab9babd450143b2`, CRC íntegro. `LEIA-ME.txt` informa homologação/sem validade fiscal; `indice.json` contém um documento de R$77,00, onze bloqueios e dezoito vendas sem preparação. Conteúdo corresponde ao snapshot até #20, anterior aos novos pedidos deste ensaio; não foi apresentado como exportação das vendas posteriores. Ausência de XML é correta para a preparação bloqueada. Cópia e relatório em `outputs/fiscal-download/`. Link recebeu atributo `download` explícito. Teste de API fiscal também passou com XML sintético, acesso autorizado e negativas por perfil/restaurante. XML autorizado real e transmissão externa continuam fora desta validação.
+3. **Conexão perdida — PASSA:** proxy local `tests/helpers/payment-fault-proxy.mjs`, exclusivamente 127.0.0.1:3101 → 3100; só interrompe POST de pagamentos. Primeiro ensaio consumiu resposta 200 da aplicação e cortou o corpo antes de chegar ao navegador: pagamento #22 persistiu R$22,00; repetir a intenção recuperou resultado sem outra baixa. Segundo ensaio cortou antes do encaminhamento: parcial R$10,00 de #23 não criou pagamento; recuperação registrou uma vez, saldo R$23,00. Terceiro ensaio, na versão final, cortou após gravação dos R$23,00 restantes com troco; recuperação retornou o resultado original, sem repetir baixa/razão.
+
+O ensaio de rede expôs orientação escondida atrás do modal e mensagem técnica em inglês. Correção: explicação em português também no modal, botão **Recuperar resultado**, instrução para não cobrar nem devolver troco novamente e rótulo **Saldo da confirmação original** enquanto o resultado é incerto. Campos, atualização de saldo e saída continuam bloqueados durante a intenção incerta. Não muda a chave/corpo de repetição.
+
+Proxy registra apenas hashes de corpo/chave, status e evento, nunca cookie ou PIN. `outputs/payment-network/requests.jsonl` comprova três intenções distintas, cada uma repetida com corpo/chave idênticos; snapshots antes/depois e `assertions.json` confirmam ausência de baixa duplicada. Novos #22/#23 somam R$55,00: dinheiro R$45,00 + Pix R$10,00. Caixa abriu zero, fechou esperado/contado R$45,00 e diferença zero. Produção/entrega encerradas; dados sintéticos preservados. Recuperação foi testada mantendo a aba/sessão aberta: recarga/fechamento da aba durante a intenção incerta, indisponibilidade prolongada e dispositivos físicos continuam fora do recorte.
+
+Verificações da versão final: build/TypeScript PASSA; lint sem erros, os mesmos três avisos preexistentes; `checkout.integration.mjs` e `fiscal.integration.mjs` PASSA. Alterações de cozinha, checkout e testes da rodada anterior integram a publicação autorizada. Reversão é por código, sem schema; preservar correções de integridade ao preparar eventual hotfix. Estado de publicação será registrado após confirmação remota.

@@ -29,4 +29,19 @@ try{
  assert.equal((await db.query('SELECT count(*)::int n FROM kitchen_tickets WHERE restaurant_id=$1',[q.id])).rows[0].n,60);
  assert.equal((await db.query("SELECT count(*)::int n FROM inventory_movements WHERE restaurant_id=$1 AND type='sale_consumption'",[q.id])).rows[0].n,60);
  console.log('PASS: 3 waves x 20 simultaneous approvals/creates; 60 unique orders/queues/tickets and 60 stock effects, isolated local PostgreSQL.');
+ // Last unit: two independent intents must not oversell or leave partial effects.
+ await db.query('UPDATE inventory_items SET quantity=1 WHERE id=$1',[stock]);
+ const lastUnit=await Promise.all(Array.from({length:2},()=>call('/api/operations/orders',{tableNumber:1,sendToKitchen:true,items:[{productId:p.id,variantId:p.variant,quantity:1}]},waiter.cookie)));
+ assert.deepEqual(lastUnit.map(r=>r.status).sort(),[201,400]);
+ assert.match(lastUnit.find(r=>r.status===400).body.error,/Estoque insuficiente/);
+ assert.equal(Number((await db.query('SELECT quantity FROM inventory_items WHERE id=$1',[stock])).rows[0].quantity),0);
+ assert.equal((await db.query('SELECT count(*)::int n FROM orders WHERE restaurant_id=$1',[q.id])).rows[0].n,61);
+ const pending=ok(await call('/api/public/orders',{source:'qr_menu',fulfillment:'dine_in',tableNumber:1,items:[{productId:p.id,variantId:p.variant,quantity:1}]})).order;
+ const denied=await call(`/api/operations/orders/${pending.id}/approval`,{decision:'approve',revision:1},manager.cookie);
+ assert.equal(denied.status,400);assert.match(denied.body.error,/Estoque insuficiente/);
+ assert.equal((await db.query('SELECT status FROM orders WHERE id=$1',[pending.id])).rows[0].status,'pending');
+ assert.equal((await db.query('SELECT count(*)::int n FROM kitchen_tickets WHERE restaurant_id=$1',[q.id])).rows[0].n,61);
+ assert.equal((await db.query("SELECT count(*)::int n FROM inventory_movements WHERE restaurant_id=$1 AND type='sale_consumption'",[q.id])).rows[0].n,61);
+ assert.equal((await db.query('SELECT count(*)::int n FROM finance_entries WHERE restaurant_id=$1',[q.id])).rows[0].n,0);
+ console.log('PASS: last-unit race accepts exactly one order; insufficient-stock approval remains pending; no negative stock, orphan ticket or financial effect.');
 }catch(e){console.error('Concurrency QA failed:',e.message);throw e;}finally{if(q){await db.query('DELETE FROM product_recipe_components WHERE inventory_item_id IN (SELECT id FROM inventory_items WHERE restaurant_id=$1)',[q.id]);await cleanupCoreFixture(db,q);}await db.end();}
