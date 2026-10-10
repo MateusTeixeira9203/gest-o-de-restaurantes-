@@ -1,6 +1,6 @@
 "use client";
 import { AccessHub } from "./access-hub";
-import { FiscalWorkspace } from "./fiscal-workspace";
+import { FiscalWorkspace, FiscalConfiguration } from "./fiscal-workspace";
 import { FinanceWorkspace, CashShiftPanel } from "./finance-workspace";
 import { ServedOrderButton } from "./served-order-button";
 import { CostManagement } from "./cost-management";
@@ -190,7 +190,7 @@ function Management({ section }: { section: string }) {
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, []);
-  const activeSection = section === "caixa" ? "financeiro" : section;
+  const activeSection = section === "caixa" ? "financeiro" : section === "configuracoes-fiscal" ? "configuracoes" : section;
   useEffect(() => {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const animation = pageRef.current?.animate(
@@ -225,11 +225,11 @@ function Management({ section }: { section: string }) {
 
 function ManagementSection({ section }: { section: string }) {
   const {plan}=useRestaurant();
-  if(plan==='essential' && ['custos','fiscal'].includes(section))return <p>Este recurso está disponível no plano Profissional.</p>;
+  if(plan==='essential' && ['custos','fiscal','configuracoes-fiscal'].includes(section))return <p>Este recurso está disponível no plano Profissional.</p>;
   if(plan==='essential' && section==='dashboard')return <Dashboard />;
   if(plan==='essential' && section==='relatorios')return <Reports />;
   if(plan==='essential' && ['caixa','financeiro'].includes(section))return <CashShiftPanel />;
-  if (section === "fiscal") return <FiscalWorkspace />; if (section === "dashboard") return <FinanceWorkspace key="dashboard" />; if(section === "financeiro") return <FinanceWorkspace />; if (section === "mesas") return <ManagementTables />; if (section === "pedidos") return <ManageOrders />; if (section === "cardapio") return <ManagementMenu />; if (section === "estoque") return <Stock />; if(section === "custos")return <CostManagement />; if (section === "caixa") return <FinanceWorkspace key="cash" initialTab="cash" />; if (section === "equipe") return <><PageTitle title="Equipe" subtitle="Cadastre cada pessoa com nome, papel e PIN para iniciar o turno." /><TeamManagement /></>; if (section === "relatorios") return <FinanceWorkspace key="results" initialTab="results" />; if (section === "configuracoes") return <ManagementSettings />; return <NotFound />;
+  if (section === "configuracoes-fiscal") return <FiscalConfiguration />; if (section === "fiscal") return <FiscalWorkspace />; if (section === "dashboard") return <FinanceWorkspace key="dashboard" />; if(section === "financeiro") return <FinanceWorkspace />; if (section === "mesas") return <ManagementTables />; if (section === "pedidos") return <ManageOrders />; if (section === "cardapio") return <ManagementMenu />; if (section === "estoque") return <Stock />; if(section === "custos")return <CostManagement />; if (section === "caixa") return <FinanceWorkspace key="cash" initialTab="cash" />; if (section === "equipe") return <><PageTitle title="Equipe" subtitle="Cadastre cada pessoa com nome, papel e PIN para iniciar o turno." /><TeamManagement /></>; if (section === "relatorios") return <FinanceWorkspace key="results" initialTab="results" />; if (section === "configuracoes") return <ManagementSettings />; return <NotFound />;
 }
 
 function Dashboard() { const { state } = useRestaurant(); const completed = state.sales; const revenue = completed.reduce((sum, sale) => sum + sale.subtotal, 0); const active = state.orders.filter(order => !["completed", "cancelled"].includes(order.status)); const ticket = completed.length ? revenue / completed.length : 0; return <><div className="page-heading"><div><h2>Visão geral</h2><p>Dados reais desta operação</p></div></div><div className="metric-grid"><Metric label="Faturamento" value={money(revenue)} note="Pedidos concluídos" icon={TrendingUp} /><Metric label="Pedidos em andamento" value={String(active.length)} note="Fila atual" icon={ReceiptText} /><Metric label="Mesas abertas" value={String(state.tables.filter(table => table.status !== "available").length)} icon={Table2} /><Metric label="Ticket médio" value={money(ticket)} icon={CreditCard} /></div><section className="chart-card mt-6"><div className="card-heading"><div><h3>Pedidos recentes</h3><p>Atualizado automaticamente</p></div></div>{state.orders.length ? <div className="rank-list">{state.orders.slice(0, 8).map(order => <div key={order.id}><span className="rank">#{order.number}</span><strong>{order.tableId.startsWith("externo-") ? "Pedido online" : `Mesa ${order.tableId}`}</strong><div><i style={{ width: "100%" }} /></div><b>{money(orderTotal(order))}</b></div>)}</div> : <div className="empty-state"><ReceiptText size={28} /><p>Nenhum pedido registrado ainda.</p></div>}</section></>; }
@@ -347,6 +347,7 @@ function AppRouter() {
   if (pathname === "/menu/entrega") return <MenuBuilder key="delivery-menu" source="qr" publicMenu deliveryLink />;
   if (pathname.startsWith("/menu/mesa/")) return <MenuBuilder source="qr" publicMenu tableId={pathname.split("/").pop()!} />;
   if (pathname === "/gestao") return <ServerLogin />;
+  if (pathname === "/gestao/configuracoes/fiscal") return <StaffGate roles={["manager"]}><Management section="configuracoes-fiscal" /></StaffGate>;
   if (pathname.startsWith("/gestao/")) return <StaffGate roles={["manager"]}><Management section={pathname.split("/").pop() || "dashboard"} /></StaffGate>;
   return <NotFound />;
 }

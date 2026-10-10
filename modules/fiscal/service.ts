@@ -82,6 +82,7 @@ async function build(
 export async function fiscalOverview(
   rid: string,
   environment: Environment = "homologation",
+  documentIds?: string[],
 ) {
   const [issuer, products, sales, documents] = await Promise.all([
     query("SELECT data FROM fiscal_profiles WHERE restaurant_id=$1", [rid]),
@@ -97,8 +98,8 @@ export async function fiscalOverview(
       `SELECT d.id,d.environment,d.options,d.issued_at,d.created_at,d.order_ids,d.blockers,d.snapshot->'totalCents' AS total_cents,d.snapshot->'payload'->>'_fiscal_model' AS model,d.snapshot->'sales' AS sales,d.operation_id,
  CASE WHEN co.status='succeeded' THEN 'cancelled' ELSE COALESCE(o.status,'draft') END AS status,o.reference,o.result,co.result AS cancellation_result,co.status AS cancellation_status,co.payload->>'justificativa' AS cancellation_reason,
  COALESCE((SELECT json_agg(json_build_object('id',f.id,'kind',f.kind)) FROM fiscal_files f WHERE f.restaurant_id=$1 AND f.document_id=d.id),'[]') AS files
- FROM fiscal_documents d LEFT JOIN integration_operations o ON o.id=d.operation_id AND o.restaurant_id=d.restaurant_id LEFT JOIN integration_operations co ON co.restaurant_id=d.restaurant_id AND co.operation_key='fiscal_cancel:'||d.id::text AND co.kind='fiscal' AND co.environment=d.environment WHERE d.restaurant_id=$1 AND d.environment=$2 ORDER BY d.created_at DESC LIMIT 200`,
-      [rid, environment],
+ FROM fiscal_documents d LEFT JOIN integration_operations o ON o.id=d.operation_id AND o.restaurant_id=d.restaurant_id LEFT JOIN integration_operations co ON co.restaurant_id=d.restaurant_id AND co.operation_key='fiscal_cancel:'||d.id::text AND co.kind='fiscal' AND co.environment=d.environment WHERE d.restaurant_id=$1 AND d.environment=$2 AND ($3::uuid[] IS NULL OR d.id=ANY($3::uuid[])) ORDER BY d.created_at DESC LIMIT 200`,
+      [rid, environment, documentIds ?? null],
     ),
   ]);
   return {
@@ -151,6 +152,7 @@ export async function prepareDocument(
   actor: Actor,
   environment: Environment = "homologation",
   options: FiscalOptions = optionsSchema.parse({}),
+  reuseAccount = false,
 ) {
   if (new Set(ids).size !== ids.length) throw new Error("Pedido repetido.");
   const sorted = [...ids].sort();
@@ -170,6 +172,17 @@ export async function prepareDocument(
       )
         throw new Error("Chave já usada com outras vendas.");
       return { id: prior.id };
+    }
+    if (reuseAccount) {
+      const linked = (await c.query(
+        "SELECT DISTINCT d.id,d.order_ids FROM fiscal_order_links l JOIN fiscal_documents d ON d.id=l.document_id AND d.restaurant_id=l.restaurant_id WHERE l.restaurant_id=$1 AND l.environment=$2 AND l.order_id=ANY($3::uuid[])",
+        [rid, environment, sorted],
+      )).rows;
+      if (linked.length) {
+        if (linked.length !== 1 || JSON.stringify([...linked[0].order_ids].sort()) !== JSON.stringify(sorted))
+          throw new Error("Esta conta possui documentos anteriores separados. Confira os detalhes antes de emitir.");
+        return { id: linked[0].id as string };
+      }
     }
     if (
       (
@@ -267,8 +280,8 @@ export async function refreshDocument(
     return { ok: true };
   });
 }
-export async function processDocument(rid: string, id: string, actor: Actor) {
-  const selected = await transaction(async (c) => {
+export async function queueDocument(rid: string, id: string, actor: Actor) {
+  return transaction(async (c) => {
     await lock(c, rid);
     const d = (
       await c.query(
@@ -345,6 +358,9 @@ export async function processDocument(rid: string, id: string, actor: Actor) {
       settings,
     };
   });
+}
+export async function processDocument(rid: string, id: string, actor: Actor) {
+  const selected = await queueDocument(rid, id, actor);
   const c = await database.connect();
   try {
     const result = await dispatch(

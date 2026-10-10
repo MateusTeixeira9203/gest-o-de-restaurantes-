@@ -29,6 +29,9 @@ export async function GET(request: Request) {
           new URL(request.url).searchParams.get("environment") ||
             "homologation",
         ),
+        new URL(request.url).searchParams.get("documents")
+          ? z.array(z.string().uuid()).max(50).parse(new URL(request.url).searchParams.get("documents")!.split(","))
+          : undefined,
       ),
       { headers: { "Cache-Control": "no-store" } },
     );

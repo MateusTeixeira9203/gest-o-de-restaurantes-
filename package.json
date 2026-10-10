@@ -22,7 +22,8 @@
     "test:integrations-base": "node tests/integrations-base.mjs",
     "test:planning": "node tests/planning.unit.mjs && node tests/planning.integration.mjs",
     "test:checkout": "node tests/pix.test.mjs && node tests/checkout.integration.mjs",
-    "fiscal:worker": "node scripts/fiscal-worker.mjs"
+    "fiscal:worker": "node scripts/fiscal-worker.mjs",
+    "test:fiscal:accounts": "node tests/fiscal-accounts.integration.mjs && node tests/fiscal-accounts-api.integration.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",
