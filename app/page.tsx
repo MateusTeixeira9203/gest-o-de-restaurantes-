@@ -22,7 +22,7 @@ export default async function Home() {
         <header className="flex items-center justify-between border-b border-white/10 pb-6">
           <div className="flex items-center gap-3">
             <span className="grid h-12 w-12 place-items-center overflow-hidden rounded-xl border border-[#ffbc1b]/40 bg-black/40 p-0.5">
-              <Image src={branding.logoUrl||"/gestor-food-mark.svg"} alt={current.name} unoptimized width={96} height={96} priority className="h-full w-full object-contain" />
+              <Image src={branding.logoUrl||"/comanda-inteligente-mark.svg"} alt={current.name} unoptimized width={96} height={96} priority className="h-full w-full object-contain" />
             </span>
             <div><p className="text-lg font-semibold tracking-tight">{current.name}</p><p className="text-xs text-white/45">Operação & gestão</p></div>
           </div>

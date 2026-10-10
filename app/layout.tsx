@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Gestor Food — Operação & Gestão",
+  title: "Comanda Inteligente — Gestão para Restaurantes",
   description: "Gestão de restaurantes: salão, cozinha, caixa e financeiro.",
   icons: {
     icon: "/favicon.svg",

@@ -24,7 +24,7 @@ export function ProductSettings() {
   if (!value) return null;
   return (
     <section className="settings-card">
-      <h3>Gestor Food · Produto e identidade</h3>
+      <h3>Comanda Inteligente · Produto e identidade</h3>
       <p className="mt-2 text-sm text-neutral-500">
         Plano {value.plan === "professional" ? "Profissional" : "Essencial"}. A
         marca do restaurante permanece em toda a operação.

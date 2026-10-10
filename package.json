@@ -1,6 +1,6 @@
 {
-  "name": "gestor-food",
-  "version": "0.2.0",
+  "name": "comanda-inteligente",
+  "version": "0.3.0",
   "private": true,
   "engines": {
     "node": ">=22.13.0"
@@ -17,6 +17,8 @@
     "db:migrate": "node scripts/database.mjs apply",
     "typecheck": "tsc --noEmit",
     "test:integration": "node tests/approval.integration.mjs && node tests/finance.integration.mjs && node tests/tenancy.integration.mjs",
+    "test:fiscal": "node tests/fiscal.unit.mjs && node tests/fiscal.integration.mjs && node tests/fiscal-processing.integration.mjs",
+    "test:payment-settlement": "node tests/payment-settlement.integration.mjs",
     "test:integrations-base": "node tests/integrations-base.mjs",
     "test:planning": "node tests/planning.unit.mjs && node tests/planning.integration.mjs",
     "test:checkout": "node tests/pix.test.mjs && node tests/checkout.integration.mjs"

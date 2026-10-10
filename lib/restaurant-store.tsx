@@ -65,7 +65,7 @@ type StoreContextValue = {
 };
 
 const StoreContext = createContext<StoreContextValue | null>(null);
-const baseState: RestaurantState = { settings: { name: "Gestor Food", whatsapp: "", serviceRate: 10, tableCount: 0 }, tables: [], products: [], orders: [], stock: [], movements: [], sales: [], nextOrderNumber: 1 };
+const baseState: RestaurantState = { settings: { name: "Comanda Inteligente", whatsapp: "", serviceRate: 10, tableCount: 0 }, tables: [], products: [], orders: [], stock: [], movements: [], sales: [], nextOrderNumber: 1 };
 
 function productFromRemote(product: RemoteProduct): Product {
   return {
