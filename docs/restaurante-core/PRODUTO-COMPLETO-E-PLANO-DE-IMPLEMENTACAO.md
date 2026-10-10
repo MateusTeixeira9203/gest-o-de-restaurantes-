@@ -269,18 +269,18 @@ Evitar jargões como tenant, webhook, idempotência e payload nas telas de opera
 
 O design deve evoluir a base atual: superfícies claras, texto escuro, destaque moderado da marca, cartões legíveis e boa densidade operacional. A gestão prioriza leitura de valores; a operação prioriza ação rápida e identificação de estado. Não substituir a interface inteira por um conceito novo antes de validar o trabalho existente.
 
-Leitura do CSS atual identificou fundo claro próximo de `#F4F4EF`, texto `#171814`, cartões brancos, destaque lima `#D7FF55` e pilha tipográfica Inter/system-ui. Esses valores são referência de continuidade visual, não identidade obrigatória de todos os clientes. O aplicativo publicado não foi reavaliado visualmente nesta etapa documental.
+Inspeção da implementação em 10/10/2026: a identidade atual sobrepõe o tema inicial com fundo creme `#FFF8EB`, texto `#17130E`, cartões brancos, lateral escura e detalhes dourados/laranja (`#FFBD18` / `#EC6A14`). A ação principal respeita a cor configurada por restaurante. A pilha é Inter/system-ui; Inter não está embutida, portanto o sistema usa a fonte disponível no dispositivo. Estes valores descrevem a continuidade visual atual, não uma identidade obrigatória para todos os clientes.
 
 O contrato visual abaixo é a **definição proposta para implementação e teste**. Os valores podem ser ajustados no primeiro bloco visual mediante seu feedback, preservando hierarquia, estados, acessibilidade e consistência.
 
 | Token ou padrão | Referência inicial | Uso |
 | --- | --- | --- |
-| Fundo de aplicação | `#F4F4EF` ou neutro equivalente do tema | Área externa ao conteúdo |
+| Fundo de aplicação | `#FFF8EB` ou neutro equivalente do tema | Área externa ao conteúdo |
 | Superfície | `#FFFFFF` | Formulários, listas e cartões |
-| Texto principal | `#171814` | Valores, rótulos e títulos |
+| Texto principal | `#17130E` | Valores, rótulos e títulos |
 | Texto secundário | Cinza escuro com contraste validado | Contexto e observações, sem esconder avisos |
 | Ação principal | Escuro da base ou cor de marca validada | Uma ação dominante por contexto |
-| Destaque de marca | Lima atual como referência do Patos; configurável | Identidade, seleção e detalhes, não estado financeiro |
+| Destaque de marca | Dourado/laranja da demonstração; configurável | Identidade, seleção e detalhes, não estado financeiro |
 | Sucesso | Verde com ícone e texto | Ação efetivada e estado concluído |
 | Atenção | Âmbar com ícone e texto | Pendência/espera, sem depender só de cor |
 | Erro ou risco de perda | Vermelho com texto objetivo | Falha, rejeição e ação destrutiva |
@@ -382,6 +382,10 @@ Marca muda tokens e imagens, não o significado das cores de erro, os nomes dos 
 O primeiro preset deve funcionar bem para o Patos. A choperia acrescentará seu preset e configuração de bar sem duplicar componentes. Novo preset precisa passar pelo mesmo roteiro mobile, contraste e estados de erro.
 
 ### 7.10 Aceite visual
+
+**Revisão final da demonstração — 10/10/2026. Responsável: Codex.** Escopo: conferir gestão, navegação, tipografia, contraste e largura móvel; ajustar apenas inconsistências visuais; simplificar os nomes da equipe demonstrativa e configurar o acesso administrativo solicitado, exclusivamente em variáveis privadas. Preservar IDs, papéis, PINs e situação dos membros, pedidos, saldos e dados fiscais. Não emitir notas nem simular pagamentos externos. Critérios: telas existentes → navegar/recarregar → contexto e dados mantidos, sem transbordamento da página; menu aberto → recolher/reabrir/Escape → conteúdo acessível; formulários móveis → ler/focar → texto de 16 px sem alterar valores; equipe existente → renomear → mesmos IDs/papéis; novo acesso → autenticar → gestão disponível. Reversão visual por commit e de nomes pelos registros anteriores em evidência local privada; credenciais somente por configuração, nunca no Git. Resultado e publicação registrados abaixo após verificação; aceite estético final continua com o proprietário.
+
+**Resultado dirigido:** PASSA no build local de produção com PostgreSQL sintético: dez áreas de gestão navegadas em 360, 390 e 430 px (30 verificações, `scrollWidth <= innerWidth`); campos textuais medidos em 16 px; menu abre/recolhe no desktop, abre/fecha por Escape no celular; ícones de ação medidos em 44 px. Textos secundários selecionados agora usam cinza `#66665E`; estados vazios e mesa livre usam `#626259`. Cartões compactos de estoque medidos em 112 px de altura, com valor em 22,4 px e números tabulares, mantendo dados e controles. Paleta e fonte de sistema preservadas. Login administrativo atualizado passa localmente. Na demonstração publicada, renomeação pela API e nova leitura confirmaram os cinco IDs e papéis existentes: Garçom 1, Cozinheiro, Caixa 1, Gerente e Entregador 1; sem criar pessoas adicionais ou trocar PINs. Build e TypeScript passam; lint sem erros, com três avisos anteriores. Evidências locais: `outputs/design-audit/responsive.json`, `estoque-final.png`, `team-before.json`, `team-after.json` e logs. NÃO TESTADO nesta rodada: todos os dispositivos físicos, zoom do sistema, preferência de movimento reduzido no SO e uma nova simulação completa de atendimento/carga; o recorte foi visual e de acesso, sem alteração de regra operacional. Publicação e login remoto devem ser confirmados após o push; não confundir este gate com homologação fiscal.
 
 - Ação principal da tarefa é localizável sem explicação externa.
 - Nome do restaurante, conta, pedido e contexto de operação são inequívocos.

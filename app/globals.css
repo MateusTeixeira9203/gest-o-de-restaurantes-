@@ -112,7 +112,7 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .app-page { min-height:100vh; background:#f3f3ee; color:#171814; }
 .page-container { width:min(100%, 1200px); margin:0 auto; padding:0 1rem 4rem; }
 .topbar { min-height:5.5rem; display:flex; align-items:center; justify-content:space-between; gap:1rem; border-bottom:1px solid #dfdfd7; margin-bottom:1.5rem; }
-.icon-button { width:2.5rem; height:2.5rem; display:grid; place-items:center; border:1px solid #d9d9d1; border-radius:.75rem; background:white; color:#44443e; transition:.18s; flex:none; }
+.icon-button { width:2.75rem; height:2.75rem; display:grid; place-items:center; border:1px solid #d9d9d1; border-radius:.75rem; background:white; color:#44443e; transition:.18s; flex:none; }
 .icon-button:hover { background:#171814; color:white; border-color:#171814; }
 .primary-button,.secondary-button,.dark-button,.text-button { min-height:2.75rem; display:inline-flex; align-items:center; gap:.5rem; border-radius:.8rem; padding:.7rem 1rem; font-size:.875rem; font-weight:650; transition:.18s; }
 .primary-button { background:#171814; color:white; box-shadow:0 1px 1px #0002; }
@@ -324,3 +324,21 @@ button:disabled{cursor:not-allowed}
 
 /* Keep the mobile drawer hidden even before client hydration knows the viewport. */
 @media(max-width:1024px){.management .manage-sidebar.open:not(.mobile-open){transform:translateX(-100%);visibility:hidden}}
+
+/* Demonstration polish: keep the existing brand, improve small-text legibility. */
+.manage-content .text-neutral-400,.app-page .text-neutral-400,.customer-page .text-neutral-400{color:#66665e}
+.empty-state,.kanban-empty{color:#626259}
+.status-free{color:#626259}
+.metric-card p{color:#66665e}
+.manage-sidebar .sidebar-brand p:last-child{color:#bcb7af}
+.metric-grid.compact .metric-card{min-height:7rem}
+.metric-grid.compact .metric-card>div:not(.metric-icon){padding-right:2.6rem}
+.metric-grid.compact .metric-card>div>strong{display:block;margin-top:.65rem;font-size:1.4rem;font-variant-numeric:tabular-nums;line-height:1.3;overflow-wrap:anywhere}
+.metric-grid.compact .metric-card>strong{margin-top:.65rem}
+.metric-card strong,.summary-strip strong,.cash-card strong{font-variant-numeric:tabular-nums}
+@media(max-width:640px){
+  .management :is(input,select,textarea):not([type=checkbox]):not([type=radio]),
+  .app-page :is(input,select,textarea):not([type=checkbox]):not([type=radio]),
+  .customer-page :is(input,select,textarea):not([type=checkbox]):not([type=radio]),
+  .login-card input{font-size:16px}
+}
