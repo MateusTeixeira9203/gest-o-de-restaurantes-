@@ -1234,6 +1234,10 @@ export async function closeTable(
         balance.remaining -= applied;
       }
     }
+    if (received >= due) await client.query(
+      "UPDATE orders SET checkout_group_id=$2 WHERE id=ANY($1::uuid[]) AND restaurant_id=$3",
+      [orders.rows.map(o => o.id), requestKey, current.id],
+    );
     await client.query(
       "UPDATE orders SET status='completed',updated_at=now() WHERE id=ANY($1::uuid[]) AND served_at IS NOT NULL AND COALESCE((SELECT sum(amount_cents) FROM payments WHERE order_id=orders.id AND status='paid'),0)>=total_cents",
       [orders.rows.map((o) => o.id)],

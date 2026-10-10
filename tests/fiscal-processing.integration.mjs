@@ -14,7 +14,7 @@ try{
  process.env.FOCUS_NFE_HOMOLOGATION_ENABLED='true';process.env.FOCUS_NFE_HOMOLOGATION_TOKENS=JSON.stringify({[q.id]:'synthetic-test-token'});
  globalThis.fetch=async(input,options={})=>{
   assert.equal(options.redirect,'error');const u=new URL(input);assert.equal(u.origin,'https://homologacao.focusnfe.com.br');
-  if(u.pathname.startsWith('/arquivos/'))return new Response(u.pathname.endsWith('.pdf')?Buffer.from('%PDF-1.4 QA SEM VALIDADE FISCAL'):Buffer.from(`<QA>SEM VALIDADE FISCAL ${key}</QA>`));
+  if(u.pathname.startsWith('/arquivos/'))return new Response(u.pathname.endsWith('.pdf')?Buffer.from('%PDF-1.4 QA SEM VALIDADE FISCAL'):Buffer.from(u.pathname.includes('cancel')?`<procEventoNFe><evento><infEvento><CNPJ>12345678000123</CNPJ><chNFe>${key}</chNFe><tpEvento>110111</tpEvento></infEvento></evento><retEvento><infEvento><chNFe>${key}</chNFe><cStat>135</cStat></infEvento></retEvento></procEventoNFe>`:`<nfeProc><NFe><infNFe Id="NFe${key}"><emit><CNPJ>12345678000123</CNPJ></emit></infNFe></NFe><protNFe><infProt><chNFe>${key}</chNFe><cStat>100</cStat><nProt>123456789012345</nProt></infProt></protNFe></nfeProc>`));
   if(options.method==='POST'){sends++;ref=u.searchParams.get('ref');const body=JSON.parse(options.body);assert.ok(Math.abs(Date.now()-Date.parse(body.data_emissao))<10000);assert.equal(body.items[0].valor_bruto,'20.00');if(unknown){unknown=false;throw new Error('Synthetic timeout after acceptance');}}
   if(options.method==='DELETE'){cancels++;cancelled=true;}
   return Response.json({status:cancelled?'cancelado':'autorizado',ref,cnpj_emitente:'12345678000123',chave_nfe:key,caminho_xml_nota_fiscal:'/arquivos/qa.xml',caminho_danfe:'/arquivos/qa.pdf',...(cancelled?{caminho_xml_cancelamento:'/arquivos/cancel.xml'}:{})});

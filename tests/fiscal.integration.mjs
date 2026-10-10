@@ -6,7 +6,7 @@ import {createCoreFixture,cleanupCoreFixture} from './helpers/core-fixture.mjs';
 const base=process.env.TEST_BASE_URL||'http://localhost:3002';assert.ok(['localhost','127.0.0.1'].includes(new URL(base).hostname));
 const db=await connect();let q,other;
 async function call(path,body,cookie,method=body?'POST':'GET',key=randomUUID(),host=q.slug+'.test'){
- return new Promise((resolve,reject)=>{const req=http.request(new URL(base+path),{method,headers:{host,'content-type':'application/json','idempotency-key':key,...(cookie?{cookie}:{})}},res=>{const chunks=[];res.on('data',c=>chunks.push(c));res.on('end',()=>{const bytes=Buffer.concat(chunks);resolve({status:res.statusCode,body:res.headers['content-type']?.includes('json')?JSON.parse(bytes.toString()):bytes,cookie:res.headers['set-cookie']?.[0]?.split(';')[0]});});});req.on('error',reject);req.setTimeout(20000,()=>req.destroy(new Error('Timeout')));req.end(body?JSON.stringify(body):undefined);});
+ return new Promise((resolve,reject)=>{const req=http.request(new URL(base+path),{method,headers:{host,'content-type':'application/json','idempotency-key':key,...(cookie?{cookie}:{})}},res=>{const chunks=[];res.on('data',c=>chunks.push(c));res.on('end',()=>{const bytes=Buffer.concat(chunks);resolve({headers:res.headers,status:res.statusCode,body:res.headers['content-type']?.includes('json')?JSON.parse(bytes.toString()):bytes,cookie:res.headers['set-cookie']?.[0]?.split(';')[0]});});});req.on('error',reject);req.setTimeout(20000,()=>req.destroy(new Error('Timeout')));req.end(body?JSON.stringify(body):undefined);});
 }
 function ok(r){assert.equal(r.status,200,JSON.stringify(r.body));return r.body;}
 try{
@@ -51,6 +51,11 @@ try{
  assert.equal(ok(await call('/api/operations/fiscal/files/'+file.id,null,cashier.cookie)).toString(),'<QA>SEM VALIDADE FISCAL</QA>');
  assert.equal((await call('/api/operations/fiscal/files/'+file.id,null,foreign.cookie,'GET',randomUUID(),other.slug+'.test')).status,404);
  assert.equal((await call('/api/operations/fiscal/files/'+file.id,null,waiter.cookie)).status,403);
+ const htmlFile=(await db.query("INSERT INTO fiscal_files(restaurant_id,document_id,kind,content,mime,sha256) VALUES($1,$2,'auxiliary',$3,'text/html','qa-html') RETURNING id",[q.id,id,Buffer.from('<html><body>QA</body></html>')])).rows[0];
+ const preview=await call('/api/operations/fiscal/files/'+htmlFile.id+'?preview=1',null,cashier.cookie);ok(preview);assert.ok(preview.headers['content-security-policy'].startsWith('sandbox;'));assert.ok(preview.headers['content-disposition'].startsWith('inline;'));
+ const pdoc=ok(await call('/api/operations/fiscal',{...prepare,environment:'production'},cashier.cookie));assert.notEqual(pdoc.id,id);
+ assert.equal((await call('/api/operations/fiscal',{action:'process',documentId:pdoc.id},cashier.cookie)).status,400);
+ assert.equal(ok(await call('/api/operations/fiscal?environment=production',null,cashier.cookie)).documents.length,1);
  const date=new Date().toLocaleDateString('en-CA',{timeZone:'America/Sao_Paulo'});
  const archive=ok(await call(`/api/operations/fiscal/export?from=${date}&to=${date}`,null,cashier.cookie));assert.equal(archive.readUInt32LE(0),0x04034b50);assert.ok(archive.includes(Buffer.from('SEM VALIDADE FISCAL')));assert.ok(archive.includes(Buffer.from('INCOMPLETO')));
  assert.equal((await db.query('SELECT count(*)::int n FROM payments WHERE order_id=$1',[sale])).rows[0].n,1);assert.equal((await db.query('SELECT count(*)::int n FROM finance_entries WHERE restaurant_id=$1',[q.id])).rows[0].n,0);
