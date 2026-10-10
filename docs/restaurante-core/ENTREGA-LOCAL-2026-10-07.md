@@ -202,3 +202,16 @@ Migration `0014_finance_planning_purchases.sql` aplicada após backup `outputs/b
 Para testar: `./scripts/dev-local.sh`; Gestão → Financeiro → Contas para parcelas/recorrências; aba Compras para obrigação e recebimento; Gestão → Estoque para conferir saldo. Configure insumos antes de cadastrar a compra. O arquivo de teste é `tests/planning.integration.mjs`, com servidor local na porta 3002 por padrão ou `TEST_BASE_URL` explícita.
 
 Pendências internas remanescentes: integração fiscal e arquivos do contador, adaptadores bancários/terminais, conciliação automática, restauração, devoluções de compras recebidas, rendimento/subreceitas/embalagens e evoluções descritas no manual. Dados do restaurante são necessários para configuração e homologação externa, mas essas integrações também demandam código; não anunciar como disponíveis apenas aguardando credenciais.
+
+
+## Base fiscal e pagamentos — 10/10/2026
+
+Contrato: recorte de base técnica em B08 do manual. Implementação local e não publicada. A migration 0015 está entregue, mas não aplicada ao schema operacional; testada em schema PostgreSQL sintético, com ensaio de rollback e remoção ao final. Nenhuma transmissão externa, cobrança ou emissão ocorreu.
+
+Entregue: fila persistente com tenant/ambiente/referência única, conteúdo idempotente, lease e proteção contra resposta atrasada; processamento incerto consulta a mesma referência; estados finais não regridem. Autorização fiscal para caixa/gestão e cobrança também para garçom. Contrato de meios/canais para Pix direto, Pix no terminal e cartão; validação de referência/valor/moeda antes de reconhecer resultado. Adaptador Focus exclusivamente de homologação, URL fixa, timeout, sem redirecionamento de credencial, e reconhecimento do estado fiscal em vez de apenas HTTP. Produção bloqueada. Não persiste corpo bruto de erro nem credenciais nos campos de configuração da fila.
+
+PASSA: `npm run test:integrations-base` em rodadas repetidas; inclui concorrência real entre duas conexões PostgreSQL, chave com conteúdo diferente recusada, tenant cruzado, perfis, falha de transporte, lease vencido, resposta atrasada, conector desabilitado, respostas Focus controladas, Pix de terminal sintético e capacidade incompatível. Build de produção, Typecheck e lint dirigido passam; lint geral mantém três avisos anteriores. NÃO TESTADO: interface/servidor HTTP deste módulo (não existem ainda), provedor externo, webhook e documentos fiscais reais. Testes de biblioteca/repositório não são uma auditoria fiscal ponta a ponta.
+
+Próximas ligações indispensáveis: cadastro fiscal e classificação de produtos, vínculo/snapshot da venda, tela de pendências do caixa/gestão, processo agendado, correção de rejeições e cancelamento, armazenamento/download privado de XML e documento auxiliar, pacote do contador; nos pagamentos, adaptador bancário/terminal selecionado, notificações autenticadas, baixa financeira idempotente e conciliação. Notas de entrada continuam fora deste recorte. Receber as chaves não basta para ativar o módulo.
+
+Fontes de contrato Focus consultadas: [emissão](https://doc.focusnfe.com.br/reference/emitir_nfce), [consulta](https://doc.focusnfe.com.br/reference/consultar_nfce), [autenticação](https://doc.focusnfe.com.br/reference/autenticacao). Nenhuma afirmação de homologação é feita com base nesses testes locais.
