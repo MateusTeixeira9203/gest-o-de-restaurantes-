@@ -9,12 +9,12 @@ import { PendingOrders } from "./pending-orders";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import {
   ArrowLeft, ArrowRight, Bell, Bike, Boxes, Check, ChefHat, ChevronRight, CircleDollarSign,
   CookingPot, Copy, CreditCard, FileBarChart, LayoutDashboard, LockKeyhole, LogOut,
   MapPin, Menu as MenuIcon, Minus, Plus, ReceiptText, Search, Settings, ShoppingBag,
-  Sparkles, Table2, TrendingUp, UtensilsCrossed, UsersRound, WalletCards,
+  X, Sparkles, Table2, TrendingUp, UtensilsCrossed, UsersRound, WalletCards,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
@@ -167,11 +167,29 @@ function Deliveries() {
 function Metric({ label, value, note, icon: Icon }: { label: string; value: string; note?: string; icon: React.ComponentType<{ size?: number }>; }) { return <article className="metric-card"><div className="metric-icon"><Icon size={18} /></div><p>{label}</p><strong>{value}</strong>{note && <span>{note}</span>}</article>; }
 
 const managementNav = [
-  ["dashboard", "Dashboard", LayoutDashboard], ["mesas", "Mesas", Table2], ["pedidos", "Pedidos", ReceiptText], ["cardapio", "Cardápio", MenuIcon], ["estoque", "Estoque", Boxes], ["custos", "Custos", TrendingUp], ["caixa", "Caixa", CircleDollarSign], ["financeiro", "Financeiro", WalletCards], ["fiscal", "Fiscal", ReceiptText], ["equipe", "Equipe", UsersRound], ["relatorios", "Relatórios", FileBarChart], ["configuracoes", "Configurações", Settings],
+  ["dashboard", "Dashboard", LayoutDashboard], ["mesas", "Mesas", Table2], ["pedidos", "Pedidos", ReceiptText], ["cardapio", "Cardápio", MenuIcon], ["estoque", "Estoque", Boxes], ["financeiro", "Financeiro", WalletCards], ["fiscal", "Fiscal", ReceiptText], ["equipe", "Equipe", UsersRound], ["relatorios", "Relatórios", FileBarChart], ["configuracoes", "Configurações", Settings],
 ] as const;
 
+const subscribeCompactMenu = (notify: () => void) => {
+  const media = window.matchMedia("(max-width: 1024px)");
+  media.addEventListener("change", notify);
+  return () => media.removeEventListener("change", notify);
+};
 function Management({ section }: { section: string }) {
   const router = useRouter(); const [mobileNav, setMobileNav] = useState(false); const pageRef = useRef<HTMLDivElement>(null); const { logout, session, plan } = useRestaurant();
+  const [collapsed, setCollapsed] = useState(false);
+  const compact = useSyncExternalStore(subscribeCompactMenu, () => window.matchMedia("(max-width: 1024px)").matches, () => false);
+  const navOpen = compact ? mobileNav : !collapsed;
+  const toggleRef = useRef<HTMLButtonElement>(null);
+  const closeNav = () => { setMobileNav(false); setCollapsed(true); toggleRef.current?.focus(); };
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !event.defaultPrevented) { setMobileNav(false); setCollapsed(true); toggleRef.current?.focus(); }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, []);
+  const activeSection = section === "caixa" ? "financeiro" : section;
   useEffect(() => {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const animation = pageRef.current?.animate(
@@ -188,16 +206,28 @@ function Management({ section }: { section: string }) {
     setMobileNav(false);
   };
   const signOut = () => { void logout().then(() => router.push("/gestao")); };
-  return <main className="management"><aside className={mobileNav ? "manage-sidebar open" : "manage-sidebar"}><div className="p-6"><Brand dark /></div><nav aria-label="Áreas da gestão">{managementNav.filter(([id])=>plan==='professional'||!['financeiro','custos','fiscal'].includes(id)).map(([id, label, Icon]) => <a key={id} href={`/gestao/${id}`} onClick={event => navigate(event, id)} aria-current={section === id ? "page" : undefined} className={section === id ? "active" : ""}><Icon size={18} /><span>{label}</span></a>)}</nav><button onClick={signOut} className="logout-button"><LogOut size={17} /> Trocar usuário</button></aside>{mobileNav && <button className="sidebar-overlay" onClick={() => setMobileNav(false)} aria-label="Fechar menu" />}<div className="manage-content"><header className="manage-top"><button onClick={() => setMobileNav(true)} className="icon-button lg:hidden" aria-label="Abrir menu"><MenuIcon size={19} /></button><div><p className="text-xs font-semibold uppercase tracking-wider text-neutral-400">Gestão</p><h1 key={section} className="manage-title text-xl font-semibold capitalize">{managementNav.find(([id]) => id === section)?.[1] ?? section}</h1></div><div className="flex items-center gap-3"><span className="sync-dot" /><span className="hidden text-sm text-neutral-500 sm:block">{session?.username ?? "Gestão"}</span><div className="avatar">{(session?.username ?? "AD").slice(0, 2).toUpperCase()}</div></div></header><div className="manage-page" ref={pageRef}><ManagementSection section={section} /></div></div></main>;
+  return <main className={`management${navOpen ? " nav-open" : " nav-closed"}`}>
+    <aside id="management-navigation" inert={!navOpen} className={`manage-sidebar${navOpen ? " open" : ""}${mobileNav ? " mobile-open" : ""}`}>
+      <div className="sidebar-brand"><Brand dark /><button className="icon-button" onClick={closeNav} aria-label="Fechar menu lateral"><X size={19} /></button></div>
+      <nav aria-label="Áreas da gestão">{managementNav.filter(([id]) => plan === 'professional' || id !== 'fiscal').map(([id, label, Icon]) => <a key={id} href={`/gestao/${id}`} onClick={event => navigate(event, id)} aria-current={activeSection === id ? "page" : undefined} className={activeSection === id ? "active" : ""}><Icon size={18} /><span>{label}</span></a>)}</nav>
+      <button onClick={signOut} className="logout-button"><LogOut size={17} /> Trocar usuário</button>
+    </aside>
+    {compact && <button className={`sidebar-overlay${navOpen ? " open" : ""}`} onClick={closeNav} aria-label="Fechar menu" aria-hidden={!navOpen} tabIndex={-1} disabled={!navOpen} />}
+    <div className="manage-content"><header className="manage-top">
+      <button ref={toggleRef} onClick={() => compact ? setMobileNav(value => !value) : setCollapsed(value => !value)} className="icon-button" aria-label={navOpen ? "Recolher menu" : "Abrir menu"} aria-expanded={navOpen} aria-controls="management-navigation"><MenuIcon size={19} /></button>
+      <div className="manage-heading"><p className="text-xs font-semibold uppercase tracking-wider text-neutral-400">Gestão</p><h1 key={section} className="manage-title text-xl font-semibold capitalize">{managementNav.find(([id]) => id === activeSection)?.[1] ?? section}</h1></div>
+      <div className="flex items-center gap-3"><span className="hidden text-sm text-neutral-500 sm:block">{session?.username ?? "Gestão"}</span><div className="avatar">{(session?.username ?? "AD").slice(0, 2).toUpperCase()}</div></div>
+    </header><div className="manage-page" ref={pageRef}><ManagementSection section={section} /></div></div>
+  </main>;
 }
 
 
 function ManagementSection({ section }: { section: string }) {
   const {plan}=useRestaurant();
-  if(plan==='essential' && ['financeiro','custos','fiscal'].includes(section))return <p>Este recurso está disponível no plano Profissional.</p>;
+  if(plan==='essential' && ['custos','fiscal'].includes(section))return <p>Este recurso está disponível no plano Profissional.</p>;
   if(plan==='essential' && section==='dashboard')return <Dashboard />;
   if(plan==='essential' && section==='relatorios')return <Reports />;
-  if(plan==='essential' && section==='caixa')return <CashShiftPanel />;
+  if(plan==='essential' && ['caixa','financeiro'].includes(section))return <CashShiftPanel />;
   if (section === "fiscal") return <FiscalWorkspace />; if (section === "dashboard") return <FinanceWorkspace key="dashboard" />; if(section === "financeiro") return <FinanceWorkspace />; if (section === "mesas") return <ManagementTables />; if (section === "pedidos") return <ManageOrders />; if (section === "cardapio") return <ManagementMenu />; if (section === "estoque") return <Stock />; if(section === "custos")return <CostManagement />; if (section === "caixa") return <FinanceWorkspace key="cash" initialTab="cash" />; if (section === "equipe") return <><PageTitle title="Equipe" subtitle="Cadastre cada pessoa com nome, papel e PIN para iniciar o turno." /><TeamManagement /></>; if (section === "relatorios") return <FinanceWorkspace key="results" initialTab="results" />; if (section === "configuracoes") return <ManagementSettings />; return <NotFound />;
 }
 

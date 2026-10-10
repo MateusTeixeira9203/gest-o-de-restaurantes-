@@ -273,3 +273,54 @@ button:focus-visible, a:focus-visible, summary:focus-visible { outline:2px solid
 }
 
 [data-slot="dialog-close"], [data-slot="sheet-content"] > button { min-width:44px; min-height:44px; display:grid; place-items:center; top:.25rem; right:.25rem; }
+
+/* Management navigation: one toggle for both desktop and mobile. */
+.management .manage-sidebar{transform:translateX(-100%);visibility:hidden;transition:transform .2s ease,visibility .2s;overflow-y:auto}
+.management .manage-sidebar.open{transform:translateX(0);visibility:visible}
+.management.nav-closed .manage-content{margin-left:0}
+.sidebar-brand{display:flex;align-items:center;justify-content:space-between;gap:.5rem;padding:1.25rem .9rem}
+.sidebar-brand .icon-button{color:#fff;background:transparent;border-color:#ffffff26;flex-shrink:0}
+.manage-heading{flex:1;min-width:0}
+.manage-sidebar nav{padding-top:0}
+.workspace-tabs{display:flex;gap:.5rem;overflow-x:auto;padding-bottom:.5rem}
+.workspace-tabs>button{flex-shrink:0;white-space:nowrap}
+.workspace-details>summary{cursor:pointer;font-weight:600;list-style-position:inside}
+.workspace-details[open]>summary{margin-bottom:1rem}
+@media(prefers-reduced-motion:reduce){.management .manage-sidebar{transition:none}}
+
+/* Shared interaction rhythm. Motion never delays a command or animates financial values. */
+:root{--motion-control:140ms;--motion-content:180ms;--motion-panel:240ms;--ease-interface:cubic-bezier(.2,.8,.2,1)}
+.management .manage-sidebar{transition:transform var(--motion-panel) var(--ease-interface),visibility var(--motion-panel)}
+.manage-page{max-width:1600px;margin-inline:auto}
+.management .sidebar-overlay{opacity:0;visibility:hidden;pointer-events:none;transition:opacity var(--motion-panel) ease,visibility var(--motion-panel)}
+.management .sidebar-overlay.open{opacity:1;visibility:visible;pointer-events:auto}
+.primary-button,.secondary-button,.dark-button,.icon-button,.category-chip,.workspace-tabs>button,.table-mode-switch button,.sector-tabs button{transition:background-color var(--motion-control) ease,color var(--motion-control) ease,border-color var(--motion-control) ease,box-shadow var(--motion-control) ease,transform var(--motion-control) var(--ease-interface)}
+.primary-button:active:not(:disabled),.secondary-button:active:not(:disabled),.icon-button:active:not(:disabled){transform:scale(.98)}
+button:disabled{cursor:not-allowed}
+.management :is(button,a,summary):focus-visible{outline:2px solid var(--patos-orange,#a96005);outline-offset:4px}
+.management :is(input,select,textarea):focus-visible{outline:2px solid var(--patos-orange,#a96005);outline-offset:2px}
+.manage-sidebar :is(button,a):focus-visible{outline-color:var(--patos-gold,#ffbd18)}
+.workspace-panel{animation:workspace-reveal var(--motion-content) var(--ease-interface)}
+.workspace-details>summary{list-style:none;display:flex;align-items:center;gap:.65rem;min-height:28px}
+.workspace-details>summary::-webkit-details-marker{display:none}
+.workspace-details>summary::before{content:"";width:7px;height:7px;flex-shrink:0;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:rotate(-45deg);transition:transform var(--motion-control) ease}
+.workspace-details[open]>summary::before{transform:rotate(45deg)}
+.workspace-details[open]>:not(summary){animation:workspace-reveal var(--motion-content) var(--ease-interface)}
+.workspace-loading{display:flex;align-items:center;gap:.65rem;min-height:3rem;color:#595951;font-size:.9rem}
+.loading-indicator{display:inline-block;flex-shrink:0;width:1rem;height:1rem;border:2px solid #d9d5ca;border-top-color:currentColor;border-radius:50%;animation:workspace-wait .8s linear infinite}
+@keyframes workspace-reveal{from{opacity:.5;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+@keyframes workspace-wait{to{transform:rotate(360deg)}}
+@media(min-width:1025px){.manage-content{transition:margin-left var(--motion-panel) var(--ease-interface)}}
+@media(hover:hover) and (pointer:fine){
+  .secondary-button:hover:not(:disabled),.icon-button:hover:not(:disabled),.workspace-tabs>button:hover:not(:disabled){box-shadow:0 2px 7px #17181412}
+  .table-card,.cash-card,.orders-admin-card,.product-card{transition:border-color var(--motion-control) ease,box-shadow var(--motion-control) ease,transform var(--motion-control) var(--ease-interface)}
+  .table-card:hover,.cash-card:hover,.product-card:hover{box-shadow:0 4px 14px #1718140d}
+}
+@media(prefers-reduced-motion:reduce){
+  .management .manage-sidebar,.management .sidebar-overlay,.manage-content,.primary-button,.secondary-button,.dark-button,.icon-button,.category-chip,.workspace-tabs>button,.table-mode-switch button,.sector-tabs button,.workspace-details>summary::before,.table-card,.cash-card,.orders-admin-card,.product-card{transition:none}
+  .workspace-panel,.workspace-details[open]>:not(summary),.loading-indicator{animation:none}
+  .primary-button:hover,.table-card:hover,.cash-card:hover,.product-card:hover:not(:disabled),.primary-button:active:not(:disabled),.secondary-button:active:not(:disabled),.icon-button:active:not(:disabled),.manage-sidebar nav a:hover,.manage-sidebar nav a.active{transform:none}
+}
+
+/* Keep the mobile drawer hidden even before client hydration knows the viewport. */
+@media(max-width:1024px){.management .manage-sidebar.open:not(.mobile-open){transform:translateX(-100%);visibility:hidden}}

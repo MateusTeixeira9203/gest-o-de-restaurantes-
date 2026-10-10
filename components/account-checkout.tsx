@@ -68,7 +68,7 @@ export function AccountCheckout({tableId,onBack}:{tableId:string;onBack:()=>void
       const result=await r.json() as {error?:string;remainingCents:number;changeCents:number};
       if(!r.ok){if(r.status<500){intent.current=null;setUncertain(false);setConfirm(false);setQr(null);setQuote(null);setNotice(result.error||'A conta mudou. Confira o saldo atualizado.');load();}throw new Error(result.error||'Falha ao confirmar.');}
       intent.current=null;setUncertain(false);setConfirm(false);setQr(null);
-      toast.success(result.remainingCents>0?`Recebimento registrado. Saldo: ${money(result.remainingCents/100)}`:result.changeCents>0?`Conta paga. Troco: ${money(result.changeCents/100)}`:'Conta paga. Entregas pendentes continuam no atendimento.');
+      toast.success(result.remainingCents>0?`Recebimento registrado. Saldo: ${money(result.remainingCents/100)}`:result.changeCents>0?`Conta paga. Troco: ${money(result.changeCents/100)}`:'Conta paga. Se houver entregas pendentes, elas continuam no atendimento.');
       if(result.remainingCents>0)load();else {setQuote(null);setRows([]);onBack();}
       await refresh();
     }catch(e){const message=intent.current?'Não foi possível confirmar a resposta do recebimento. Repita a confirmação original; não cobre o cliente novamente.':e instanceof Error?e.message:'Não foi possível concluir a operação.';setNotice(message);toast.error(message);}finally{setBusy(false);}

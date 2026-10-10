@@ -5,7 +5,7 @@ import {randomUUID} from 'node:crypto';
 import {createCoreFixture,cleanupCoreFixture} from './helpers/core-fixture.mjs';
 // Explicit local socket only. Never runs its concurrency waves on the shared Neon database.
 const socket=process.env.LOCAL_QA_PG_SOCKET;if(!socket)throw new Error('LOCAL_QA_PG_SOCKET required');
-const db=new pg.Client({host:socket,port:55433,user:'mtx',database:'postgres'});await db.connect();let q;
+const db=new pg.Client({host:socket,port:Number(process.env.LOCAL_QA_PG_PORT||55433),user:'mtx',database:'postgres'});await db.connect();let q;
 async function call(path,body,cookie,key=randomUUID()){
  return new Promise((resolve,reject)=>{const req=http.request('http://127.0.0.1:3100'+path,{method:body?'POST':'GET',headers:{host:q.slug+'.test','content-type':'application/json','idempotency-key':key,...(cookie?{cookie}:{})}},res=>{let raw='';res.on('data',c=>raw+=c);res.on('end',()=>{try{resolve({status:res.statusCode,body:JSON.parse(raw),cookie:res.headers['set-cookie']?.[0]?.split(';')[0]});}catch(e){reject(e);}});});req.on('error',reject);req.setTimeout(30000,()=>req.destroy(new Error('Timeout')));req.end(body?JSON.stringify(body):undefined);});
 }

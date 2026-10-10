@@ -1,6 +1,9 @@
 "use client";
-import {IntegratedPayments} from "@/components/integrated-payments";
-import {PurchaseManagement, RecurringSeries} from "@/components/purchase-management";
+import { IntegratedPayments } from "@/components/integrated-payments";
+import {
+  PurchaseManagement,
+  RecurringSeries,
+} from "@/components/purchase-management";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { money } from "@/lib/domain";
@@ -63,25 +66,35 @@ function useFinance(from: string, to: string, cashOnly = false) {
   const [busy, setBusy] = useState(false);
   const lock = useRef(false);
   const keys = useRef(new Map<string, string>());
-  const generation = useRef(0);
+  const request = useRef<AbortController | null>(null);
   const reload = useCallback(async () => {
-    const current = ++generation.current;
+    request.current?.abort();
+    const controller = new AbortController();
+    request.current = controller;
     try {
       const response = await fetch(
         `/api/operations/finance?from=${from}&to=${to}${cashOnly ? "&cash=1" : ""}`,
-        { cache: "no-store" },
+        { cache: "no-store", signal: controller.signal },
       );
       const body = (await response.json()) as FinancialSnapshot & {
         error?: string;
       };
       if (!response.ok)
         throw new Error(body.error || "Financeiro indisponível.");
-      if (current !== generation.current) return;
+      if (controller.signal.aborted) return;
       setData(body);
       setError("");
     } catch (e) {
-      if (current !== generation.current) return;
-      setError(e instanceof Error ? e.message : "Falha ao carregar.");
+      if (controller.signal.aborted) return;
+      setError(
+        e instanceof TypeError || e instanceof SyntaxError
+          ? "Não foi possível conectar ao financeiro. Confira a conexão e tente atualizar."
+          : e instanceof Error
+            ? e.message
+            : "Não foi possível carregar o financeiro.",
+      );
+    } finally {
+      if (request.current === controller) request.current = null;
     }
   }, [from, to, cashOnly]);
   // reload updates state only after the external HTTP response, never synchronously.
@@ -89,9 +102,13 @@ function useFinance(from: string, to: string, cashOnly = false) {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- reload awaits HTTP before updating state.
     void reload();
     const id = setInterval(() => {
-      if (document.visibilityState === "visible") void reload();
+      if (document.visibilityState === "visible" && !request.current)
+        void reload();
     }, 20000);
-    return () => clearInterval(id);
+    return () => {
+      clearInterval(id);
+      request.current?.abort();
+    };
   }, [reload]);
   const run: Run = async (command) => {
     if (lock.current) return false;
@@ -115,7 +132,9 @@ function useFinance(from: string, to: string, cashOnly = false) {
       return true;
     } catch (e) {
       toast.error(
-        e instanceof Error
+        e instanceof Error &&
+          !(e instanceof TypeError) &&
+          !(e instanceof SyntaxError)
           ? e.message
           : "Conexão interrompida. Tente novamente para confirmar a mesma operação.",
       );
@@ -299,7 +318,10 @@ export function CashShiftPanel() {
       {data ? (
         <CashControls shifts={data.shifts} run={run} busy={busy} />
       ) : (
-        <p>Carregando caixa…</p>
+        <div role="status" className="workspace-loading">
+          {!error && <span className="loading-indicator" aria-hidden="true" />}
+          {error ? "O caixa não pôde ser carregado." : "Carregando caixa…"}
+        </div>
       )}
     </div>
   );
@@ -450,7 +472,7 @@ function Documents({
 }) {
   const [kind, setKind] = useState<"payable" | "receivable">("payable");
   const [filter, setFilter] = useState("open");
-  const [schedule,setSchedule]=useState("single");
+  const [schedule, setSchedule] = useState("single");
   const docs = data.documents.filter(
     (d) =>
       filter === "all" ||
@@ -465,7 +487,13 @@ function Documents({
           label="Cadastrar conta"
           submit={(form) =>
             run({
-              ...(schedule==='single'?{action:"create_document" as const}:{action:"create_series" as const,mode:schedule as "installments"|"recurring",count:Number(form.get('count'))}),
+              ...(schedule === "single"
+                ? { action: "create_document" as const }
+                : {
+                    action: "create_series" as const,
+                    mode: schedule as "installments" | "recurring",
+                    count: Number(form.get("count")),
+                  }),
               kind,
               title: text(form, "title"),
               contact: text(form, "contact"),
@@ -509,9 +537,43 @@ function Documents({
               name="contact"
               required={false}
             />
-            <label className="block text-sm">Programação<select className={inputClass} value={schedule} onChange={e=>setSchedule(e.target.value)}><option value="single">Conta única</option><option value="installments">Dividir total em parcelas mensais</option><option value="recurring">Repetir valor mensalmente</option></select></label>
-            {schedule!=='single'&&<label className="block text-sm">Quantidade de meses<input className={inputClass} name="count" type="number" min="2" max="60" defaultValue="3" required/></label>}
-            <Field label={schedule==='recurring'?"Valor de cada mês (R$)":"Valor total (R$)"} name="amount" type="number" />
+            <label className="block text-sm">
+              Programação
+              <select
+                className={inputClass}
+                value={schedule}
+                onChange={(e) => setSchedule(e.target.value)}
+              >
+                <option value="single">Conta única</option>
+                <option value="installments">
+                  Dividir total em parcelas mensais
+                </option>
+                <option value="recurring">Repetir valor mensalmente</option>
+              </select>
+            </label>
+            {schedule !== "single" && (
+              <label className="block text-sm">
+                Quantidade de meses
+                <input
+                  className={inputClass}
+                  name="count"
+                  type="number"
+                  min="2"
+                  max="60"
+                  defaultValue="3"
+                  required
+                />
+              </label>
+            )}
+            <Field
+              label={
+                schedule === "recurring"
+                  ? "Valor de cada mês (R$)"
+                  : "Valor total (R$)"
+              }
+              name="amount"
+              type="number"
+            />
             <Field
               label="Competência"
               name="competence"
@@ -526,12 +588,15 @@ function Documents({
             />
           </div>
           <p className="text-xs text-neutral-500">
-            Vendas já entram automaticamente. Para vincular mercadoria e obrigação, use Compras.
-            Parcelas dividem o total e mantêm a competência; recorrências repetem o valor e avançam competência e vencimento, por até 60 meses. Em mês curto, usamos o último dia. Não há renovação automática além do período informado.
+            Vendas já entram automaticamente. Para vincular mercadoria e
+            obrigação, use Compras. Parcelas dividem o total e mantêm a
+            competência; recorrências repetem o valor e avançam competência e
+            vencimento, por até 60 meses. Em mês curto, usamos o último dia. Não
+            há renovação automática além do período informado.
           </p>
         </Form>
       </section>
-      <RecurringSeries data={data} busy={busy} run={run}/>
+      <RecurringSeries data={data} busy={busy} run={run} />
       <div className="flex items-center justify-between">
         <h2 className="section-title">Contas cadastradas</h2>
         <select
@@ -837,10 +902,9 @@ export function FinanceWorkspace({
     <div className="space-y-5">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500">
-            Comanda Inteligente
-          </p>
-          <h2 className="text-2xl font-semibold">Financeiro</h2>
+          <h2 className="text-2xl font-semibold">
+            {tabs.find(([id]) => id === tab)?.[1] || "Financeiro"}
+          </h2>
           <p className="mt-1 text-sm text-neutral-500">
             Operação, caixa e resultados em uma base única.
           </p>
@@ -866,10 +930,7 @@ export function FinanceWorkspace({
           </label>
         </div>
       </header>
-      <nav
-        aria-label="Seções financeiras"
-        className="flex flex-wrap gap-2 pb-2"
-      >
+      <nav aria-label="Seções financeiras" className="workspace-tabs">
         {tabs.map(([id, label]) => (
           <button
             key={id}
@@ -890,13 +951,17 @@ export function FinanceWorkspace({
         </div>
       )}
       {!data ? (
-        <p>Carregando financeiro…</p>
+        <div role="status" className="workspace-loading">
+          {!error && <span className="loading-indicator" aria-hidden="true" />}
+          {error
+            ? "Os dados não puderam ser atualizados."
+            : "Carregando financeiro…"}
+        </div>
       ) : (
-        <>
+        <div key={tab} className="workspace-panel space-y-5">
           {tab === "summary" && (
             <>
               <Summary data={data} />
-              <CashFlow data={data} />
               <details className="command-card p-5">
                 <summary className="cursor-pointer font-semibold">
                   Informar saldo bancário inicial
@@ -933,7 +998,9 @@ export function FinanceWorkspace({
           {tab === "cash" && (
             <CashControls shifts={data.shifts} run={run} busy={busy} />
           )}{" "}
-          {tab === "purchases" && <PurchaseManagement data={data} busy={busy} run={run}/>}
+          {tab === "purchases" && (
+            <PurchaseManagement data={data} busy={busy} run={run} />
+          )}
           {tab === "documents" && (
             <>
               <Documents data={data} run={run} busy={busy} />
@@ -1043,7 +1110,7 @@ export function FinanceWorkspace({
               </p>
             </section>
           )}
-        </>
+        </div>
       )}
     </div>
   );
