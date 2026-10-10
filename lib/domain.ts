@@ -81,4 +81,4 @@ export interface CartItem {
 
 export const money = (value: number) => value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 export const orderTotal = (order: Order) => order.items.reduce((sum, item) => sum + item.quantity * (item.unitPrice + item.addons.reduce((a, b) => a + b.price, 0)), 0);
-export const tableTotal = (state: RestaurantState, tableId: string) => state.orders.filter(o => o.tableId === tableId && !["cancelled", "completed"].includes(o.status)).reduce((sum, order) => sum + orderTotal(order), 0);
+export const tableTotal = (state: RestaurantState, tableId: string) => state.orders.filter(o => o.tableId === tableId && !["cancelled", "completed"].includes(o.status)).reduce((sum, order) => sum + Math.max(0, (order.totalCents ?? Math.round(orderTotal(order) * 100)) - (order.paidCents ?? 0)) / 100, 0);

@@ -1,3 +1,4 @@
+import { accountVersion } from "@/modules/payments/checkout";
 import { restaurantContext } from "@/modules/tenancy/context";
 import { snapshotRecipeCost } from "@/modules/costs/service";
 import { randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
@@ -1113,13 +1114,14 @@ export async function closeTable(
   }>,
   actor: { role: string; name: string },
   requestKey: string,
+  options?: { allowPartial: boolean; expectedVersion: string },
 ) {
   return transaction(async (client) => {
     const current = await restaurant(client);
     await client.query("SELECT pg_advisory_xact_lock(hashtext($1))", [
       `payment:${current.id}:${requestKey}`,
     ]);
-    const hash = requestHash({ tableNumber, payments, actor });
+    const hash = requestHash({ tableNumber, payments, actor, ...(options ? { options } : {}) });
     const prior = (
       await client.query<{
         request_hash: string;
@@ -1155,6 +1157,8 @@ export async function closeTable(
       throw new Error(
         "Confira os pedidos pendentes antes de receber esta conta.",
       );
+    if (options && accountVersion(orders.rows) !== options.expectedVersion)
+      throw new Error("A conta mudou. Atualize o saldo e confira os recebimentos antes de confirmar.");
     const balances = orders.rows.map((o) => ({
       id: o.id,
       remaining: Math.max(0, o.total_cents - Number(o.paid)),
@@ -1165,8 +1169,8 @@ export async function closeTable(
     const cash = payments
       .filter((p) => p.method === "Dinheiro")
       .reduce((sum, p) => sum + p.amountCents, 0);
-    const change = received - due;
-    if (received < due)
+    const change = Math.max(0, received - due);
+    if (received < due && !options?.allowPartial)
       throw new Error("Valor recebido menor que o saldo da conta.");
     if (change > cash)
       throw new Error("Somente pagamentos em dinheiro podem gerar troco.");
@@ -1236,7 +1240,7 @@ export async function closeTable(
       }
     }
     await client.query(
-      "UPDATE orders SET status='completed',updated_at=now() WHERE id=ANY($1::uuid[]) AND served_at IS NOT NULL",
+      "UPDATE orders SET status='completed',updated_at=now() WHERE id=ANY($1::uuid[]) AND served_at IS NOT NULL AND COALESCE((SELECT sum(amount_cents) FROM payments WHERE order_id=orders.id AND status='paid'),0)>=total_cents",
       [orders.rows.map((o) => o.id)],
     );
     for (const order of orders.rows)
@@ -1254,7 +1258,7 @@ export async function closeTable(
           }),
         ],
       );
-    const result = { totalCents: due, changeCents: change };
+    const result = { totalCents: Math.min(received, due), changeCents: change, remainingCents: Math.max(0, due-received) };
     await client.query(
       "INSERT INTO finance_commands(restaurant_id,request_key,request_hash,result) VALUES($1,$2,$3,$4::jsonb)",
       [current.id, requestKey, hash, JSON.stringify(result)],
