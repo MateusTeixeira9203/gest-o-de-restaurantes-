@@ -6,7 +6,7 @@ Este é o documento mestre para transformar a base do Patos Lanches em um produt
 
 Sua função é ser o **manual do produto e contrato de escopo para desenvolvimento e validação**: visão, nome, marca, design, funcionalidades, regras, arquitetura, dados, integrações, operação, entregas e critérios de aceite. Uma implementação deve poder ser conferida contra esta base, e uma mudança de direção precisa ficar registrada nela.
 
-**Estado atual: versão 0.3 em validação para publicação autorizada em 10/10/2026.** Operação, planejamento financeiro/compras, área fiscal de homologação, arquivos/ZIP e ponte interna de recebimentos foram implementados. Fiscal real, conectores concretos e conciliação automática de depósitos ainda não estão homologados. O quadro da seção 19 e o relato de entrega distinguem implementação, evidência e dependência. Aceite do usuário pendente.
+**Estado atual: versão 0.3 publicada e verificada em 10/10/2026, aplicação no commit `936d344`.** Operação, planejamento financeiro/compras, área fiscal de homologação, arquivos/ZIP e ponte interna de recebimentos foram implementados. Fiscal real, conectores concretos e conciliação automática de depósitos ainda não estão homologados. O quadro da seção 19 e o relato de entrega distinguem implementação, evidência e dependência. Aceite do usuário pendente.
 
 Este arquivo passa a ser a referência principal de escopo, sequência e aceite. Os documentos anteriores permanecem como apoio. Em caso de divergência, prevalecem a instrução mais recente do proprietário e sua incorporação neste documento. Mudanças futuras devem atualizar a versão, o bloco afetado e os testes, evitando manter duas definições concorrentes.
 
@@ -1201,7 +1201,7 @@ Aceite de uso e validação técnica são campos independentes. Você pode gosta
 | B07 | Parcial: período e resultados gerenciais | Consultas reais; custos incompletos identificados | Pendente | Métricas adicionais e validação dos cadastros |
 | B08 | Área fiscal de homologação: emitente, classificação, preparação, fila, rejeição/revisão, consulta e cancelamento | API/banco e transporte Focus controlado PASSAM; homologação externa NÃO TESTADA | Pendente | Matriz fiscal MG completa, credenciais e homologação; produção bloqueada |
 | B09 | CSV financeiro; XML/auxiliar/evento privados e ZIP com índice de pendências | ZIP real, permissão e isolamento PASSAM; arquivos Focus simulados | Pendente | Conferência do contador e arquivos reais em homologação |
-| B10 | Parcial: MVP publicado em 09/10 | Deploy 3a70b3e READY; pedidos e conta financeira verificados no endereço público | Pendente | Seu aceite, restauração, volume, hardware e auditoria ampliada |
+| B10 | MVP 0.3 publicado em 10/10, commit 936d344 | Vercel READY e leitura autenticada pública; restore real e duas SIM-20 isoladas PASSAM | Pendente | Seu aceite, capacidade Vercel/Neon, dispositivos e turno real |
 | B11 | Contrato de conectores e ponte de recebimentos idempotente | Persistência, repetição simultânea, divergências e caixa fechado PASSAM | Pendente | Adaptador real, notificação autenticada, homologação e ativação |
 | B12 | Conciliação manual de cartão implementada | Repasse líquido, taxa e repetição testados | Pendente | Importação e conciliação automáticas |
 | B13 | Parcial: domínios e contexto por restaurante | Dois restaurantes sintéticos testados no mesmo banco | Pendente | RLS, onboarding, domínio real e auditoria ampliada |

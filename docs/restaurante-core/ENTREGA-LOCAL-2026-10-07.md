@@ -219,7 +219,7 @@ Fontes de contrato Focus consultadas: [emissão](https://doc.focusnfe.com.br/ref
 
 ## Comanda Inteligente 0.3 — atualização de 10/10/2026
 
-Esta seção atualiza os estados históricos acima. Nome aprovado: **Comanda Inteligente — Gestão para Restaurantes**. Marca, dados e endereço de cada restaurante preservados. Publicação autorizada, ainda em preparação neste registro.
+Esta seção atualiza os estados históricos acima. Nome aprovado: **Comanda Inteligente — Gestão para Restaurantes**. Marca, dados e endereço de cada restaurante preservados. Publicação concluída; detalhes e limites no encerramento abaixo.
 
 Entregue neste incremento: área Fiscal para gestão/caixa; emitente e classificação revisada; vínculo único da venda e snapshot; bloqueios tributários; envio/consulta de homologação, recuperação de timeout, revisão após rejeição, cancelamento separado do estorno financeiro; coleta e download privado de XML/PDF/evento; ZIP com índice, hash e pendências. Ponte interna para confirmação de Pix/cartão, protegida contra duplicidade, pagamento concorrente, divergência de saldo e caixa fechado. Painel de acompanhamento no Financeiro → Conciliação.
 
@@ -245,3 +245,19 @@ Migrations 0015/0016/0017 aplicadas. Backups em `outputs/backups/pre-fiscal-2026
 O que ainda depende de desenvolvimento/configuração: ampliar o mapeamento fiscal para a matriz tributária real (o recorte atual bloqueia serviço, frete, adicionais, outros canais/regimes/códigos); implementar conector concreto do banco/maquininha e sua conciliação de depósitos; homologar Focus e arquivos reais; ativar agendamento seguro; NF-e/entrada XML se mantidas no escopo de implantação. Não basta colar uma chave para prometer tudo. Evoluções já registradas em B05/B06/B07/B13–B15 permanecem abertas, sem serem anunciadas como parte pronta.
 
 Para demonstrar hoje: operação/mesas/comandas → garçom envia → setores da cozinha → pronto → servir → fechar com parcial/misto/Pix estático conferido; Financeiro → Contas/Compras/Fluxo/Resultados; Fiscal → preparar, conferir pendências e exportar pacote marcado como homologação. Apresentar emissão externa e maquininha como etapa de implantação com dados do cliente, não como emissão já homologada.
+
+### Repetição sobre o build final enviado
+
+Commit de aplicação `936d344`: segunda suíte completa PASSA, incluindo o ciclo fiscal controlado e recebimentos. Segunda SIM-20: 468 HTTP, nenhum erro, 60 pedidos, 120 tickets, pico 23 simultâneas, caixa sem diferença. Ambiente: build de produção local + PostgreSQL restaurado isolado. Relatórios em `outputs/regression-post-push.log` e `outputs/stress-20/2026-10-10T14-42-43.506Z/report.json`. Esses números não medem a infraestrutura pública.
+
+Verificação visual adicional: tela desktop de conciliação renderizada e inspecionada, navegação fiscal e título Comanda Inteligente conferidos. Em 390 px o DOM não transbordou, mas screenshots móveis da ferramenta continuaram redimensionados; não declarar auditoria visual integral de celular.
+
+### Publicação verificada — 10/10/2026, 11:45 BRT
+
+Aplicação `936d34455233d49fc1771d6b76bc8062a266fb6c`, Next.js, Vercel produção **READY**, deployment `dpl_EQDPGwThPJWFCPV4WEXgnWnM7KrR`, projeto `prj_0EpAH5HhSqc8SQyTZi1JN7TMd5ZL`. Build remoto cerca de 88 s. Endereço: https://gest-o-de-restaurantes-opal.vercel.app. A API acionou o deploy do SHA testado porque não havia publicação nova após o push. Não houve mudança de domínio, marca ou cadastro do restaurante.
+
+Verificação pública PASSA: health conectado; título Comanda Inteligente; cardápio demonstrativo Patos Lanches preservado e aberto no navegador; GET autenticado de produto, operação, fiscal e pagamentos integrados; fiscal e pagamentos recusam acesso anônimo; worker recusa chamada não autorizada. Fiscal externo conferido como desabilitado. Nenhum pedido, recebimento ou emissão foi criado nesse teste público. Relatório local `outputs/public-smoke.json`. Migrações sem pendências, 0015–0017 registradas.
+
+Limite de observabilidade: listagem de deployments retornou 403 e leitura de eventos retornou 404 pelo conector; não há CLI local autenticada para fallback. A leitura direta do deployment e o endpoint público funcionaram e confirmaram a versão. Não foi possível fazer varredura completa de logs; requisições dirigidas passaram. Monitoramento contínuo, carga sobre Vercel/Neon e dispositivos do cliente não foram certificados.
+
+Este registro final altera somente documentação; o código de aplicação publicado permanece no SHA acima. Commits, push, deploy, verificação do agente e aceite do usuário são estados distintos. Aceite do usuário ainda pendente.

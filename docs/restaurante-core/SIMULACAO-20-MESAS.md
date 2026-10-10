@@ -102,3 +102,9 @@ Ensaio de 14:35:21 UTC parou no login por ausência do segredo de sessão no pro
 Medições locais: criação por garçom p95 250 ms; atualização operacional p95 116 ms; pagamento final p95 212 ms. Evidência: `outputs/stress-20/2026-10-10T14-35-46.403Z/report.json`. O harness passou a conferir o caixa usando código persistido `cash` e a exigir igualdade entre caixa contado/esperado, pagamentos/vendas e consumo/estoque; a rodada histórica não atestava essas fases. Fixtures de sobrecarga permanecem apenas na cópia local isolada e os artefatos não vão ao Git.
 
 Aceite desta reexecução: AC01–AC05 PASSAM neste ambiente; leitura persistida e recarga passam. Não atesta duração de turno real, capacidade máxima, internet dos clientes, Vercel sob carga, dispositivos físicos ou provedores externos. Repetição após publicação será registrada abaixo.
+
+### Repetição após commit e push
+
+Commit de aplicação `936d34455233d49fc1771d6b76bc8062a266fb6c`, já enviado ao GitHub. Rodada `2026-10-10T14-42-43.506Z`, no mesmo ambiente local isolado: **PASSA**. Foram 468 chamadas HTTP, zero erros, pico 23 simultâneas; 60 pedidos completos e 120 tickets. p95 de criação 253 ms, pagamento final 212 ms, atualização 60 ms. Caixa contado e esperado R$705,00; vendas, recebimentos, estoque e razão conferidos. Preservação das entidades anteriores PASSA. Evidências em `outputs/stress-20/2026-10-10T14-42-43.506Z/`.
+
+A segunda suíte de regressão também passou no build final: aprovação/entrega, financeiro, isolamento, checkout, compras/planejamento, fiscal HTTP, ciclo fiscal com transporte controlado, recebimentos integrados e dois garçons. A carga não foi enviada ao endpoint público ou ao Neon compartilhado.
