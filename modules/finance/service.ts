@@ -1,3 +1,4 @@
+import { monthlyDate, installments, convertQuantity } from "./planning";
 import type { PoolClient } from "pg";
 import { randomUUID } from "node:crypto";
 import { restaurantContext } from "@/modules/tenancy/context";
@@ -183,6 +184,7 @@ async function reverseEntry(
   actor: Actor,
   reason: string,
   shiftId?: string,
+  effectiveDate = businessDate(),
 ) {
   const lines = (
     await client.query<{
@@ -214,7 +216,7 @@ async function reverseEntry(
       debit: Number(l.credit_cents),
       credit: Number(l.debit_cents),
     })),
-    businessDate(),
+    effectiveDate,
     shiftId,
     entryId,
   );
@@ -261,6 +263,70 @@ async function execute(
     !["open_shift", "close_shift", "cash_move"].includes(c.action)
   )
     throw new Error("Esta ação exige acesso de gestão.");
+  if (c.action === "create_series") {
+    const amounts = c.mode === "installments" ? installments(c.amountCents, c.count) : Array(c.count).fill(c.amountCents) as number[];
+    const seriesId = randomUUID();
+    await client.query("INSERT INTO finance_series(id,restaurant_id,mode,title,occurrences,created_by) VALUES($1,$2,$3,$4,$5,$6)",[seriesId,rid,c.mode,c.title,c.count,actor.name]);
+    const ids:string[]=[];
+    for(let i=0;i<c.count;i++) {
+      const result = await execute(client,rid,{action:"create_document",kind:c.kind,title:`${c.title} (${i+1}/${c.count})`,contact:c.contact,category:c.category,amountCents:amounts[i],competenceDate:c.mode==='recurring'?monthlyDate(c.competenceDate,i):c.competenceDate,dueDate:monthlyDate(c.dueDate,i)},key,actor);
+      const id=String(result.id);ids.push(id);
+      await client.query("UPDATE finance_documents SET series_id=$2,occurrence=$3 WHERE id=$1",[id,seriesId,i+1]);
+    }
+    return {seriesId,documentIds:ids};
+  }
+  if(c.action==='stop_series') {
+    const series=(await client.query("SELECT mode,stopped_at FROM finance_series WHERE id=$1 AND restaurant_id=$2 FOR UPDATE",[c.seriesId,rid])).rows[0];
+    if(!series || series.mode!=='recurring')throw new Error('Recorrência não encontrada.');
+    if(series.stopped_at)return {ok:true};
+    const docs=(await client.query("SELECT id,entry_id,competence_date::text FROM finance_documents d WHERE series_id=$1 AND restaurant_id=$2 AND cancelled_at IS NULL AND due_date>$3::date AND competence_date>$3::date AND NOT EXISTS(SELECT 1 FROM finance_settlements s WHERE s.document_id=d.id AND reversed_at IS NULL) FOR UPDATE",[c.seriesId,rid,businessDate()])).rows;
+    for(const d of docs){await reverseEntry(client,rid,d.entry_id,actor,c.reason,undefined,d.competence_date);await client.query("UPDATE finance_documents SET cancelled_at=now(),cancellation_reason=$2 WHERE id=$1",[d.id,c.reason]);}
+    await client.query("UPDATE finance_series SET stopped_at=now(),stop_reason=$2 WHERE id=$1",[c.seriesId,c.reason]);
+    return {ok:true,cancelled:docs.length};
+  }
+  if(c.action==='create_purchase') {
+    if(c.purchasedOn>businessDate())throw new Error('Informe a data da compra confirmada, sem data futura.');
+    if(new Set(c.lines.map(l=>l.itemId)).size!==c.lines.length)throw new Error('Não repita o material na compra.');
+    if((await client.query("SELECT 1 FROM purchases WHERE restaurant_id=$1 AND supplier=$2 AND reference=$3",[rid,c.supplier,c.reference])).rowCount)throw new Error('Esta referência do fornecedor já está cadastrada.');
+    const total=c.lines.reduce((sum,l)=>sum+l.totalCents,0);
+    if(total>2_000_000_000)throw new Error('Total da compra excede o limite.');
+    const validated=[];
+    for(const l of c.lines){const item=(await client.query("SELECT unit FROM inventory_items WHERE id=$1 AND restaurant_id=$2 AND active",[l.itemId,rid])).rows[0];if(!item)throw new Error('Material não encontrado neste restaurante.');validated.push({...l,baseUnit:item.unit,baseQuantity:convertQuantity(l.quantity,l.unit,item.unit)});}
+    let seriesId:string;
+    if(c.count>1){const result=await execute(client,rid,{action:'create_series',mode:'installments',count:c.count,kind:'payable',title:`Compra ${c.reference}`,contact:c.supplier,category:'stock',amountCents:total,competenceDate:c.purchasedOn,dueDate:c.dueDate},key,actor);seriesId=String(result.seriesId);}
+    else {seriesId=randomUUID();await client.query("INSERT INTO finance_series(id,restaurant_id,mode,title,occurrences,created_by) VALUES($1,$2,'installments',$3,1,$4)",[seriesId,rid,`Compra ${c.reference}`,actor.name]);const result=await execute(client,rid,{action:'create_document',kind:'payable',title:`Compra ${c.reference}`,contact:c.supplier,category:'stock',amountCents:total,competenceDate:c.purchasedOn,dueDate:c.dueDate},key,actor);await client.query("UPDATE finance_documents SET series_id=$2,occurrence=1 WHERE id=$1",[result.id,seriesId]);}
+    const id=randomUUID();
+    await client.query("INSERT INTO purchases(id,restaurant_id,supplier,reference,purchased_on,series_id,total_cents,created_by) VALUES($1,$2,$3,$4,$5,$6,$7,$8)",[id,rid,c.supplier,c.reference,c.purchasedOn,seriesId,total,actor.name]);
+    for(const l of validated)await client.query("INSERT INTO purchase_lines(restaurant_id,purchase_id,inventory_item_id,input_quantity,input_unit,base_quantity,base_unit,total_cents) VALUES($1,$2,$3,$4,$5,$6,$7,$8)",[rid,id,l.itemId,l.quantity,l.unit,l.baseQuantity,l.baseUnit,l.totalCents]);
+    return {id,seriesId};
+  }
+  if(c.action==='cancel_purchase') {
+    const p=(await client.query("SELECT series_id,cancelled_at FROM purchases WHERE id=$1 AND restaurant_id=$2 FOR UPDATE",[c.purchaseId,rid])).rows[0];
+    if(!p)throw new Error('Compra não encontrada.');if(p.cancelled_at)return {ok:true};
+    if((await client.query("SELECT 1 FROM purchase_lines WHERE purchase_id=$1 AND received_quantity>0",[c.purchaseId])).rowCount)throw new Error('Compra com mercadoria recebida: exige devolução e conferência de estoque.');
+    if((await client.query("SELECT 1 FROM finance_documents d JOIN finance_settlements s ON s.document_id=d.id WHERE d.series_id=$1 AND s.reversed_at IS NULL",[p.series_id])).rowCount)throw new Error('Estorne as baixas antes de cancelar a compra.');
+    const docs=(await client.query("SELECT id,entry_id FROM finance_documents WHERE series_id=$1 AND cancelled_at IS NULL",[p.series_id])).rows;
+    for(const d of docs){await reverseEntry(client,rid,d.entry_id,actor,c.reason);await client.query("UPDATE finance_documents SET cancelled_at=now(),cancellation_reason=$2 WHERE id=$1",[d.id,c.reason]);}
+    await client.query("UPDATE purchases SET cancelled_at=now(),cancellation_reason=$2 WHERE id=$1",[c.purchaseId,c.reason]);return {ok:true};
+  }
+  if(c.action==='receive_purchase') {
+    if(new Set(c.lines.map(l=>l.lineId)).size!==c.lines.length)throw new Error('Não repita o item no recebimento.');
+    if(!(await client.query("SELECT id FROM purchases WHERE id=$1 AND restaurant_id=$2 AND cancelled_at IS NULL FOR UPDATE",[c.purchaseId,rid])).rowCount)throw new Error('Compra não encontrada.');
+    const changes=[];
+    for(const l of c.lines){const row=(await client.query("SELECT * FROM purchase_lines WHERE id=$1 AND purchase_id=$2 AND restaurant_id=$3 FOR UPDATE",[l.lineId,c.purchaseId,rid])).rows[0];if(!row)throw new Error('Item não pertence à compra.');const delta=convertQuantity(l.quantity,l.unit,row.base_unit);if(Math.round((Number(row.received_quantity)+delta)*1000)>Math.round(Number(row.base_quantity)*1000))throw new Error('Recebimento maior que a quantidade pendente.');changes.push({row,delta});}
+    changes.sort((a,b)=>String(a.row.inventory_item_id).localeCompare(String(b.row.inventory_item_id)));
+    for(const {row,delta} of changes){
+      const item=(await client.query("SELECT quantity,average_cost_cents,cost_known,unit FROM inventory_items WHERE id=$1 AND restaurant_id=$2 FOR UPDATE",[row.inventory_item_id,rid])).rows[0];
+      if(!item || item.unit!==row.base_unit)throw new Error('Unidade do material mudou. Confira a compra.');
+      const before=Number(item.quantity),cost=Number(row.total_cents)/Number(row.base_quantity),quantity=before+delta;
+      if(quantity>1_000_000_000)throw new Error('Saldo de estoque excede o limite.');
+      const average=(before*Number(item.average_cost_cents)+delta*cost)/quantity;
+      await client.query("UPDATE inventory_items SET quantity=$2,average_cost_cents=$3,cost_known=$4,updated_at=now() WHERE id=$1",[row.inventory_item_id,quantity,average,before===0||item.cost_known]);
+      await client.query("UPDATE purchase_lines SET received_quantity=received_quantity+$2 WHERE id=$1",[row.id,delta]);
+      await client.query("INSERT INTO inventory_movements(restaurant_id,inventory_item_id,type,quantity_delta,unit_cost_cents,note,purchase_line_id) VALUES($1,$2,'purchase',$3,$4,$5,$6)",[rid,row.inventory_item_id,delta,cost,`Compra ${c.purchaseId} · recebido por ${actor.name}`,row.id]);
+    }
+    return {ok:true};
+  }
   if (c.action === "open_shift") {
     if (
       (
@@ -479,14 +545,15 @@ async function execute(
     return { ok: true };
   }
   if (c.action === "cancel_document") {
+    if((await client.query("SELECT 1 FROM purchases p JOIN finance_documents d ON d.series_id=p.series_id WHERE d.id=$1 AND p.restaurant_id=$2",[c.documentId,rid])).rowCount)throw new Error('Conta vinculada a compra: cancelamento exige conferência da mercadoria e ajuste da compra.');
     const doc = (
-      await client.query<{ entry_id: string }>(
-        "SELECT entry_id FROM finance_documents d WHERE id=$1 AND restaurant_id=$2 AND cancelled_at IS NULL AND NOT EXISTS(SELECT 1 FROM finance_settlements s WHERE s.document_id=d.id AND s.reversed_at IS NULL) FOR UPDATE",
+      await client.query<{ entry_id: string; competence_date: string }>(
+        "SELECT entry_id,competence_date::text FROM finance_documents d WHERE id=$1 AND restaurant_id=$2 AND cancelled_at IS NULL AND NOT EXISTS(SELECT 1 FROM finance_settlements s WHERE s.document_id=d.id AND s.reversed_at IS NULL) FOR UPDATE",
         [c.documentId, rid],
       )
     ).rows[0];
     if (!doc) throw new Error("Estorne as baixas antes de cancelar a conta.");
-    await reverseEntry(client, rid, doc.entry_id, actor, c.reason);
+    await reverseEntry(client, rid, doc.entry_id, actor, c.reason, undefined, doc.competence_date > businessDate() ? doc.competence_date : businessDate());
     await client.query(
       "UPDATE finance_documents SET cancelled_at=now(),cancellation_reason=$2 WHERE id=$1",
       [c.documentId, c.reason],

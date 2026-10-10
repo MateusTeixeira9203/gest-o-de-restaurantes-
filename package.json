@@ -17,6 +17,7 @@
     "db:migrate": "node scripts/database.mjs apply",
     "typecheck": "tsc --noEmit",
     "test:integration": "node tests/approval.integration.mjs && node tests/finance.integration.mjs && node tests/tenancy.integration.mjs",
+    "test:planning": "node tests/planning.unit.mjs && node tests/planning.integration.mjs",
     "test:checkout": "node tests/pix.test.mjs && node tests/checkout.integration.mjs"
   },
   "dependencies": {

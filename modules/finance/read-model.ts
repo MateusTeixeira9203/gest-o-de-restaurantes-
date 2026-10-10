@@ -148,7 +148,10 @@ export async function financialSnapshot(from: string, to: string) {
         )
       ).rowCount,
     );
+    const series=(await client.query<{id:string;mode:string;title:string;occurrences:number;stopped_at:string|null}>("SELECT id,mode,title,occurrences,stopped_at FROM finance_series WHERE restaurant_id=$1 ORDER BY created_at DESC",[rid])).rows;
+    const purchases=(await client.query<{id:string;supplier:string;reference:string;purchased_on:string;total_cents:string;cancelled_at:string|null;lines:Array<{id:string;name:string;input_quantity:string;input_unit:string;base_quantity:string;base_unit:string;received_quantity:string}>}>(`SELECT p.id,p.supplier,p.reference,p.purchased_on::text,p.total_cents,p.cancelled_at,json_agg(json_build_object('id',l.id,'name',i.name,'input_quantity',l.input_quantity,'input_unit',l.input_unit,'base_quantity',l.base_quantity,'base_unit',l.base_unit,'received_quantity',l.received_quantity) ORDER BY l.id) AS lines FROM purchases p JOIN purchase_lines l ON l.purchase_id=p.id JOIN inventory_items i ON i.id=l.inventory_item_id WHERE p.restaurant_id=$1 GROUP BY p.id ORDER BY p.created_at DESC`,[rid])).rows;
     return {
+      series,purchases,
       bankOpeningRegistered,
       today: businessDate(),
       from,

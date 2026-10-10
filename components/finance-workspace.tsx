@@ -1,4 +1,5 @@
 "use client";
+import {PurchaseManagement, RecurringSeries} from "@/components/purchase-management";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { money } from "@/lib/domain";
@@ -448,6 +449,7 @@ function Documents({
 }) {
   const [kind, setKind] = useState<"payable" | "receivable">("payable");
   const [filter, setFilter] = useState("open");
+  const [schedule,setSchedule]=useState("single");
   const docs = data.documents.filter(
     (d) =>
       filter === "all" ||
@@ -462,7 +464,7 @@ function Documents({
           label="Cadastrar conta"
           submit={(form) =>
             run({
-              action: "create_document",
+              ...(schedule==='single'?{action:"create_document" as const}:{action:"create_series" as const,mode:schedule as "installments"|"recurring",count:Number(form.get('count'))}),
               kind,
               title: text(form, "title"),
               contact: text(form, "contact"),
@@ -506,7 +508,9 @@ function Documents({
               name="contact"
               required={false}
             />
-            <Field label="Valor total (R$)" name="amount" type="number" />
+            <label className="block text-sm">Programação<select className={inputClass} value={schedule} onChange={e=>setSchedule(e.target.value)}><option value="single">Conta única</option><option value="installments">Dividir total em parcelas mensais</option><option value="recurring">Repetir valor mensalmente</option></select></label>
+            {schedule!=='single'&&<label className="block text-sm">Quantidade de meses<input className={inputClass} name="count" type="number" min="2" max="60" defaultValue="3" required/></label>}
+            <Field label={schedule==='recurring'?"Valor de cada mês (R$)":"Valor total (R$)"} name="amount" type="number" />
             <Field
               label="Competência"
               name="competence"
@@ -521,11 +525,12 @@ function Documents({
             />
           </div>
           <p className="text-xs text-neutral-500">
-            Vendas do restaurante já entram automaticamente. Compras de estoque
-            precisam também de entrada física no estoque.
+            Vendas já entram automaticamente. Para vincular mercadoria e obrigação, use Compras.
+            Parcelas dividem o total e mantêm a competência; recorrências repetem o valor e avançam competência e vencimento, por até 60 meses. Em mês curto, usamos o último dia. Não há renovação automática além do período informado.
           </p>
         </Form>
       </section>
+      <RecurringSeries data={data} busy={busy} run={run}/>
       <div className="flex items-center justify-between">
         <h2 className="section-title">Contas cadastradas</h2>
         <select
@@ -821,6 +826,7 @@ export function FinanceWorkspace({
     ["summary", "Visão geral"],
     ["cash", "Caixa"],
     ["documents", "Contas"],
+    ["purchases", "Compras"],
     ["flow", "Fluxo de caixa"],
     ["results", "Resultados"],
     ["reconcile", "Conciliação"],
@@ -926,6 +932,7 @@ export function FinanceWorkspace({
           {tab === "cash" && (
             <CashControls shifts={data.shifts} run={run} busy={busy} />
           )}{" "}
+          {tab === "purchases" && <PurchaseManagement data={data} busy={busy} run={run}/>}
           {tab === "documents" && (
             <>
               <Documents data={data} run={run} busy={busy} />
