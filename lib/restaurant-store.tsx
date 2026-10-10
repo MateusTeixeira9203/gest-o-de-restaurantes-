@@ -186,8 +186,14 @@ export function RestaurantStoreProvider({ children }: { children: React.ReactNod
   useEffect(() => {
     if (!authenticated || publicMenuPage) return;
     const intervalMs = pathname.startsWith("/operacao") ? 4_000 : pathname === "/gestao/pedidos" ? 8_000 : 20_000;
-    const interval = window.setInterval(() => { if (document.visibilityState === "visible") void refresh(); }, intervalMs);
-    return () => window.clearInterval(interval);
+    let stopped = false;
+    let timer: number;
+    const poll = async () => {
+      if (document.visibilityState === "visible") await refresh().catch(() => false);
+      if (!stopped) timer = window.setTimeout(poll, intervalMs);
+    };
+    timer = window.setTimeout(poll, intervalMs);
+    return () => { stopped = true; window.clearTimeout(timer); };
   }, [authenticated, pathname, publicMenuPage, refresh]);
 
   const login = useCallback(async (username: string, password: string): Promise<Result> => {

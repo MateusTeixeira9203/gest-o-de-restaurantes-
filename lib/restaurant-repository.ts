@@ -193,14 +193,6 @@ async function restaurant(client?: PoolClient): Promise<RestaurantRow> {
   return restaurantContext(client);
 }
 
-async function ensureCatalog(client: PoolClient, restaurantId: string) {
-  await client.query("SELECT pg_advisory_xact_lock(hashtext($1))", [
-    `catalog:${restaurantId}`,
-  ]);
-  // The first operational setup is intentionally empty. Products are created
-  // by Gestão so no sample catalog leaks into a real restaurant.
-}
-
 async function inventorySnapshot(restaurantId: string) {
   const [settings, items, movements, recipes] = await Promise.all([
     query<{ enabled: boolean }>(
@@ -479,7 +471,6 @@ export async function createOrder(
         );
       return orderReceipt(client, repeated.rows[0].id, current.id);
     }
-    await ensureCatalog(client, current.id);
     let tableId: string | null = null;
     if (input.tableNumber) {
       const table = await client.query<{ id: string }>(
@@ -698,6 +689,9 @@ async function approveOrderInTransaction(
     throw new Error("Este pedido não está aguardando aprovação.");
   if (order.revision !== revision)
     throw new Error("Pedido alterado. Recarregue e confira antes de enviar.");
+  // Creation with immediate approval already holds this counter. Pending-order
+  // approval must acquire it before inventory settings too, avoiding a lock cycle.
+  await client.query("SELECT restaurant_id FROM restaurant_counters WHERE restaurant_id=$1 FOR UPDATE", [restaurantId]);
   await client.query(
     "SELECT restaurant_id FROM inventory_settings WHERE restaurant_id=$1 FOR UPDATE",
     [restaurantId],
