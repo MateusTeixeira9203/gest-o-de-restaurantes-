@@ -1,6 +1,6 @@
 # Fiscal — Comanda Inteligente / Minas Gerais
 
-**Estado em 10/10/2026:** implementação local preparada para configuração e homologação da matriz descrita abaixo. Nenhuma emissão real, chamada externa à Focus, contratação ou ativação ocorreu nesta atualização. A homologação externa continua pendente; o estado de publicação é registrado na auditoria SIM-20. Este documento é a referência técnica fiscal; o manual do produto mantém a visão e o escopo geral.
+**Estado em 10/10/2026:** implementação publicada (`aa918c1`, deploy READY) preparada para configuração e homologação da matriz descrita abaixo. Nenhuma emissão real, chamada externa à Focus, contratação ou ativação ocorreu nesta atualização. A homologação externa continua pendente; o estado de publicação é registrado na auditoria SIM-20. Este documento é a referência técnica fiscal; o manual do produto mantém a visão e o escopo geral.
 
 ## 1. Contrato da atualização
 
