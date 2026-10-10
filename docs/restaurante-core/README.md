@@ -15,6 +15,7 @@ O desenho mantém um repositório, uma aplicação principal e um banco de produ
 | Documento | Conteúdo |
 | --- | --- |
 | [Manual completo do produto](PRODUTO-COMPLETO-E-PLANO-DE-IMPLEMENTACAO.md) | Contrato de escopo, design, arquitetura, funcionalidades, sequência B00–B15, dependências e testes por bloco |
+| [Simulação de 20 mesas](SIMULACAO-20-MESAS.md) | Ensaio local persistido de 09/10: falhas de concorrência, tempos, evidências e melhorias propostas |
 | [Estado verificado e melhorias](ESTADO-E-MELHORIAS.md) | GitHub, Vercel, verificações públicas, capacidades atuais e prioridades da primeira versão |
 | [Primeira versão do Patos](PRIMEIRA-VERSAO.md) | Escopo atual, ordem de execução e critérios de uso da primeira entrega |
 | [Arquitetura](ARQUITETURA.md) | Produto, personalização, planos, acesso, módulos, entidades, APIs, fluxos e migração |

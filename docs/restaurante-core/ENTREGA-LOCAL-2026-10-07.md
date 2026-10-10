@@ -215,3 +215,33 @@ PASSA: `npm run test:integrations-base` em rodadas repetidas; inclui concorrênc
 Próximas ligações indispensáveis: cadastro fiscal e classificação de produtos, vínculo/snapshot da venda, tela de pendências do caixa/gestão, processo agendado, correção de rejeições e cancelamento, armazenamento/download privado de XML e documento auxiliar, pacote do contador; nos pagamentos, adaptador bancário/terminal selecionado, notificações autenticadas, baixa financeira idempotente e conciliação. Notas de entrada continuam fora deste recorte. Receber as chaves não basta para ativar o módulo.
 
 Fontes de contrato Focus consultadas: [emissão](https://doc.focusnfe.com.br/reference/emitir_nfce), [consulta](https://doc.focusnfe.com.br/reference/consultar_nfce), [autenticação](https://doc.focusnfe.com.br/reference/autenticacao). Nenhuma afirmação de homologação é feita com base nesses testes locais.
+
+
+## Comanda Inteligente 0.3 — atualização de 10/10/2026
+
+Esta seção atualiza os estados históricos acima. Nome aprovado: **Comanda Inteligente — Gestão para Restaurantes**. Marca, dados e endereço de cada restaurante preservados. Publicação autorizada, ainda em preparação neste registro.
+
+Entregue neste incremento: área Fiscal para gestão/caixa; emitente e classificação revisada; vínculo único da venda e snapshot; bloqueios tributários; envio/consulta de homologação, recuperação de timeout, revisão após rejeição, cancelamento separado do estorno financeiro; coleta e download privado de XML/PDF/evento; ZIP com índice, hash e pendências. Ponte interna para confirmação de Pix/cartão, protegida contra duplicidade, pagamento concorrente, divergência de saldo e caixa fechado. Painel de acompanhamento no Financeiro → Conciliação.
+
+| Verificação | Resultado e limite |
+|---|---|
+| Aprovação, entrega, caixa e financeiro | PASSA em APIs + banco: troco, parcial, estorno, custo histórico, razão balanceado |
+| Planos, identidades e três restaurantes | PASSA: cookies, APIs, dados e produtos isolados; Essencial bloqueia recursos avançados |
+| Compras e planejamento | PASSA: parcelas exatas, recorrências mensais finitas, interrupção, recebimento parcial, conversão e custo médio |
+| Fiscal na aplicação | PASSA: preparação/revisão, perfis, arquivo privado, exportação, bloqueio sem credenciais, persistência/recarga |
+| Ciclo fiscal com transporte controlado | PASSA: timeout, consulta sem segundo envio, autorização, arquivos, cancelamento único e manutenção dos recebimentos; NÃO é homologação Focus |
+| Confirmação integrada | PASSA: preparação idempotente, bloqueio de segunda cobrança pendente, quatro confirmações simultâneas resultam em um lançamento; comprovante do navegador recusado |
+| Conflitos de recebimento | PASSA: outra identidade/tenant recusados; homologação, conta cancelada, referência repetida e caixa fechado não adicionam dinheiro |
+| Dois garçons | PASSA: mesas diferentes e mesma mesa, corrida de fechamento, saldo e recarga |
+| Concorrência dirigida | PASSA: três ondas de 20 ações simultâneas, 60 pedidos/tickets/baixas únicos |
+| Turno 20 mesas | PASSA: 60 pedidos completos, pico 27 HTTP, zero erros, caixa sem diferença e estoque conferido; ambiente local isolado |
+| Restore | PASSA: restauração em cluster vazio, 34 tabelas/439 linhas iguais ao dump; evidência em outputs/backups/restore-fiscal-verification.json |
+| Build/typecheck/lint | PASSA; lint tem três avisos preexistentes |
+| Navegador fiscal | PASSA dirigido: preparar, cadastrar emitente/produto, revalidar e recarregar. DOM em 390 px sem overflow; captura visual completa não confiável nesta ferramenta |
+| Provedores/hardware/produção fiscal | NÃO TESTADO: sem transmissão externa, banco, terminal ou nota com validade fiscal |
+
+Migrations 0015/0016/0017 aplicadas. Backups em `outputs/backups/pre-fiscal-20261010.dump` e `pre-payments-20261010.dump`, ignorados no Git e privados. Corrigida ordem contador → estoque na aprovação e removido bloqueio vazio de catálogo; polling automático espera a resposta antes de agendar a próxima atualização.
+
+O que ainda depende de desenvolvimento/configuração: ampliar o mapeamento fiscal para a matriz tributária real (o recorte atual bloqueia serviço, frete, adicionais, outros canais/regimes/códigos); implementar conector concreto do banco/maquininha e sua conciliação de depósitos; homologar Focus e arquivos reais; ativar agendamento seguro; NF-e/entrada XML se mantidas no escopo de implantação. Não basta colar uma chave para prometer tudo. Evoluções já registradas em B05/B06/B07/B13–B15 permanecem abertas, sem serem anunciadas como parte pronta.
+
+Para demonstrar hoje: operação/mesas/comandas → garçom envia → setores da cozinha → pronto → servir → fechar com parcial/misto/Pix estático conferido; Financeiro → Contas/Compras/Fluxo/Resultados; Fiscal → preparar, conferir pendências e exportar pacote marcado como homologação. Apresentar emissão externa e maquininha como etapa de implantação com dados do cliente, não como emissão já homologada.

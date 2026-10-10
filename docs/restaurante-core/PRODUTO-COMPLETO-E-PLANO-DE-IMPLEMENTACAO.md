@@ -1,12 +1,12 @@
-# Gestor Food produto completo e plano de implementação
+# Comanda Inteligente produto completo e plano de implementação
 
-Versão 1.4 • 10 de outubro de 2026 • Primeiro piloto em Minas Gerais • Alvo de avaliação no sábado 10 de outubro de 2026
+Versão 1.5 • 10 de outubro de 2026 • Primeiro piloto em Minas Gerais • Alvo de avaliação no sábado 10 de outubro de 2026
 
 Este é o documento mestre para transformar a base do Patos Lanches em um produto de operação e gestão de restaurantes, personalizável por estabelecimento, com planos Essencial e Profissional. Ele define o produto completo acordado até aqui e divide sua construção em blocos que podem ser implementados, testados pelo proprietário do produto e corrigidos antes da próxima entrega.
 
 Sua função é ser o **manual do produto e contrato de escopo para desenvolvimento e validação**: visão, nome, marca, design, funcionalidades, regras, arquitetura, dados, integrações, operação, entregas e critérios de aceite. Uma implementação deve poder ser conferida contra esta base, e uma mudança de direção precisa ficar registrada nela.
 
-**Estado atual: MVP 0.2 publicado em 09/10/2026; incrementos locais de fechamento/Pix estático/cozinha e planejamento financeiro/compras, ainda não publicados; aceite do usuário pendente.** A existência de um recurso neste documento não significa que ele está concluído. O recorte entregue, as evidências e todas as pendências estão em [Entrega local de 07/10/2026](ENTREGA-LOCAL-2026-10-07.md). O quadro da seção 19 foi atualizado; seu aceite permanece pendente. Fiscal real e integrações automáticas não estão disponíveis.
+**Estado atual: versão 0.3 em validação para publicação autorizada em 10/10/2026.** Operação, planejamento financeiro/compras, área fiscal de homologação, arquivos/ZIP e ponte interna de recebimentos foram implementados. Fiscal real, conectores concretos e conciliação automática de depósitos ainda não estão homologados. O quadro da seção 19 e o relato de entrega distinguem implementação, evidência e dependência. Aceite do usuário pendente.
 
 Este arquivo passa a ser a referência principal de escopo, sequência e aceite. Os documentos anteriores permanecem como apoio. Em caso de divergência, prevalecem a instrução mais recente do proprietário e sua incorporação neste documento. Mudanças futuras devem atualizar a versão, o bloco afetado e os testes, evitando manter duas definições concorrentes.
 
@@ -53,7 +53,7 @@ O manual fixa o produto conhecido, não torna imutáveis todas as escolhas antes
 
 ## 2 Definição do produto
 
-Gestor Food é o nome provisório da plataforma. O produto é um core reutilizável para três restaurantes inicialmente; Patos Lanches fornece a identidade da demonstração, não regras exclusivas do produto. Cada estabelecimento é uma configuração do mesmo core, sem fork por cliente. Uma choperia ou outro restaurante terá identidade, cardápio, equipe, configurações e dados próprios, usando a mesma base mantida pela plataforma.
+Comanda Inteligente — Gestão para Restaurantes é o nome aprovado da plataforma em 10/10/2026. O produto é um core reutilizável para três restaurantes inicialmente; Patos Lanches fornece a identidade da demonstração, não regras exclusivas do produto. Cada estabelecimento é uma configuração do mesmo core, sem fork por cliente. Uma choperia ou outro restaurante terá identidade, cardápio, equipe, configurações e dados próprios, usando a mesma base mantida pela plataforma.
 
 O produto deve organizar o trabalho desde o pedido até o atendimento, registrar os efeitos no estoque e no financeiro e dar ao proprietário informação confiável para tomar decisões. O dono precisa saber quanto vendeu, recebeu, gastou, tem a pagar, tem a receber e quanto cada produto contribui para pagar as despesas e formar resultado.
 
@@ -95,7 +95,7 @@ Compras avançadas, importação de XML de fornecedores, controle por barril, co
 
 | Assunto | Decisão atual |
 | --- | --- |
-| Produto | Gestor Food, nome provisório; não renomear automaticamente o restaurante |
+| Produto | Comanda Inteligente — Gestão para Restaurantes; não renomear automaticamente o restaurante |
 | Primeiro estabelecimento | Patos Lanches, em Minas Gerais |
 | Infraestrutura | Reaproveitar GitHub, Next.js, Neon PostgreSQL e Vercel existentes |
 | Ambiente de trabalho | Usar o projeto e banco atuais, pois o proprietário informou que a operação comercial ainda não começou |
@@ -198,7 +198,7 @@ Antes de comercializar, calcular implantação, treinamento, hospedagem, banco, 
 
 Patos pode ter um visual de lanchonete e choperia outro visual, com bar e cozinha separados. Bebida de 300 ml e 500 ml são variantes com consumos distintos. Recurso específico deve virar configuração ou módulo reutilizável quando fizer sentido, não código espalhado testando o nome do cliente.
 
-Não permitir JavaScript arbitrário em configurações. Prévia de marca deve preservar contraste, legibilidade, estados de erro e uso no celular. A marca Gestor Food aparece onde fizer sentido comercial; a operação mostra claramente o restaurante ativo.
+Não permitir JavaScript arbitrário em configurações. Prévia de marca deve preservar contraste, legibilidade, estados de erro e uso no celular. A marca Comanda Inteligente aparece onde fizer sentido comercial; a operação mostra claramente o restaurante ativo.
 
 ## 7 Pessoas e mapa de telas
 
@@ -249,7 +249,7 @@ Toda tela de consulta precisa de carregamento, vazio, sucesso, erro e falta de p
 
 | Elemento | Definição |
 | --- | --- |
-| Nome da plataforma | Gestor Food, provisório conforme decisão atual |
+| Nome da plataforma | Comanda Inteligente — Gestão para Restaurantes |
 | Nome do piloto | Patos Lanches; preservar cadastro e grafia configurada no restaurante |
 | Nome dos planos | Essencial e Profissional |
 | Descrição funcional | Operação e gestão para restaurantes |
@@ -259,7 +259,7 @@ Toda tela de consulta precisa de carregamento, vazio, sucesso, erro e falta de p
 | Endereço público futuro | Host cadastrado e verificado; domínio definitivo ainda não escolhido |
 | Marca em documentos fiscais | Dados do emitente e conteúdo do documento; não substituir razão social por nome da plataforma |
 
-O proprietário sugeriu Comando Inteligente e Telecomanda em 09/10/2026; são candidatos, sem escolha final. Comanda Inteligente é uma alternativa de redação a avaliar. Giro Food e outras alternativas mencionadas não foram escolhidas. Não renomear código, banco, domínio ou conta de provedor em função de sugestão de nome. Disponibilidade de marca/domínio deverá ser verificada antes de uma adoção comercial definitiva.
+Em 10/10/2026 o proprietário aprovou **Comanda Inteligente**, com o complemento **Gestão para Restaurantes**. A alteração abrange apresentação da plataforma e exportações; preserva nomes, marcas, domínios e cadastros dos restaurantes. Registro de marca e contratação de domínio não foram realizados.
 
 Usar português brasileiro, moeda BRL com vírgula decimal, datas legíveis e verbos diretos. Termos preferidos: “Enviar para cozinha”, “Registrar recebimento”, “Confirmar retirada”, “Saiu para entrega”, “Baixar conta”, “Fechar caixa”, “Consultar nota” e “Exportar para o contador”. Explicar “baixa” na tela financeira como registro de pagamento/recebimento; não usar a palavra para sugerir quitação de tributo.
 
@@ -571,7 +571,7 @@ Dinheiro, Pix conferido e cartão de terminal externo são registrados manualmen
 
 ### 11.2 Integrações posteriores
 
-Cada restaurante recebe em sua própria conta. A conta que recebe pela licença Gestor Food é outra operação. Escolher um provedor e um meio por vez, com contrato explícito de criar, consultar, cancelar, devolver e ler liquidações conforme suporte real.
+Cada restaurante recebe em sua própria conta. A conta que recebe pela licença Comanda Inteligente é outra operação. Escolher um provedor e um meio por vez, com contrato explícito de criar, consultar, cancelar, devolver e ler liquidações conforme suporte real.
 
 Webhooks exigem autenticação pelo mecanismo do provedor, validação de recebedor, moeda, valor, referência e ambiente, deduplicação e processamento retomável. Página de sucesso do navegador não comprova pagamento. Timeout não autoriza criar uma cobrança nova às cegas.
 
@@ -822,6 +822,8 @@ Critérios deste recorte: (1) pedido autorizado entra na fila; avançar um setor
 
 **Evidência do recorte em 09/10/2026:** localhost sobre Neon, registros sintéticos isolados, código `e9bc3d0`, migration `e6b36e6`, sobre base Git `8c1cd07`. `tests/checkout.integration.mjs` passou duas vezes integralmente: três tenants, cookies cruzados recusados, configuração restrita ao gestor, QR sem pagamento, saldo parcial, concorrência idempotente, rejeição de saldo desatualizado, setores independentes e fechamento. Aprovação, financeiro e tenancy também passaram nesta revisão. No navegador, gestor configurou Pix fictício e abriu R$ 100; garçom enviou dois itens de setores distintos (R$ 50 + R$ 5 de serviço), registrou R$ 10 de Pix antes do preparo; cozinha finalizou cada setor; garçom viu pronto, entregou e quitou R$ 30 no cartão + R$ 20 em espécie, com R$ 5 de troco. Mesa livre após recarga; SQL confirmou uma venda, pagamentos de R$ 55, razão balanceado e caixa esperado/contado de R$ 115. Tela de fechamento conferida em 390 px, sem transbordamento horizontal. Pix real em aplicativo bancário, falha de resposta no navegador, maquininha e emissão fiscal: NÃO TESTADO; integrações automáticas ainda NÃO IMPLEMENTADAS. Não é uma auditoria completa de todos os blocos.
 
+**Verificação adicional solicitada: dois garçons simultâneos (09/10).** Responsável: Codex. Escopo: duas identidades autenticadas do mesmo restaurante sintético em localhost, versão `c0ef100`; requisições HTTP sobrepostas, sem emissão fiscal ou transferência bancária. Inicial: duas mesas livres e caixa com R$ 100. Ações/aceite: criar, produzir, entregar e quitar mesas distintas sem misturar pedidos; adicionar dois pedidos à mesma mesa sem perda; tentar quitar o mesmo saldo pelos dois garçons, aceitando apenas uma confirmação e recusando a desatualizada; repetir a confirmação vencedora sem duplicar. Verificação: respostas HTTP, nova leitura do estado em ambas as sessões, tickets/pagamentos/razão no PostgreSQL e fechamento. Efeitos proibidos: perda de pedido, pagamento acima do saldo, receita duplicada ou alteração de dados fora do tenant de QA. Interface em dois dispositivos não faz parte deste teste de concorrência. Script: `tests/two-waiters.integration.mjs`; dados sintéticos removidos ao fim. Resultado: PASSA em duas rodadas completas no servidor de desenvolvimento local (porta 3001). Em mesas diferentes, contas de R$ 22 e R$ 33 foram processadas em paralelo. Na mesma mesa, dois pedidos totalizaram R$ 55; a corrida de confirmação retornou HTTP 200/400, com mensagem de conta alterada para o perdedor, pagamento total único de R$ 55 e repetição idempotente do vencedor. Ambas as sessões releram pedidos concluídos; quatro receitas no total, razão balanceado e caixa de R$ 100 (recebimentos Pix manuais). Fixtures removidas nas duas rodadas. Limitação de ambiente encontrada antes dos testes: `next start` local não carregou `RESTAURANT_SESSION_SECRET`, presente apenas na configuração de desenvolvimento; login retornou 400 também sem concorrência. Foi usado `scripts/dev-local.sh`, sem alterar segredos ou código da aplicação. Publicação e interface simultânea em dois aparelhos: NÃO TESTADO.
+
 **Objetivo:** registrar dinheiro, quitar o consumidor e fechar o turno com números explicáveis.
 
 **Construção:** contas financeiras básicas, gaveta, turno, abertura, fundo e origem, recebimentos múltiplos/parciais, troco, suprimento, sangria, despesa em espécie, contagem e fechamento. Integrar uma vez os eventos de venda e pagamento ao razão. Preservar adiantamento antes do atendimento e recebível de cartão após quitação do consumidor. Registrar custódia de valores recebidos pelo entregador e prestação de contas.
@@ -902,6 +904,10 @@ Critérios deste recorte: (1) pedido autorizado entra na fila; avançar um setor
 
 **Aceite de homologação:** fluxo e exceções comprovados no provedor. **Aceite de produção:** emitente/configurações corretos, canais da rotina cobertos, equipamento e procedimento de contingência definidos e primeira operação real autorizada conferida. Um aceite não substitui o outro. **Fica depois:** notas de fornecedores, apuração tributária e operações fiscais não definidas para o piloto.
 
+#### Integração ao aplicativo — execução 10/10/2026
+
+Responsável: Codex; aceite: proprietário. Resultado: caixa/gestão acessam painel fiscal, configuram emitente/perfis e preparam documentos de vendas persistidas com pendências explícitas; acompanhamento, arquivos privados e exportação de período. Fiscal não altera caixa/estoque/receitas nem permite garçom emitir; produção desabilitada. Escopo técnico: API autenticada, isolamento por tenant/plano, snapshot de itens/valores, referência idempotente, conector de homologação explicitamente habilitado no servidor, correção antes de transmissão, consulta de resultados incertos, evidências para contador. Preservar telas e fluxo existentes, sem contratar serviços. Critérios: cadastro/recarga; duplicação e concorrência; usuário indevido e tenant cruzado recusados; venda alterada não transmite snapshot antigo; cadastro incompleto não chama rede; exportação distingue falta de XML; emissão não cria venda/pagamento. Testar API/banco e navegador com registros sintéticos. Sem chaves, validar transporte controlado e registrar homologação externa NÃO TESTADA. Pendências de conectores específicos só podem ser encerradas após definição dos provedores. Reversão: retirar entradas de navegação/desabilitar transmissão, preservar tabelas/documentos.
+
 #### Base técnica de integrações — recorte de 10/10/2026
 
 Responsável: Codex. Resultado esperado: infraestrutura reutilizável para fiscal, Pix direto e Pix/cartão em terminal. Dentro: contrato de provedores, fila PostgreSQL com referência persistente por tenant/ambiente, idempotência, lease, recuperação de resposta incerta por consulta, permissões de fiscal (caixa/gestão) e cobrança (garçom/caixa/gestão), adaptador Focus de homologação e testes com transporte controlado. Preservar pedidos, caixa, estoque e pagamentos manuais; nenhuma confirmação externa cria lançamento financeiro neste recorte. Fora: interfaces fiscais, classificação tributária, vínculo automático da venda, trabalhador agendado, webhooks públicos, arquivos/ZIP, cancelamento remoto, captura de notas de entrada, provedores bancários/terminais reais e produção. Nenhuma chave recebida pelo navegador nem URL de provedor arbitrária. Pix é meio; terminal é canal. Um terminal só oferece Pix automatizado quando o adaptador homologado declara essa capacidade.
@@ -918,7 +924,7 @@ Resultado: base implementada em `modules/integrations`, `modules/fiscal/focus.ts
 
 **Avaliação verificada:** a documentação oferece emissão, consulta por referência e cancelamento de NFC-e; consulta retorna estado e caminhos dos arquivos. HTTP bem-sucedido não basta para declarar autorização. Homologação e produção têm endereços diferentes. Fontes: [emissão](https://doc.focusnfe.com.br/reference/emitir_nfce), [consulta](https://doc.focusnfe.com.br/reference/consultar_nfce), [cancelamento](https://doc.focusnfe.com.br/reference/cancelar_nfce), [ambientes](https://doc.focusnfe.com.br/reference/ambiente).
 
-**Custo consultado em 09/10/2026:** plano Retail anunciado por R$ 62,90/mês, um emitente, 500 NFC-e e 100 NF-e; excedentes de R$ 0,055/NFC-e e R$ 0,16/NF-e. Simulações aritméticas, considerando somente volume de NFC-e e nenhuma outra cobrança: 500/mês = R$ 62,90; 1.500 = R$ 117,90; 3.000 = R$ 200,40; 6.000 = R$ 365,40. A Focus informa aceitar certificado A1. Confirmar proposta e custos antes da contratação; o valor não está incluído na licença vitalícia do Gestor Food. Fonte: [preços oficiais](https://focusnfe.com.br/precos/).
+**Custo consultado em 09/10/2026:** plano Retail anunciado por R$ 62,90/mês, um emitente, 500 NFC-e e 100 NF-e; excedentes de R$ 0,055/NFC-e e R$ 0,16/NF-e. Simulações aritméticas, considerando somente volume de NFC-e e nenhuma outra cobrança: 500/mês = R$ 62,90; 1.500 = R$ 117,90; 3.000 = R$ 200,40; 6.000 = R$ 365,40. A Focus informa aceitar certificado A1. Confirmar proposta e custos antes da contratação; o valor não está incluído na licença vitalícia do Comanda Inteligente. Fonte: [preços oficiais](https://focusnfe.com.br/precos/).
 
 **Trade-off:** terceirizar a comunicação fiscal reduz a integração direta com a SEFAZ, mas mantém dependência de disponibilidade, preços e suporte do fornecedor. A API não resolve cadastro tributário incorreto nem substitui a validação do contador. Recomendação: experimentar homologação para um restaurante; evitar contratar um pacote multiempresa antes de conhecer o volume.
 
@@ -956,6 +962,10 @@ Nenhuma credencial, certificado, contrato ou emissão externa foi criado durante
 **Verificação técnica:** contagens e totais do pacote batem com consulta independente; nenhum documento de outro contexto/ambiente; autorizações preservadas; falta de arquivo não passa despercebida; acesso de leitura não permite movimentação.
 
 **Aceite:** arquivos utilizáveis, completos segundo o filtro ou explicitamente incompletos, com rastreabilidade. **Fica depois:** envio automático por e-mail, SPED e layouts proprietários não validados pelo contador.
+
+#### Correção de concorrência — execução 10/10
+
+Responsável: Codex. Fato: SIM-20 anterior registrou ciclo contador/estoque entre criação direta e aprovação de pendente, além de serialização vazia no catálogo. Resultado esperado: ordem contador → configuração de estoque nos dois caminhos; remover lock de catálogo sem operação; polling automático aguarda a resposta anterior. Preservar contadores únicos, idempotência, aprovação, consumo único e fechamento. Teste dirigido com criação/aprovação simultâneas em restaurante sintético sobre PostgreSQL local restaurado; nenhum stress no tenant real. Critérios: nenhuma falha/deadlock no recorte; efeitos únicos; regressões de caixa e pedidos preservadas. Resultado/ambiente devem ser registrados sem substituir retrospectivamente a reprovação do SIM-20 original.
 
 ### B10 Validação integrada e preparação para operar
 
@@ -1189,10 +1199,10 @@ Aceite de uso e validação técnica são campos independentes. Você pode gosta
 | B05 | Contas, baixas, parcelas e recorrências mensais finitas implementadas | Rateio exato, meses curtos, interrupção de futuras, idempotência e regressões passaram | Pendente | Recorrência sem prazo, anexos, edição de séries e contas bancárias |
 | B06 | Fichas, custo histórico, compras vinculadas e recebimento parcial com kg/g e L/ml | Custo médio, conversão, excesso e concorrência testados; snapshot anterior preservado | Pendente | Rendimento, embalagens compostas, devolução de compra recebida e XML |
 | B07 | Parcial: período e resultados gerenciais | Consultas reais; custos incompletos identificados | Pendente | Métricas adicionais e validação dos cadastros |
-| B08 | Infraestrutura local de fila e adaptador Focus; emissão no aplicativo ainda não disponível | Transporte controlado e PostgreSQL isolado PASSAM; homologação externa NÃO TESTADA | Pendente | Matriz fiscal MG, emitente, contador, provedor, A1/CSC e integração |
-| B09 | CSV financeiro implementado | Exportação de 205 lançamentos extras conferida | Pendente | XML/ZIP e pacote contábil completo |
+| B08 | Área fiscal de homologação: emitente, classificação, preparação, fila, rejeição/revisão, consulta e cancelamento | API/banco e transporte Focus controlado PASSAM; homologação externa NÃO TESTADA | Pendente | Matriz fiscal MG completa, credenciais e homologação; produção bloqueada |
+| B09 | CSV financeiro; XML/auxiliar/evento privados e ZIP com índice de pendências | ZIP real, permissão e isolamento PASSAM; arquivos Focus simulados | Pendente | Conferência do contador e arquivos reais em homologação |
 | B10 | Parcial: MVP publicado em 09/10 | Deploy 3a70b3e READY; pedidos e conta financeira verificados no endereço público | Pendente | Seu aceite, restauração, volume, hardware e auditoria ampliada |
-| B11 | Evolução não implementada | Pendente | Pendente | Escolher provedor e implementar integração |
+| B11 | Contrato de conectores e ponte de recebimentos idempotente | Persistência, repetição simultânea, divergências e caixa fechado PASSAM | Pendente | Adaptador real, notificação autenticada, homologação e ativação |
 | B12 | Conciliação manual de cartão implementada | Repasse líquido, taxa e repetição testados | Pendente | Importação e conciliação automáticas |
 | B13 | Parcial: domínios e contexto por restaurante | Dois restaurantes sintéticos testados no mesmo banco | Pendente | RLS, onboarding, domínio real e auditoria ampliada |
 | B14 | Parcial: dois planos com bloqueio no servidor | Essencial bloqueia financeiro avançado | Pendente | Licença, suporte, cobrança e condições comerciais |
@@ -1328,7 +1338,7 @@ Essas dependências não exigem parar toda a implementação. Cada uma bloqueia 
 
 | Decisão | Posição atual | Regra enquanto estiver aberta |
 | --- | --- | --- |
-| Nome definitivo da plataforma | Gestor Food provisório | Usar como referência, sem registrar marca/domínio automaticamente |
+| Nome definitivo da plataforma | Comanda Inteligente aprovado em 10/10/2026 | Usar como referência, sem registrar marca/domínio automaticamente |
 | Identidade visual da plataforma | Não desenhada/aprovada | Preservar neutralidade e marca do restaurante |
 | Fiscal no Essencial | Adicional/inclusão não decidido | Não prometer no material comercial definitivo |
 | Preço e parcelamento | Referências e intenção de até seis vezes | Não anunciar condições finais não confirmadas |
@@ -1443,7 +1453,7 @@ Alterações futuras devem registrar versão, motivação, blocos afetados e dec
 
 | Termo | Significado neste manual |
 | --- | --- |
-| Plataforma | Gestor Food e seus serviços compartilhados |
+| Plataforma | Comanda Inteligente e seus serviços compartilhados |
 | Restaurante ou estabelecimento | Unidade de dados, operação e configuração do cliente |
 | White-label | Mesma base com identidade e configuração próprias de cada cliente |
 | SaaS | Aplicação hospedada e mantida como serviço, independentemente da modalidade comercial da licença |
@@ -1470,3 +1480,24 @@ Alterações futuras devem registrar versão, motivação, blocos afetados e dec
 | Homologação fiscal | Modo de teste do provedor/autoridade, sem validade fiscal dos documentos de teste |
 | RLS | Políticas do banco que restringem acesso às linhas conforme contexto |
 | Aceite | Confirmação registrada de que o recorte passou nos critérios correspondentes |
+
+
+### Incremento de 10/10 — Comanda Inteligente e recebimentos integrados
+
+Responsável: execução e integração nesta tarefa. Nome comercial aprovado: **Comanda Inteligente — Gestão para Restaurantes**. A identidade de cada restaurante permanece configurável, sem renomear cadastros ou domínios dos clientes.
+
+Escopo: preparar a ligação entre uma cobrança do provedor, seus pedidos originais e o caixa original; aplicar somente confirmação persistida e validada pelo servidor; listar pendências de conferência no financeiro. A API pública não aceita valor, estado pago ou identificador externo como prova de recebimento. Produção dos conectores permanece desabilitada até homologação específica. Conciliação do depósito líquido e taxas é distinta da confirmação da venda e continua manual até contrato de adquirente definido.
+
+Aceite: cobrança confirmada de produção, vinculada a pedidos com saldo e caixa aberto, produz um único recebimento e lançamento balanceado; repetição simultânea não duplica. Homologação nunca movimenta dinheiro. Outro restaurante ou garçom não aplica recebimento via rota de recuperação. Caixa fechado, conta alterada ou referência externa repetida gera conferência sem lançamento. Verificar API autenticada, banco antes/depois, repetição e recarga em PostgreSQL isolado. Preservar recebimentos manuais, troco, pagamento parcial, cozinha, marca do restaurante e dados existentes. Reversão: desabilitar o acesso ao novo fluxo; migration aditiva não remove histórico.
+
+### Evidência consolidada do incremento 0.3 — antes da publicação
+
+PASSA: aprovação, financeiro, isolamento, checkout, planejamento/compras, fiscal HTTP, processamento fiscal com transporte controlado, recebimento integrado com prova sintética de servidor, dois garçons, três ondas de 20 criações/aprovações e turno completo de 20 mesas. Ambiente de carga: Next compilado + PostgreSQL 18 restaurado e isolado localmente; não mede Vercel/Neon. O ensaio inicial sem segredo de sessão parou no login, foi corrigido no ambiente e repetido. Build e TypeScript passam; lint sem erros, três avisos anteriores. Auditoria visual completa e homologação externa continuam NÃO TESTADAS.
+
+Restauração executada: backup anterior ao fiscal restaurado em cluster vazio; 34 tabelas e 439 linhas comparadas ao próprio dump, sem diferenças. Migrations 0015, 0016 e 0017 aplicadas após backups, sem apagar dados de negócio. Não ativam emissão ou cobrança.
+
+Limites fiscais atuais: NFC-e de homologação, venda presencial atendida por funcionário, Simples com CSOSN 102/103/300/400 e PIS/COFINS 04/06/07/08/09 revisados. Serviços, frete, adicionais, outros canais/regimes/códigos ficam bloqueados até mapeamento validado; esses casos ainda exigem desenvolvimento além das credenciais. NF-e modelo 55, entrada automática de XML, SPED e envio automático ao contador não estão entregues. O ZIP explicita homologação, documentos faltantes e ausência de preparação; limite 500 documentos/32 MB.
+
+Configuração de homologação: `FOCUS_NFE_HOMOLOGATION_ENABLED=true` e `FOCUS_NFE_HOMOLOGATION_TOKENS` como mapa de UUID do restaurante para credencial, somente no ambiente seguro do servidor. Nunca salvar tokens no cadastro de produtos ou no Git. Reprocessamento já enfileirado: POST `/api/internal/fiscal-queue`, Bearer `FISCAL_WORKER_SECRET` de ao menos 32 caracteres; processa até três operações por chamada. Agendador externo não ativado. Transmissão exige ação de caixa/gestão e perfil fiscal revisado. Produção permanece bloqueada no dispatcher.
+
+Recebimentos integrados: `preparePaymentIntent` congela pedidos/valores/caixa antes da chamada ao provedor; bloqueia outra cobrança pendente na mesma comanda. `applyConfirmedPayment` usa apenas resultado persistido por adaptador confiável; homologação não movimenta financeiro. Valor já recebido, cancelamento da conta, referência externa repetida ou caixa original fechado vira conferência. Não é conciliação automática de extrato/liquidação: esta ainda exige contrato e adaptador bancário.
