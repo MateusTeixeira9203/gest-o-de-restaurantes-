@@ -170,3 +170,35 @@ Para os três restaurantes: obter identidade visual, domínio, cardápio/preços
 Pendências de implementação: adaptador Focus NFe, configuração fiscal por emitente, estados de emissão/rejeição/cancelamento, XML/DANFE privado e exportação fiscal; Pix com confirmação automática; conectores de terminais compatíveis; comandas numeradas independentes de mesa; demais lacunas do manual. Não basta cadastrar credenciais para esses recursos funcionarem.
 
 Dependências a obter: conta/contratação Focus, certificado e credenciamento/CSC aplicáveis, dados tributários validados pelo contador; banco/provedor Pix, marca/modelo e credenciamento das maquininhas. Custos e compatibilidade devem ser confirmados por restaurante antes da oferta comercial. Nenhuma contratação ou cobrança externa foi feita.
+
+
+## Incremento interno — 10/10/2026: planejamento financeiro e compras
+
+Recorte implementado localmente, ainda não publicado. Commits: `eb1792f` (schema), `c74c27d` (financeiro/compras) e `36f6849` (identificação mesa/comanda). Fonte de escopo: B05/B06 do manual. A licença vitalícia e o serviço fiscal recorrente são distintos; condições comerciais definitivas continuam pendentes.
+
+- Contas: programação única, parcelamento mensal do total ou repetição mensal do valor por 2–60 meses. Parcelas preservam a competência da obrigação; recorrências avançam competência e vencimento. Meses curtos usam o último dia, sem perder o dia-base nos seguintes.
+- Recorrências: interrupção de ocorrências futuras ainda sem baixas; histórico e contas com pagamento permanecem. A reversão usa a competência futura para não gerar uma redução artificial na despesa de hoje. Não há renovação indefinida ou edição de valor em lote nesta entrega.
+- Compras: fornecedor, referência, data, múltiplos materiais, total por item e contas a pagar parceladas. Confirmação gera obrigação, não recebe mercadoria nem paga fornecedor. Referência exata do mesmo fornecedor não pode ser cadastrada novamente.
+- Recebimento: parcial ou total, conversão kg/g e L/ml, saldo pendente e custo médio. Transação e chave de repetição protegem estoque e títulos; excesso de recebimento é recusado. Não converter massa em volume sem cadastro próprio. Valores extras devem estar rateados nos totais dos itens.
+- Cancelamento da compra permitido antes de receber mercadoria e após estornar eventuais baixas. Compra recebida exige devolução, ainda pendente; títulos vinculados não podem ser cancelados isoladamente.
+- Mesas/comandas: mesmo cadastro numerado; identificação personalizada usada na abertura e no fechamento. Não foi criado modelo de várias comandas individuais vinculadas à mesma mesa.
+
+| Critério | Evidência local |
+| --- | --- |
+| Rateio e datas | PASSA: R$ 100 em R$ 33,34 + R$ 33,33 + R$ 33,33; 31/01 → 28/02 → 31/03; teste unitário inclui ano bissexto |
+| Recorrência | PASSA: interrupção preserva título com baixa parcial, cancela futuras elegíveis e preserva competência do estorno |
+| Compra/estoque | PASSA: obrigação sem entrada física; 2 kg convertidos para 2.000 g; recebimentos parciais e custo médio conferidos |
+| Repetição e concorrência | PASSA: mesma chave não duplica; duas tentativas de consumir o saldo final produzem uma aceitação e uma recusa |
+| Autorização/isolamento | PASSA: garçom recusado e insumo de outro restaurante recusado; regressão de plano Essencial preservada |
+| Navegador e banco | PASSA: série de três parcelas; criação/interrupção de Internet QA; compra R$ 60,01 em três parcelas, recebimento 500 g, saldo 1.500 g após recarga, SQL conferido |
+| Identificação de comanda | PASSA: gestão salvou Comanda 01 e atendimento mostrou o nome |
+| Celular | PASSA dirigido: formulário de compras/recebimento em 390 px, sem transbordamento horizontal; não cobre toda a acessibilidade |
+| Regressões | PASSA: aprovação, financeiro, isolamento e checkout; planejamento passou duas rodadas integrais |
+| Compilação | PASSA: build de produção e TypeScript; lint sem erros, com três avisos preexistentes |
+| Preservação | PASSA: 146 registros originais/19 tabelas comparados sem diferenças nos campos conferidos; contadores explicitamente excluídos |
+
+Migration `0014_finance_planning_purchases.sql` aplicada após backup `outputs/backups/pre-planning-20261010.dump` e ensaio transacional com rollback. Nenhuma integração fiscal ou bancária acionada. Todos os tenants sintéticos desta rodada removidos. Restore completo ainda não ensaiado.
+
+Para testar: `./scripts/dev-local.sh`; Gestão → Financeiro → Contas para parcelas/recorrências; aba Compras para obrigação e recebimento; Gestão → Estoque para conferir saldo. Configure insumos antes de cadastrar a compra. O arquivo de teste é `tests/planning.integration.mjs`, com servidor local na porta 3002 por padrão ou `TEST_BASE_URL` explícita.
+
+Pendências internas remanescentes: integração fiscal e arquivos do contador, adaptadores bancários/terminais, conciliação automática, restauração, devoluções de compras recebidas, rendimento/subreceitas/embalagens e evoluções descritas no manual. Dados do restaurante são necessários para configuração e homologação externa, mas essas integrações também demandam código; não anunciar como disponíveis apenas aguardando credenciais.

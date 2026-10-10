@@ -1,12 +1,12 @@
 # Gestor Food produto completo e plano de implementação
 
-Versão 1.3 • 9 de outubro de 2026 • Primeiro piloto em Minas Gerais • Alvo de avaliação no sábado 10 de outubro de 2026
+Versão 1.4 • 10 de outubro de 2026 • Primeiro piloto em Minas Gerais • Alvo de avaliação no sábado 10 de outubro de 2026
 
 Este é o documento mestre para transformar a base do Patos Lanches em um produto de operação e gestão de restaurantes, personalizável por estabelecimento, com planos Essencial e Profissional. Ele define o produto completo acordado até aqui e divide sua construção em blocos que podem ser implementados, testados pelo proprietário do produto e corrigidos antes da próxima entrega.
 
 Sua função é ser o **manual do produto e contrato de escopo para desenvolvimento e validação**: visão, nome, marca, design, funcionalidades, regras, arquitetura, dados, integrações, operação, entregas e critérios de aceite. Uma implementação deve poder ser conferida contra esta base, e uma mudança de direção precisa ficar registrada nela.
 
-**Estado atual: MVP 0.2 publicado em 09/10/2026; incremento local de fechamento/Pix estático/cozinha em `e9bc3d0`, ainda não publicado; aceite do usuário pendente.** A existência de um recurso neste documento não significa que ele está concluído. O recorte entregue, as evidências e todas as pendências estão em [Entrega local de 07/10/2026](ENTREGA-LOCAL-2026-10-07.md). O quadro da seção 19 foi atualizado; seu aceite permanece pendente. Fiscal real e integrações automáticas não estão disponíveis.
+**Estado atual: MVP 0.2 publicado em 09/10/2026; incrementos locais de fechamento/Pix estático/cozinha e planejamento financeiro/compras, ainda não publicados; aceite do usuário pendente.** A existência de um recurso neste documento não significa que ele está concluído. O recorte entregue, as evidências e todas as pendências estão em [Entrega local de 07/10/2026](ENTREGA-LOCAL-2026-10-07.md). O quadro da seção 19 foi atualizado; seu aceite permanece pendente. Fiscal real e integrações automáticas não estão disponíveis.
 
 Este arquivo passa a ser a referência principal de escopo, sequência e aceite. Os documentos anteriores permanecem como apoio. Em caso de divergência, prevalecem a instrução mais recente do proprietário e sua incorporação neste documento. Mudanças futuras devem atualizar a versão, o bloco afetado e os testes, evitando manter duas definições concorrentes.
 
@@ -48,6 +48,8 @@ O manual fixa o produto conhecido, não torna imutáveis todas as escolhas antes
 | 16 | Especificação executável dos blocos B00 a B15 |
 | 17 a 19 | Plano até sábado, testes e rotina de feedback |
 | 20 a 24 | Dependências externas, conclusão, fontes, histórico e glossário |
+
+**Alinhamento comercial de 10/10:** proprietário pretende licença vitalícia para os três primeiros clientes e custo recorrente Focus separado, pago pelo restaurante. Não confundir esse custo externo com mensalidade da licença. Hospedagem, suporte, limites, duração de cobertura e condições de atualização ainda precisam ser definidos no contrato. Meta proposta de 15 dias para implantação não comprova prazo de homologação: registrar início após entrega dos dados e compatibilidade confirmada, com dependências explícitas. Não há contrato jurídico final nem contratação externa nesta entrega.
 
 ## 2 Definição do produto
 
@@ -836,6 +838,8 @@ Critérios deste recorte: (1) pedido autorizado entra na fila; avançar um setor
 
 ### B05 Contas a pagar receber e fluxo de caixa
 
+**Recorte 10/10 — completar o núcleo interno para demonstração.** Responsável: Codex; aceite: proprietário. Construir séries mensais finitas (2–60 ocorrências), parcelamento com rateio exato, interrupção de recorrências futuras não liquidadas, compras confirmadas com fornecedor/parcelas, recebimento parcial com conversão kg↔g e L↔ml, histórico e custo médio. Reutilizar atendimento numerado para mesa/comanda, sem duplicar mecanismos. Preservar aprovação, cozinha, pagamentos, snapshots de custo e isolamento. Fora: Focus/Pix/terminal reais, compras por XML, devolução de mercadoria recebida, recorrência sem prazo e conversões por densidade/rendimento. Critérios: repetição/concorrência não duplicam contas ou estoque; parcelas somam o total; mês curto conserva o dia-base; recebimento não paga título; excedente/unidade incompatível/outro tenant são recusados sem efeito; futuras recorrências interrompidas não apagam passado; API, banco, recarga e interface com dados sintéticos. Resultado local PASSA no recorte: duas rodadas completas de `test:planning`, regressões de aprovação/financeiro/tenancy e checkout; navegador com parcelas R$ 33,34/R$ 33,33/R$ 33,33, recorrência futura interrompida, compra de 2 kg/R$ 60,01, recebimento de 500 g e saldo de 1.500 g persistidos após recarga. SQL confirmou custo de 3,0005 centavos/g e parcelas R$ 20,01/R$ 20/R$ 20, sem baixa financeira automática. Gestão e atendimento mostraram Comanda 01 após alteração de identificação. Aceite do usuário e publicação pendentes. Migration aditiva com backup; rollback de código preserva registros, sem apagar schema. Registrar evidências aqui e no relatório existente.
+
 **Objetivo:** permitir controlar compromissos e prever falta/sobra de dinheiro.
 
 **Construção:** contrapartes, categorias, contas financeiras, documentos e parcela simples; competência/vencimento; aprovação administrativa básica; baixa total/parcial; reversão; transferência; filtros de vencidos e fluxo realizado/projetado de 7 e 30 dias. Usar origem automática para vendas e compras já registradas, evitando digitação duplicada.
@@ -848,7 +852,7 @@ Critérios deste recorte: (1) pedido autorizado entra na fila; avançar um setor
 
 **Verificação técnica:** pagamentos concorrentes não ultrapassam saldo; mesma requisição não cria duas obrigações; reversão restaura o saldo correto; previsão usa saldo residual; aporte e transferência não aumentam receita.
 
-**Aceite:** o proprietário explica cada saldo pela composição e enxerga compromissos futuros sem confundi-los com gasto já pago. **Fica depois:** recorrência, parcelamentos avançados, dupla aprovação e execução de pagamento no banco.
+**Aceite:** o proprietário explica cada saldo pela composição e enxerga compromissos futuros sem confundi-los com gasto já pago. **Fica depois:** renovação indefinida de recorrências, edição em lote, parcelamentos avançados, dupla aprovação e execução de pagamento no banco.
 
 ### B06 Estoque fichas técnicas e custo dos produtos
 
@@ -884,7 +888,7 @@ Critérios deste recorte: (1) pedido autorizado entra na fila; avançar um setor
 
 ### B08 Emissão fiscal das vendas
 
-**Objetivo:** emitir e acompanhar documentos válidos para as operações cobertas do Patos, com recuperação e histórico.
+**Objetivo:** emitir e acompanhar documentos válidos para as operações cobertas de cada restaurante, com recuperação e histórico.
 
 **Dependência externa:** município, cadastro/IE/regime, A1, credenciamento/CSC, conta Focus, produtos classificados e matriz de operações. Levantar desde B00. Ausência de credencial não bloqueia construir configuração e lógica local, mas bloqueia declarar emissão integrada validada.
 
@@ -1174,8 +1178,8 @@ Aceite de uso e validação técnica são campos independentes. Você pode gosta
 | B02 | Implementado no fluxo atual | Testes de aprovação e concorrência passaram | Pendente | Seu teste no salão/caixa |
 | B03 | Parcial: atendimento integral e cancelamento | Pagamento/preparo separados; sem reposição após preparo | Pendente | Atendimento parcial, transferências e hardware |
 | B04 | Núcleo de caixa e razão implementado | Troco, contrapartidas, idempotência, estorno e fechamento testados | Pendente | Saldos reais, múltiplas gavetas e diferenças |
-| B05 | Parcial: contas e baixas manuais | Baixa parcial, saldo, estorno e cancelamento testados | Pendente | Recorrência, parcelas, anexos e contas bancárias |
-| B06 | Parcial: receitas por porção e custo histórico | Snapshot preservado após mudança de custo | Pendente | Conversões, rendimento e integração de compras |
+| B05 | Contas, baixas, parcelas e recorrências mensais finitas implementadas | Rateio exato, meses curtos, interrupção de futuras, idempotência e regressões passaram | Pendente | Recorrência sem prazo, anexos, edição de séries e contas bancárias |
+| B06 | Fichas, custo histórico, compras vinculadas e recebimento parcial com kg/g e L/ml | Custo médio, conversão, excesso e concorrência testados; snapshot anterior preservado | Pendente | Rendimento, embalagens compostas, devolução de compra recebida e XML |
 | B07 | Parcial: período e resultados gerenciais | Consultas reais; custos incompletos identificados | Pendente | Métricas adicionais e validação dos cadastros |
 | B08 | Não implementado; avaliação Focus registrada | Emissão e homologação NÃO TESTADAS | Pendente | Matriz fiscal MG, emitente, contador, provedor, A1/CSC e integração |
 | B09 | CSV financeiro implementado | Exportação de 205 lançamentos extras conferida | Pendente | XML/ZIP e pacote contábil completo |
