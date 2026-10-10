@@ -1,4 +1,5 @@
 "use client";
+import {IntegratedPayments} from "@/components/integrated-payments";
 import {PurchaseManagement, RecurringSeries} from "@/components/purchase-management";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -943,6 +944,7 @@ export function FinanceWorkspace({
           {tab === "results" && <Results data={data} />}{" "}
           {tab === "reconcile" && (
             <section className="space-y-4">
+              <IntegratedPayments />
               <h2 className="section-title">Conciliação manual de cartões</h2>
               <p className="text-sm text-neutral-500">
                 Confira o crédito no extrato da adquirente e informe o líquido
