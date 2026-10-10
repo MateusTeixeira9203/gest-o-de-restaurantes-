@@ -136,6 +136,7 @@ export type KitchenTicket = {
     productName: string;
     variantName: string;
     quantity: number;
+    addons: Array<{ id: string; name: string; priceCents: number }>;
     note: string | null;
   }>;
 };
@@ -861,7 +862,7 @@ export async function getKitchenQueue(sector?: string) {
     items: KitchenTicket["items"];
   }>(
     `SELECT kt.id AS ticket_id, o.id AS order_id, o.order_number, kt.queue_number, kt.kitchen_sector, kt.status AS ticket_status, o.fulfillment, t.number AS table_number, o.customer_name, o.estimated_minutes, o.created_at, o.notes,
-      COALESCE(json_agg(json_build_object('productName', oi.product_name, 'variantName', oi.variant_name, 'quantity', oi.quantity, 'note', oi.note) ORDER BY oi.created_at) FILTER (WHERE oi.kitchen_sector = kt.kitchen_sector), '[]'::json) AS items
+      COALESCE(json_agg(json_build_object('productName', oi.product_name, 'variantName', oi.variant_name, 'quantity', oi.quantity, 'addons', oi.addons, 'note', oi.note) ORDER BY oi.created_at) FILTER (WHERE oi.kitchen_sector = kt.kitchen_sector), '[]'::json) AS items
      FROM kitchen_tickets kt JOIN orders o ON o.id = kt.order_id LEFT JOIN dining_tables t ON t.id = o.table_id LEFT JOIN order_items oi ON oi.order_id = o.id
      WHERE kt.restaurant_id = $1 AND kt.status <> 'cancelled' AND o.status IN ('confirmed','preparing','ready') AND ($2::text IS NULL OR kt.kitchen_sector = $2)
      GROUP BY kt.id, o.id, t.number

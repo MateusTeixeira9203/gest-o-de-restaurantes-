@@ -8,7 +8,7 @@ type KitchenTicket = {
   id: string; orderId: string; orderNumber: number; queueNumber: number; sector: string;
   status: "new" | "preparing" | "ready" | "cancelled"; fulfillment: "dine_in" | "pickup" | "delivery";
   tableNumber: number | null; customerName: string | null; estimatedMinutes: number | null; createdAt: string; notes: string | null;
-  items: Array<{ productName: string; variantName: string; quantity: number; note: string | null }>;
+  items: Array<{ productName: string; variantName: string; quantity: number; addons: Array<{ id: string; name: string; priceCents: number }>; note: string | null }>;
 };
 
 type RemoteProduct = { id: string; name: string; description: string; category: string; sector: string; available: boolean; featured: boolean; imageUrl: string | null; variants: Array<{ id: string; name: string; priceCents: number; stockAvailable: boolean }>; addons: Array<{ id: string; name: string; priceCents: number }> };

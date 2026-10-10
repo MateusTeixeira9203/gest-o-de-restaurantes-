@@ -44,5 +44,24 @@ try{
  assert.equal((await db.query('SELECT status FROM orders WHERE id=$1',[id])).rows[0].status,'completed');assert.equal(Number((await db.query("SELECT sum(amount_cents) total FROM payments WHERE order_id=$1 AND status='paid'",[id])).rows[0].total),5500);
  assert.equal((await db.query("SELECT count(*)::int n FROM finance_entries WHERE restaurant_id=$1 AND source_type='sale_realized'",[a.id])).rows[0].n,1);
  success(await call(a,'/api/operations/finance',{action:'close_shift',shiftId:shift.id,countedCents:11500,note:'QA isolated shift'},a.cookies.manager));
+ // UI-01: kitchen must preserve each historical addon and note, including equal products.
+ const addon=randomUUID();
+ await db.query('INSERT INTO product_addons(id,product_id,name,price_cents) VALUES($1,$2,$3,300)',[addon,a.products[0].id,'Queijo QA']);
+ const extra=success(await call(a,'/api/operations/orders',{tableNumber:1,sendToKitchen:true,items:[
+  {productId:a.products[0].id,variantId:a.products[0].variant,quantity:2,addonIds:[addon],note:'COM QUEIJO'},
+  {productId:a.products[0].id,variantId:a.products[0].variant,quantity:1,addonIds:[],note:'SEM QUEIJO'},
+  {productId:a.products[1].id,variantId:a.products[1].variant,quantity:1}
+ ]},a.cookies.waiter));
+ // A later catalog edit must not rewrite the kitchen's order snapshot.
+ await db.query("UPDATE product_addons SET name='Nome novo no catalogo' WHERE id=$1",[addon]);
+ for(let reload=0;reload<2;reload++){
+  const state=success(await call(a,'/api/operations/state',null,a.cookies.kitchen));
+  const kt=state.kitchen.filter(t=>t.orderId===extra.order.id);assert.equal(kt.length,2);
+  const food=kt.find(t=>t.sector==='Cozinha').items;assert.equal(food.length,2);
+  assert.deepEqual(food.find(i=>i.note==='COM QUEIJO').addons,[{id:addon,name:'Queijo QA',priceCents:300}]);
+  assert.equal(food.find(i=>i.note==='COM QUEIJO').quantity,2);
+  assert.deepEqual(food.find(i=>i.note==='SEM QUEIJO').addons,[]);
+  assert.deepEqual(kt.find(t=>t.sector==='Pizzaria').items[0].addons,[]);
+ }
  console.log('PASS: three independent restaurants, roles, Pix QR without payment, partial/mixed receipts, idempotent concurrency, stale quote rejection, kitchen sectors, ready/serve/settle and cash close.');
 }finally{for(const q of fixtures.reverse())await cleanupCoreFixture(db,q);await db.end();console.log('Synthetic restaurant fixtures removed.');}
