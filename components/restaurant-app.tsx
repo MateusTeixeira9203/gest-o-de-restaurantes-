@@ -1,37 +1,33 @@
 "use client";
+import { Management } from "@/components/gestao/gestao-shell";
 import { Cashier } from "@/components/caixa/caixa";
 import { Deliveries } from "@/components/entregas";
 import { WaiterTables } from "@/components/salao/mesas";
 import { TableCommand } from "@/components/salao/comanda";
 import { MenuBuilder } from "@/components/cardapio/cardapio";
-import { CancelOrderButton } from "@/components/cancel-order-button";
-import { Topbar, OrderPill, Brand, Metric, PageTitle, NotFound } from "@/components/shared/blocos";
+
+import { Topbar, Brand, NotFound } from "@/components/shared/blocos";
 import { AccessHub } from "./access-hub";
 import { FiscalWorkspace } from "./fiscal-workspace";
-import { FinanceWorkspace, CashShiftPanel } from "./finance-workspace";
-import { CostManagement } from "./cost-management";
-import { RefundOrderButton } from "./refund-order-button";
-import { PendingOrders } from "./pending-orders";
+
+
+
+
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
-import {
-  ArrowLeft, ArrowRight, Bike, Boxes, ChefHat, CircleDollarSign,
-  CreditCard, FileBarChart, LayoutDashboard, LockKeyhole, LogOut,
-  Menu as MenuIcon, ReceiptText, Search, Settings,
-  X, Sparkles, Table2, TrendingUp, UtensilsCrossed, UsersRound, WalletCards,
-} from "lucide-react";
+import { useEffect, useState } from "react";
+import { ArrowLeft, ArrowRight, Bike, ChefHat, CircleDollarSign, LayoutDashboard, LockKeyhole, Sparkles, UtensilsCrossed } from "lucide-react";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
 import { RestaurantStoreProvider, type StaffRole, useRestaurant } from "@/lib/restaurant-store";
-import { InventoryManagement } from "@/components/inventory-management";
-import { TeamManagement } from "@/components/team-management";
-import { ManagementMenu } from "@/components/management-menu";
-import { ManagementTables } from "@/components/management-tables";
-import { ManagementSettings } from "@/components/management-settings";
+
+
+
+
+
 import { KitchenBoard } from "@/components/kitchen-board";
-import { money, orderTotal } from "@/lib/domain";
+
 
 
 
@@ -64,86 +60,17 @@ function OperationHome() {
 
 
 
-const managementNav = [
-  ["dashboard", "Dashboard", LayoutDashboard], ["mesas", "Mesas", Table2], ["pedidos", "Pedidos", ReceiptText], ["cardapio", "Cardápio", MenuIcon], ["estoque", "Estoque", Boxes], ["financeiro", "Financeiro", WalletCards], ["fiscal", "Fiscal", ReceiptText], ["equipe", "Equipe", UsersRound], ["relatorios", "Relatórios", FileBarChart], ["configuracoes", "Configurações", Settings],
-] as const;
-
-const subscribeCompactMenu = (notify: () => void) => {
-  const media = window.matchMedia("(max-width: 1024px)");
-  media.addEventListener("change", notify);
-  return () => media.removeEventListener("change", notify);
-};
-function Management({ section }: { section: string }) {
-  const router = useRouter(); const [mobileNav, setMobileNav] = useState(false); const pageRef = useRef<HTMLDivElement>(null); const { logout, session, plan } = useRestaurant();
-  const [collapsed, setCollapsed] = useState(false);
-  const compact = useSyncExternalStore(subscribeCompactMenu, () => window.matchMedia("(max-width: 1024px)").matches, () => false);
-  const navOpen = compact ? mobileNav : !collapsed;
-  const toggleRef = useRef<HTMLButtonElement>(null);
-  const closeNav = () => { setMobileNav(false); setCollapsed(true); toggleRef.current?.focus(); };
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && !event.defaultPrevented) { setMobileNav(false); setCollapsed(true); toggleRef.current?.focus(); }
-    };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, []);
-  const activeSection = section === "caixa" ? "financeiro" : section === "configuracoes-fiscal" ? "configuracoes" : section;
-  useEffect(() => {
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    const animation = pageRef.current?.animate(
-      [{ opacity: 0, transform: "translateY(10px)" }, { opacity: 1, transform: "translateY(0)" }],
-      { duration: 240, easing: "cubic-bezier(.2,.8,.2,1)" },
-    );
-    return () => animation?.cancel();
-  }, [section]);
-  const navigate = (event: React.MouseEvent<HTMLAnchorElement>, id: string) => {
-    if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-    event.preventDefault();
-    const destination = `/gestao/${id}`;
-    if (window.location.pathname !== destination) window.history.pushState(null, "", destination);
-    setMobileNav(false);
-  };
-  const signOut = () => { void logout().then(() => router.push("/gestao")); };
-  return <main className={`management${navOpen ? " nav-open" : " nav-closed"}`}>
-    <aside id="management-navigation" inert={!navOpen} className={`manage-sidebar${navOpen ? " open" : ""}${mobileNav ? " mobile-open" : ""}`}>
-      <div className="sidebar-brand"><Brand dark /><button className="icon-button" onClick={closeNav} aria-label="Fechar menu lateral"><X size={19} /></button></div>
-      <nav aria-label="Áreas da gestão">{managementNav.filter(([id]) => plan === 'professional' || id !== 'fiscal').map(([id, label, Icon]) => <a key={id} href={`/gestao/${id}`} onClick={event => navigate(event, id)} aria-current={activeSection === id ? "page" : undefined} className={activeSection === id ? "active" : ""}><Icon size={18} /><span>{label}</span></a>)}</nav>
-      <button onClick={signOut} className="logout-button"><LogOut size={17} /> Trocar usuário</button>
-    </aside>
-    {compact && <button className={`sidebar-overlay${navOpen ? " open" : ""}`} onClick={closeNav} aria-label="Fechar menu" aria-hidden={!navOpen} tabIndex={-1} disabled={!navOpen} />}
-    <div className="manage-content"><header className="manage-top">
-      <button ref={toggleRef} onClick={() => compact ? setMobileNav(value => !value) : setCollapsed(value => !value)} className="icon-button" aria-label={navOpen ? "Recolher menu" : "Abrir menu"} aria-expanded={navOpen} aria-controls="management-navigation"><MenuIcon size={19} /></button>
-      <div className="manage-heading"><p className="text-xs font-semibold uppercase tracking-wider text-neutral-400">Gestão</p><h1 key={section} className="manage-title text-xl font-semibold capitalize">{managementNav.find(([id]) => id === activeSection)?.[1] ?? section}</h1></div>
-      <div className="flex items-center gap-3"><span className="hidden text-sm text-neutral-500 sm:block">{session?.username ?? "Gestão"}</span><div className="avatar">{(session?.username ?? "AD").slice(0, 2).toUpperCase()}</div></div>
-    </header><div className="manage-page" ref={pageRef}><ManagementSection section={section} /></div></div>
-  </main>;
-}
-
-
-function ManagementSection({ section }: { section: string }) {
-  const {plan}=useRestaurant();
-  if(plan==='essential' && ['custos','fiscal','configuracoes-fiscal'].includes(section))return <p>Este recurso está disponível no plano Profissional.</p>;
-  if(plan==='essential' && section==='dashboard')return <Dashboard />;
-  if(plan==='essential' && section==='relatorios')return <Reports />;
-  if(plan==='essential' && ['caixa','financeiro'].includes(section))return <CashShiftPanel />;
-  if (section === "configuracoes-fiscal") return <ManagementSettings key="fiscal" initialSection="fiscal" />; if (section === "fiscal") return <FiscalWorkspace />; if (section === "dashboard") return <FinanceWorkspace key="dashboard" />; if(section === "financeiro") return <FinanceWorkspace />; if (section === "mesas") return <ManagementTables />; if (section === "pedidos") return <ManageOrders />; if (section === "cardapio") return <ManagementMenu />; if (section === "estoque") return <Stock />; if(section === "custos")return <CostManagement />; if (section === "caixa") return <FinanceWorkspace key="cash" initialTab="cash" />; if (section === "equipe") return <><PageTitle title="Equipe" subtitle="Cadastre cada pessoa com nome, papel e PIN para iniciar o turno." /><TeamManagement /></>; if (section === "relatorios") return <FinanceWorkspace key="results" initialTab="results" />; if (section === "configuracoes") return <ManagementSettings />; return <NotFound />;
-}
-
-function Dashboard() { const { state } = useRestaurant(); const completed = state.sales; const revenue = completed.reduce((sum, sale) => sum + sale.subtotal, 0); const active = state.orders.filter(order => !["completed", "cancelled"].includes(order.status)); const ticket = completed.length ? revenue / completed.length : 0; return <><div className="page-heading"><div><h2>Visão geral</h2><p>Dados reais desta operação</p></div></div><div className="metric-grid"><Metric label="Faturamento" value={money(revenue)} note="Pedidos concluídos" icon={TrendingUp} /><Metric label="Pedidos em andamento" value={String(active.length)} note="Fila atual" icon={ReceiptText} /><Metric label="Mesas abertas" value={String(state.tables.filter(table => table.status !== "available").length)} icon={Table2} /><Metric label="Ticket médio" value={money(ticket)} icon={CreditCard} /></div><section className="chart-card mt-6"><div className="card-heading"><div><h3>Pedidos recentes</h3><p>Atualizado automaticamente</p></div></div>{state.orders.length ? <div className="rank-list">{state.orders.slice(0, 8).map(order => <div key={order.id}><span className="rank">#{order.number}</span><strong>{order.tableId.startsWith("externo-") ? "Pedido online" : `Mesa ${order.tableId}`}</strong><div><i style={{ width: "100%" }} /></div><b>{money(orderTotal(order))}</b></div>)}</div> : <div className="empty-state"><ReceiptText size={28} /><p>Nenhum pedido registrado ainda.</p></div>}</section></>; }
 
 
 
-function ManageOrders() {
-  const { state } = useRestaurant();
-  const [filter, setFilter] = useState<"active" | "completed" | "cancelled">("active");
-  const [search, setSearch] = useState("");
-  const orders = [...state.orders].filter(order => filter === "active" ? !["completed", "cancelled"].includes(order.status) : order.status === filter).filter(order => `${order.number} ${order.tableId} ${order.customerName || ""}`.toLowerCase().includes(search.toLowerCase())).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
-  return <><PendingOrders /><PageTitle title="Pedidos" subtitle="Acompanhe a fila e consulte o histórico sem rolar tabelas no celular." /><div className="orders-toolbar"><div className="orders-tabs"><button className={filter === "active" ? "active" : ""} onClick={() => setFilter("active")}>Em andamento <span>{state.orders.filter(o => !["completed", "cancelled"].includes(o.status)).length}</span></button><button className={filter === "completed" ? "active" : ""} onClick={() => setFilter("completed")}>Concluídos</button><button className={filter === "cancelled" ? "active" : ""} onClick={() => setFilter("cancelled")}>Cancelados</button></div><label className="admin-search"><Search size={16} /><input value={search} onChange={event => setSearch(event.target.value)} placeholder="Buscar pedido ou cliente" /></label></div><div className="orders-card-grid">{orders.map(order => <article key={order.id} className="orders-admin-card"><div className="flex items-start justify-between gap-3"><div><span className="text-xs text-neutral-500">{new Date(order.createdAt).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}</span><h3>Pedido #{order.number}</h3><div className="mt-1 flex flex-wrap items-center gap-2"><span className={`fulfillment-tag fulfillment-${order.fulfillment}`}>{order.fulfillment === "delivery" ? "Entrega" : order.fulfillment === "pickup" ? "Retirada" : "Mesa"}</span><span className="text-sm text-neutral-500">{order.fulfillment === "dine_in" ? `Mesa ${order.tableId}` : order.customerName || "Cliente"}</span></div></div><OrderPill status={order.status} /></div><div className="orders-admin-items">{order.items.map(item => <p key={item.id}>{item.quantity}× {item.productName} <span>· {item.variantName}</span></p>)}</div><div className="flex items-center justify-between gap-3 border-t border-neutral-100 pt-3"><strong>{money(state.sales.find(sale => sale.orderIds.includes(order.id))?.total ?? orderTotal(order))}</strong><RefundOrderButton order={order} />{!["completed", "cancelled"].includes(order.status) && <CancelOrderButton order={order} />}</div></article>)}</div>{!orders.length && <div className="empty-state"><ReceiptText size={28} /><p>{filter === "active" ? "Nenhum pedido em andamento." : "Nenhum pedido nesta categoria."}</p></div>}</>;
-}
 
-function Stock() { return <InventoryManagement />; }
 
-function Reports() { const { state } = useRestaurant(); const completed = state.sales; const total = completed.reduce((sum, sale) => sum + sale.subtotal, 0); return <><PageTitle title="Relatórios" subtitle="Resumo calculado somente com pedidos reais." /><div className="metric-grid"><Metric label="Faturamento" value={money(total)} icon={TrendingUp} /><Metric label="Pedidos concluídos" value={String(completed.length)} icon={ReceiptText} /><Metric label="Ticket médio" value={money(completed.length ? total / completed.length : 0)} icon={CreditCard} /><Metric label="Mesas cadastradas" value={String(state.tables.length)} icon={Table2} /></div></>; }
+
+
+
+
+
+
 
 
 
