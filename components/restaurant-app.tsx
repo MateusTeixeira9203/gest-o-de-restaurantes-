@@ -1,4 +1,5 @@
 "use client";
+import { Topbar, StatusPill, OrderPill, Elapsed, Brand, Metric, PageTitle, NotFound } from "@/components/shared/blocos";
 import { AccessHub } from "./access-hub";
 import { FiscalWorkspace } from "./fiscal-workspace";
 import { FinanceWorkspace, CashShiftPanel } from "./finance-workspace";
@@ -31,22 +32,12 @@ import { CustomerCheckoutDialog, type CustomerCheckoutValue } from "@/components
 import { KitchenBoard } from "@/components/kitchen-board";
 import { AccountCheckout } from "@/components/account-checkout";
 import { CashierOnlineOrders, ExternalPaymentAction } from "@/components/external-payment";
-import type { CartItem, Order, OrderStatus, Product, RestaurantState, TableStatus } from "@/lib/domain";
+import type { CartItem, Order, Product, RestaurantState } from "@/lib/domain";
 import { money, orderTotal, tableTotal } from "@/lib/domain";
 
-const TABLE_STATUS: Record<TableStatus, { label: string; cls: string }> = {
-  available: { label: "Livre", cls: "status-free" }, occupied: { label: "Ocupada", cls: "status-occupied" }, preparing: { label: "Preparando", cls: "status-preparing" }, ready: { label: "Pedido pronto", cls: "status-ready" }, closing: { label: "Aguardando conta", cls: "status-closing" },
-};
-const ORDER_STATUS: Record<OrderStatus, string> = { pending: "Pendente", confirmed: "Na fila", preparing: "Em preparo", ready: "Pronto para entregar", out_for_delivery: "Em entrega", delivered: "Entregue", completed: "Concluído", cancelled: "Cancelado" };
 
 
-function Topbar({ title, subtitle, back = "/operacao", action }: { title: string; subtitle?: string; back?: string; action?: React.ReactNode }) {
-  return <header className="topbar"><div className="flex min-w-0 items-center gap-3"><Link href={back} className="icon-button" aria-label="Voltar"><ArrowLeft size={19} /></Link><div className="min-w-0"><h1 className="truncate text-xl font-semibold tracking-tight sm:text-2xl">{title}</h1>{subtitle && <p className="mt-0.5 truncate text-sm text-neutral-500">{subtitle}</p>}</div></div>{action}</header>;
-}
 
-function StatusPill({ status }: { status: TableStatus }) { const meta = TABLE_STATUS[status]; return <span className={`status-pill ${meta.cls}`}><span />{meta.label}</span>; }
-function OrderPill({ status }: { status: OrderStatus }) { return <span className={`order-pill order-${status}`}>{ORDER_STATUS[status]}</span>; }
-function Elapsed({ date }: { date: string }) { const time = new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" }).format(new Date(date)); return <span>{time}</span>; }
 
 function OperationHome() {
   const { session, logout, state, branding } = useRestaurant();
@@ -61,7 +52,6 @@ function OperationHome() {
   return <AccessHub name={state.settings.name} logoUrl={branding.logoUrl} areas={visibleAreas} username={session?.username} actions={session ? <button onClick={() => void logout()} className="secondary-button">Trocar usuário</button> : undefined} />;
 }
 
-function Brand({ dark = false, subtitle = "Operação & gestão" }: { dark?: boolean; subtitle?: string }) { const { state, branding } = useRestaurant(); return <div className="flex items-center gap-3"><span className="brand-mark"><Image src={branding.logoUrl || "/restio-mark.svg"} alt={`Logo de ${state.settings.name}`} width={112} height={112} priority unoptimized={Boolean(branding.logoUrl)} className="brand-logo" /></span><div><p className={`font-semibold tracking-tight ${dark ? "text-white" : "text-[#171814]"}`}>{state.settings.name}</p><p className={`text-xs ${dark ? "text-white/40" : "text-neutral-500"}`}>{subtitle}</p></div></div>; }
 
 function WaiterTables() {
   const { state } = useRestaurant();
@@ -165,7 +155,6 @@ function Deliveries() {
   return <main className="app-page"><div className="page-container max-w-5xl"><Topbar title="Entregas" subtitle={`${orders.length} pedido(s) em preparo, prontos ou em rota`} /><div className="mb-6 grid gap-3 sm:grid-cols-3"><div className="metric-card"><div className="metric-icon"><ChefHat size={18} /></div><p>Em preparo</p><strong>{orders.filter(order => ["confirmed", "preparing"].includes(order.status)).length}</strong></div><div className="metric-card"><div className="metric-icon"><Bike size={18} /></div><p>Prontos para sair</p><strong>{orders.filter(order => order.status === "ready").length}</strong></div><div className="metric-card"><div className="metric-icon"><MapPin size={18} /></div><p>Em rota</p><strong>{orders.filter(order => order.status === "out_for_delivery").length}</strong></div></div><section className="grid gap-4 md:grid-cols-2">{orders.map(order => <article key={order.id} className="command-card p-5"><div className="flex items-start justify-between gap-4"><div><div className="flex flex-wrap items-center gap-2"><span className="text-xs font-bold uppercase tracking-wider text-neutral-400">Pedido #{order.number}</span><span className="fulfillment-tag fulfillment-delivery">Entrega</span></div><h2 className="mt-2 text-xl font-semibold">{order.customerName || "Cliente"}</h2><p className="mt-1 text-xs text-neutral-500">{order.status === "confirmed" ? "Na fila da cozinha" : order.status === "preparing" ? "Em preparo" : order.status === "ready" ? "Pronto para sair" : order.status === "out_for_delivery" ? "Em rota" : "Entregue"}</p></div><span className={order.paid ? "order-pill order-completed" : "order-pill order-pending"}>{order.paid ? "Pago" : "Receber"}</span></div><div className="delivery-items">{order.items.map(item => <p key={item.id}>{item.quantity}× {item.productName} <span>· {item.variantName}</span></p>)}</div><div className="mt-5 flex gap-3"><MapPin size={18} className="mt-0.5 shrink-0 text-neutral-400" /><div className="text-sm"><p className="font-medium">{order.delivery?.addressLine1 || "Endereço não informado"}</p>{order.delivery?.neighborhood && <p className="mt-1 text-neutral-500">{order.delivery.neighborhood}</p>}{order.delivery?.reference && <p className="mt-1 text-neutral-500">Ref.: {order.delivery.reference}</p>}</div></div>{order.status === "ready" && <button onClick={() => update(order, "out_for_delivery")} className="primary-button mt-6 w-full justify-center"><Bike size={17} /> Saiu para entrega</button>}{order.status === "out_for_delivery" && <button onClick={() => update(order, "delivered")} className="primary-button mt-6 w-full justify-center"><Check size={17} /> Marcar entregue</button>}{!order.paid && <div className="mt-3"><ExternalPaymentAction order={order} /></div>}</article>)}{!orders.length && <div className="empty-state md:col-span-2"><Bike size={28} /><p>Nenhuma entrega aguardando agora.</p></div>}</section></div></main>;
 }
 
-function Metric({ label, value, note, icon: Icon }: { label: string; value: string; note?: string; icon: React.ComponentType<{ size?: number }>; }) { return <article className="metric-card"><div className="metric-icon"><Icon size={18} /></div><p>{label}</p><strong>{value}</strong>{note && <span>{note}</span>}</article>; }
 
 const managementNav = [
   ["dashboard", "Dashboard", LayoutDashboard], ["mesas", "Mesas", Table2], ["pedidos", "Pedidos", ReceiptText], ["cardapio", "Cardápio", MenuIcon], ["estoque", "Estoque", Boxes], ["financeiro", "Financeiro", WalletCards], ["fiscal", "Fiscal", ReceiptText], ["equipe", "Equipe", UsersRound], ["relatorios", "Relatórios", FileBarChart], ["configuracoes", "Configurações", Settings],
@@ -250,8 +239,6 @@ function Reports() { const { state } = useRestaurant(); const completed = state.
 
 
 
-function PageTitle({ title, subtitle, action, onAction }: { title: string; subtitle: string; action?: string; onAction?: () => void }) { return <div className="page-heading"><div><h2>{title}</h2><p>{subtitle}</p></div>{action && onAction && <button onClick={onAction} className="primary-button"><Plus size={17} /> {action}</button>}</div>; }
-function NotFound() { return <main className="app-page grid min-h-screen place-items-center"><div className="text-center"><p className="text-sm font-semibold uppercase tracking-wider text-neutral-400">404</p><h1 className="mt-2 text-3xl font-semibold">Página não encontrada</h1><Link href="/operacao" className="primary-button mt-6">Voltar à operação</Link></div></main>; }
 
 function destinationForRole(role: StaffRole) {
   if (role === "waiter") return "/operacao/garcom";
