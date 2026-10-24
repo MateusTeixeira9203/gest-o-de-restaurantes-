@@ -1,9 +1,11 @@
 "use client";
+import { Cashier } from "@/components/caixa/caixa";
+import { Deliveries } from "@/components/entregas";
 import { WaiterTables } from "@/components/salao/mesas";
 import { TableCommand } from "@/components/salao/comanda";
 import { MenuBuilder } from "@/components/cardapio/cardapio";
 import { CancelOrderButton } from "@/components/cancel-order-button";
-import { Topbar, StatusPill, OrderPill, Brand, Metric, PageTitle, NotFound } from "@/components/shared/blocos";
+import { Topbar, OrderPill, Brand, Metric, PageTitle, NotFound } from "@/components/shared/blocos";
 import { AccessHub } from "./access-hub";
 import { FiscalWorkspace } from "./fiscal-workspace";
 import { FinanceWorkspace, CashShiftPanel } from "./finance-workspace";
@@ -15,9 +17,9 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import {
-  ArrowLeft, ArrowRight, Bike, Boxes, Check, ChefHat, ChevronRight, CircleDollarSign,
-  Copy, CreditCard, FileBarChart, LayoutDashboard, LockKeyhole, LogOut,
-  MapPin, Menu as MenuIcon, ReceiptText, Search, Settings,
+  ArrowLeft, ArrowRight, Bike, Boxes, ChefHat, CircleDollarSign,
+  CreditCard, FileBarChart, LayoutDashboard, LockKeyhole, LogOut,
+  Menu as MenuIcon, ReceiptText, Search, Settings,
   X, Sparkles, Table2, TrendingUp, UtensilsCrossed, UsersRound, WalletCards,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -29,10 +31,7 @@ import { ManagementMenu } from "@/components/management-menu";
 import { ManagementTables } from "@/components/management-tables";
 import { ManagementSettings } from "@/components/management-settings";
 import { KitchenBoard } from "@/components/kitchen-board";
-import { AccountCheckout } from "@/components/account-checkout";
-import { CashierOnlineOrders, ExternalPaymentAction } from "@/components/external-payment";
-import type { Order } from "@/lib/domain";
-import { money, orderTotal, tableTotal } from "@/lib/domain";
+import { money, orderTotal } from "@/lib/domain";
 
 
 
@@ -58,27 +57,11 @@ function OperationHome() {
 
 
 
-function CashierMenuShare() {
-  const { state } = useRestaurant();
-  const url = typeof window === "undefined" ? "" : `${window.location.origin}/menu/entrega`;
-  const share = () => window.open(`https://wa.me/?text=${encodeURIComponent(`Peça sua entrega no cardápio da ${state.settings.name}: ${url}`)}`, "_blank", "noopener,noreferrer");
-  const copy = async () => { try { await navigator.clipboard.writeText(url); toast.success("Link para entrega copiado."); } catch { toast.error("Não foi possível copiar o link."); } };
-  return <section className="cash-share"><div><strong>Cardápio para entrega</strong><p>Envie pelo WhatsApp. O cliente informa nome e endereço; o pedido entra no sistema como entrega.</p></div><div><button className="secondary-button" onClick={() => void copy()}><Copy size={16} /> Copiar link</button><button className="primary-button" onClick={share}><ArrowRight size={16} /> Enviar no WhatsApp</button></div></section>;
-}
 
-function Cashier() {
-  const { state } = useRestaurant(); const [selectedId, setSelectedId] = useState<string | null>(null); const table = state.tables.find(t => t.id === selectedId);
-  if (table) return <AccountCheckout tableId={table.id} onBack={() => setSelectedId(null)} />;
-  const open = state.tables.filter(t => t.status !== "available");
-  return <main className="app-page"><div className="page-container"><Topbar title="Caixa" subtitle="Mesas e comandas abertas" action={<Link href="/operacao/garcom" className="primary-button">Novo pedido</Link>} /><CashShiftPanel /><Link className="secondary-button mb-4" href="/operacao/fiscal">Fiscal e contador</Link><PendingOrders /><CashierMenuShare /><div className="metric-grid compact"><Metric label="Mesas abertas" value={String(open.length)} icon={Table2} /><Metric label="Aguardando conta" value={String(state.tables.filter(t => t.status === "closing").length)} icon={ReceiptText} /><Metric label="Em aberto" value={money(open.reduce((s, t) => s + tableTotal(state, t.id), 0))} icon={WalletCards} /></div><h2 className="section-title mb-4">Contas abertas</h2><div className="cash-grid">{open.map(t => { const orders = state.orders.filter(o => o.tableId === t.id && !["completed", "cancelled"].includes(o.status)); return <button key={t.id} onClick={() => setSelectedId(t.id)} className="cash-card"><div className="flex items-start justify-between"><div><p className="text-sm text-neutral-500">Mesa</p><h3>{t.id}</h3></div><StatusPill status={t.status} /></div><div className="mt-8 flex items-end justify-between"><div><strong>{money(tableTotal(state, t.id))}</strong><p>{orders.length} {orders.length === 1 ? "pedido" : "pedidos"}</p></div><span className="open-account">Abrir conta <ChevronRight size={16} /></span></div></button>; })}</div><CashierOnlineOrders /></div></main>;
-}
 
-function Deliveries() {
-  const { state, updateDeliveryStatus } = useRestaurant();
-  const orders = state.orders.filter(order => order.fulfillment === "delivery" && (["confirmed", "preparing", "ready", "out_for_delivery"].includes(order.status) || (order.status === "delivered" && !order.paid))).sort((a, b) => a.number - b.number);
-  const update = (order: Order, status: "out_for_delivery" | "delivered") => { void updateDeliveryStatus(order.id, status).then(result => result.ok ? toast.success(status === "out_for_delivery" ? "Pedido saiu para entrega." : "Entrega concluída.") : toast.error(result.message)); };
-  return <main className="app-page"><div className="page-container max-w-5xl"><Topbar title="Entregas" subtitle={`${orders.length} pedido(s) em preparo, prontos ou em rota`} /><div className="mb-6 grid gap-3 sm:grid-cols-3"><div className="metric-card"><div className="metric-icon"><ChefHat size={18} /></div><p>Em preparo</p><strong>{orders.filter(order => ["confirmed", "preparing"].includes(order.status)).length}</strong></div><div className="metric-card"><div className="metric-icon"><Bike size={18} /></div><p>Prontos para sair</p><strong>{orders.filter(order => order.status === "ready").length}</strong></div><div className="metric-card"><div className="metric-icon"><MapPin size={18} /></div><p>Em rota</p><strong>{orders.filter(order => order.status === "out_for_delivery").length}</strong></div></div><section className="grid gap-4 md:grid-cols-2">{orders.map(order => <article key={order.id} className="command-card p-5"><div className="flex items-start justify-between gap-4"><div><div className="flex flex-wrap items-center gap-2"><span className="text-xs font-bold uppercase tracking-wider text-neutral-400">Pedido #{order.number}</span><span className="fulfillment-tag fulfillment-delivery">Entrega</span></div><h2 className="mt-2 text-xl font-semibold">{order.customerName || "Cliente"}</h2><p className="mt-1 text-xs text-neutral-500">{order.status === "confirmed" ? "Na fila da cozinha" : order.status === "preparing" ? "Em preparo" : order.status === "ready" ? "Pronto para sair" : order.status === "out_for_delivery" ? "Em rota" : "Entregue"}</p></div><span className={order.paid ? "order-pill order-completed" : "order-pill order-pending"}>{order.paid ? "Pago" : "Receber"}</span></div><div className="delivery-items">{order.items.map(item => <p key={item.id}>{item.quantity}× {item.productName} <span>· {item.variantName}</span></p>)}</div><div className="mt-5 flex gap-3"><MapPin size={18} className="mt-0.5 shrink-0 text-neutral-400" /><div className="text-sm"><p className="font-medium">{order.delivery?.addressLine1 || "Endereço não informado"}</p>{order.delivery?.neighborhood && <p className="mt-1 text-neutral-500">{order.delivery.neighborhood}</p>}{order.delivery?.reference && <p className="mt-1 text-neutral-500">Ref.: {order.delivery.reference}</p>}</div></div>{order.status === "ready" && <button onClick={() => update(order, "out_for_delivery")} className="primary-button mt-6 w-full justify-center"><Bike size={17} /> Saiu para entrega</button>}{order.status === "out_for_delivery" && <button onClick={() => update(order, "delivered")} className="primary-button mt-6 w-full justify-center"><Check size={17} /> Marcar entregue</button>}{!order.paid && <div className="mt-3"><ExternalPaymentAction order={order} /></div>}</article>)}{!orders.length && <div className="empty-state md:col-span-2"><Bike size={28} /><p>Nenhuma entrega aguardando agora.</p></div>}</section></div></main>;
-}
+
+
+
 
 
 const managementNav = [
