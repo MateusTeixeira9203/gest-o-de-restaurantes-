@@ -1,0 +1,48 @@
+.salao-page .topbar p { white-space: normal; overflow: visible; }
+.salao-page .topbar { gap: 16px; }
+.salao-page .table-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.salao-page .table-card { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; min-width: 0; min-height: 192px; padding: 16px; border: 1px solid var(--core-border); border-inline-start: 4px solid var(--core-border); border-radius: var(--radius-card); background: var(--card); color: var(--core-ink); }
+.salao-page .table-card:hover { border-color: var(--core-muted); box-shadow: none; transform: none; }
+.salao-page .table-card:focus-visible { outline: 2px solid var(--core-accent); outline-offset: 3px; }
+.salao-page .table-occupied, .salao-page .table-preparing { border-inline-start-color: var(--info); }
+.salao-page .table-ready { border-inline-start-color: var(--ok); }
+.salao-page .table-closing { border-inline-start-color: var(--bill); }
+.salao-page .table-number { font-size: 20px; font-weight: 700; line-height: 1.2; }
+.salao-table-heading, .salao-section-heading, .salao-command-heading, .salao-order-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; }
+.salao-table-heading svg { color: var(--ok); }
+.salao-context, .salao-table-details p { color: var(--core-muted); font-size: 13px; line-height: 1.5; }
+.salao-table-details strong { font-size: 18px; font-weight: 650; }
+.salao-table-details { margin-top: auto; }
+.salao-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; }
+.salao-section-heading { margin-bottom: 16px; }
+.salao-page .summary-strip { border-radius: var(--radius-card); }
+.salao-page .summary-strip span { color: var(--core-muted); font-size: 13px; }
+.salao-command { max-width: 896px; }
+.salao-page .command-card { overflow: hidden; border: 1px solid var(--core-border); border-radius: var(--radius-card); background: var(--card); }
+.salao-command-heading, .salao-order { padding: 20px; }
+.salao-command-heading { flex-wrap: wrap; }
+.salao-order { border-top: 1px solid var(--core-border); }
+.salao-order-heading { align-items: flex-start; margin-bottom: 20px; }
+.salao-badges { display: flex; flex-wrap: wrap; gap: 8px; }
+.salao-items { display: grid; gap: 16px; }
+.salao-item { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; font-size: 15px; }
+.salao-item > div { min-width: 0; overflow-wrap: anywhere; }
+.salao-item > strong { white-space: nowrap; font-size: 15px; }
+.salao-quantity { display: inline-grid; place-items: center; min-width: 28px; min-height: 28px; padding: 4px; border-radius: var(--radius-chip); background: var(--core-surface-muted); font-weight: 650; }
+.salao-note { color: var(--warn); font-size: 13px; margin-top: 4px; }
+.salao-order-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 12px; margin-top: 16px; }
+.salao-order-actions button { min-height: 44px; padding: 8px 12px; font-size: 13px; }
+.salao-ready, .salao-success { display: flex; align-items: center; gap: 12px; padding: 16px; margin-bottom: 16px; border-radius: var(--radius-card); color: var(--ok); background: var(--ok-soft); }
+.salao-ready svg { flex-shrink: 0; }
+.salao-ready p { font-size: 13px; margin-top: 4px; }
+.salao-balance { position: sticky; bottom: 16px; z-index: 10; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; padding: 16px 20px; margin-top: 16px; background: var(--card); border: 1px solid var(--core-border); border-radius: var(--radius-card); }
+.salao-balance > div { display: grid; gap: 4px; }
+.salao-balance strong { font-size: 24px; font-weight: 650; line-height: 1.2; font-variant-numeric: tabular-nums; }
+.salao-page .table-card, .salao-item > strong { font-variant-numeric: tabular-nums; }
+@media (min-width: 768px) { .salao-page .table-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; } }
+@media (min-width: 1280px) { .salao-page .table-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
+@media (max-width: 430px) { .salao-command-heading, .salao-order { padding: 16px; } .salao-order-heading { flex-wrap: wrap; } .salao-balance { bottom: 12px; padding: 16px; } }
+.salao-page button { min-height: 44px; min-width: 44px; }
+.salao-page .table-card { box-shadow: none; }
+.salao-order-actions .primary-button { background: var(--card); color: var(--core-ink); border: 1px solid var(--core-border); border-radius: var(--radius-control); }
+.salao-order-actions .primary-button:hover { background: var(--core-surface-muted); color: var(--core-ink); }
