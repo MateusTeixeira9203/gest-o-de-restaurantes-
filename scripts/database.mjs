@@ -136,15 +136,11 @@ async function run() {
     );
     if (mode !== "apply") return;
     const backupArg = process.argv.find((a) => a.startsWith("--backup="));
-    if (
-      !backupArg ||
-      !(await readFile(backupArg.slice(9)))
-        .subarray(0, 5)
-        .equals(Buffer.from("PGDMP"))
-    )
-      throw new Error(
-        "Informe --backup=/caminho/arquivo.dump de um backup pg_dump válido.",
-      );
+    const { validateBackup, endpointFromUrl } = await import("./backup-logico.mjs");
+    await validateBackup(
+      backupArg?.slice(9), pending,
+      backupArg?.endsWith(".manifest.json") ? endpointFromUrl(connectionString()) : null,
+    );
     if (!exists) {
       const baseline = JSON.parse(
         await readFile(path.join(root, "db/legacy-baseline.json"), "utf8"),
