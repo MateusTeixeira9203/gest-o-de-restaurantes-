@@ -1,6 +1,8 @@
 "use client";
 import { useState } from "react";
 import { toast } from "sonner";
+import { X } from "lucide-react";
+import { SeloCanal } from "@/components/shared/selos";
 import { useRestaurant } from "@/lib/restaurant-store";
 import { money, orderTotal } from "@/lib/domain";
 export function PendingOrders() {
@@ -29,7 +31,7 @@ export function PendingOrders() {
     }
   }
   return (
-    <section className="my-6 rounded-2xl border border-amber-300 bg-amber-50 p-5">
+    <section className="caixa-pending my-6">
       <h2 className="section-title">Conferir pedidos ({orders.length})</h2>
       <p className="mt-1 text-sm text-neutral-600">
         Confira os itens com o cliente. A produção começa somente ao enviar para
@@ -37,23 +39,16 @@ export function PendingOrders() {
       </p>
       <div className="mt-4 grid gap-4 md:grid-cols-2">
         {orders.map((order) => (
-          <article key={order.id} className="rounded-xl bg-white p-4">
+          <article key={order.id} className="caixa-pending-order">
             <div className="flex justify-between gap-2">
-              <strong>
-                #{order.number} ·{" "}
-                {order.fulfillment === "dine_in"
-                  ? `Mesa ${order.tableId}`
-                  : order.fulfillment === "delivery"
-                    ? "Entrega"
-                    : "Retirada"}
-              </strong>
+              <SeloCanal pedido={{ fulfillment: order.fulfillment ?? "dine_in", orderNumber: order.number, tableNumber: Number(order.tableId) || null }} />
               <strong>{money(orderTotal(order))}</strong>
             </div>
             <p className="text-sm text-neutral-500">{order.customerName}</p>
             <ul className="my-3 space-y-2 text-sm">
               {order.items.map((item) => (
                 <li key={item.id}>
-                  {item.quantity}× {item.productName} · {item.variantName}
+                  <span className="caixa-item-quantity">{item.quantity}<X size={12} aria-hidden="true" /></span> {item.productName} · {item.variantName}
                   {item.addons.length > 0 && (
                     <p>
                       Adicionais:{" "}
@@ -61,19 +56,13 @@ export function PendingOrders() {
                     </p>
                   )}
                   {item.note && (
-                    <p className="text-amber-800">Observação: {item.note}</p>
+                    <p className="caixa-note">Observação: {item.note}</p>
                   )}
                 </li>
               ))}
             </ul>
-            <button
-              disabled={busy !== null}
-              onClick={() => void review(order.id, order.revision, "approve")}
-              className="primary-button w-full justify-center"
-            >
-              {busy === order.id
-                ? "Processando…"
-                : "Conferir e enviar para cozinha"}
+            <button disabled={busy !== null} onClick={() => void review(order.id, order.revision, "approve")} className="secondary-button w-full justify-center">
+              {busy === order.id ? "Processando…" : "Conferir e enviar para cozinha"}
             </button>
             <div className="mt-3 flex gap-2">
               <input
@@ -85,11 +74,7 @@ export function PendingOrders() {
                   setReasons({ ...reasons, [order.id]: event.target.value })
                 }
               />
-              <button
-                disabled={busy !== null || !reasons[order.id]?.trim()}
-                className="text-sm text-red-700"
-                onClick={() => void review(order.id, order.revision, "reject")}
-              >
+              <button disabled={busy !== null || !reasons[order.id]?.trim()} className="caixa-reject" onClick={() => void review(order.id, order.revision, "reject")}>
                 Recusar
               </button>
             </div>
