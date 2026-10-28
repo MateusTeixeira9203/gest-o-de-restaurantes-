@@ -1360,87 +1360,49 @@ export async function recordExternalPayment(
   orderId: string,
   method: "Pix" | "Dinheiro" | "Débito" | "Crédito",
   actor: { role: string; name: string },
+  receivedCents?: number,
 ) {
+  if (receivedCents !== undefined) {
+    if (method !== "Dinheiro") throw new Error("Valor entregue só para pagamento em dinheiro.");
+    if (!Number.isSafeInteger(receivedCents) || receivedCents < 0) throw new Error("O valor entregue precisa ser um inteiro não negativo.");
+    if (receivedCents > 1000000) throw new Error("O valor entregue pode ser de no máximo R$ 10.000,00.");
+  }
   return transaction(async (client) => {
     const current = await restaurant(client);
     const result = await client.query<{
-      id: string;
-      status: string;
-      fulfillment: string;
-      total_cents: number;
-      paid_cents: number;
+      id: string; status: string; fulfillment: string; total_cents: number; paid_cents: number;
     }>(
       "SELECT o.id, o.status, o.fulfillment, o.total_cents, COALESCE((SELECT sum(amount_cents) FROM payments WHERE order_id = o.id AND status = 'paid'), 0)::int AS paid_cents FROM orders o WHERE o.id = $1 AND o.restaurant_id = $2 FOR UPDATE",
       [orderId, current.id],
     );
     const order = result.rows[0];
-    if (
-      !order ||
-      order.fulfillment === "dine_in" ||
-      order.status === "cancelled"
-    )
+    if (!order || order.fulfillment === "dine_in" || order.status === "cancelled")
       throw new Error("Pedido online não encontrado ou cancelado.");
-    if (order.status === "pending")
-      throw new Error(
-        "Envie ou recuse o pedido antes de registrar o recebimento.",
-      );
+    if (order.status === "pending") throw new Error("Envie ou recuse o pedido antes de registrar o recebimento.");
     if (actor.role === "delivery" && order.fulfillment !== "delivery")
-      throw new Error(
-        "A equipe de entrega só pode receber pedidos de entrega.",
-      );
-    if (order.paid_cents >= order.total_cents)
-      throw new Error("Este pedido já está pago.");
-    if (
-      order.fulfillment === "pickup" &&
-      !["ready", "delivered"].includes(order.status)
-    )
-      throw new Error(
-        "A retirada precisa estar pronta antes de fechar o pagamento.",
-      );
+      throw new Error("A equipe de entrega só pode receber pedidos de entrega.");
+    if (order.paid_cents >= order.total_cents) throw new Error("Este pedido já está pago.");
+    if (order.fulfillment === "pickup" && !["ready", "delivered"].includes(order.status))
+      throw new Error("A retirada precisa estar pronta antes de fechar o pagamento.");
     const amount = order.total_cents - order.paid_cents;
-    const methodMap = {
-      Pix: "pix",
-      Dinheiro: "cash",
-      Débito: "debit",
-      Crédito: "credit",
-    } as const;
-    const payment = (
-      await client.query<{ id: string }>(
-        "INSERT INTO payments(order_id,method,amount_cents,status,paid_at) VALUES($1,$2,$3,'paid',now()) RETURNING id",
-        [order.id, methodMap[method], amount],
-      )
-    ).rows[0];
-    await postSalePayment(
-      client,
-      current.id,
-      payment.id,
-      order.id,
-      methodMap[method],
-      amount,
-      actor,
-    );
-    if (order.fulfillment === "pickup")
-      await recognizeSale(client, current.id, order.id, actor);
-    const completed =
-      order.fulfillment === "pickup" || order.status === "delivered";
-    if (completed)
-      await client.query(
-        "UPDATE orders SET status = 'completed', updated_at = now() WHERE id = $1",
-        [order.id],
-      );
+    const received = receivedCents ?? amount;
+    if (received < amount)
+      throw new Error(`O valor entregue precisa ser maior ou igual ao total (${(amount / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}).`);
+    const changeCents = received - amount;
+    const methodMap = { Pix: "pix", Dinheiro: "cash", Débito: "debit", Crédito: "credit" } as const;
+    const payment = (await client.query<{ id: string }>(
+      "INSERT INTO payments(order_id,method,amount_cents,received_cents,change_cents,status,paid_at) VALUES($1,$2,$3,$4,$5,'paid',now()) RETURNING id",
+      [order.id, methodMap[method], amount, received, changeCents],
+    )).rows[0];
+    await postSalePayment(client, current.id, payment.id, order.id, methodMap[method], amount, actor);
+    if (order.fulfillment === "pickup") await recognizeSale(client, current.id, order.id, actor);
+    const completed = order.fulfillment === "pickup" || order.status === "delivered";
+    if (completed) await client.query("UPDATE orders SET status = 'completed', updated_at = now() WHERE id = $1", [order.id]);
     await client.query(
       "INSERT INTO order_events (order_id, event_type, actor_role, detail) VALUES ($1,'payment_confirmed',$2,$3::jsonb)",
-      [
-        order.id,
-        actor.role,
-        JSON.stringify({
-          method,
-          amountCents: amount,
-          processedBy: actor.name,
-        }),
-      ],
+      [order.id, actor.role, JSON.stringify({ method, amountCents: amount, receivedCents: received, changeCents, processedBy: actor.name })],
     );
-    return { id: order.id, paidCents: order.total_cents, completed };
+    return { id: order.id, paidCents: order.total_cents, completed, changeCents };
   });
 }
 

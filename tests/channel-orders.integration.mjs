@@ -6,9 +6,11 @@ import {randomUUID, randomBytes, scryptSync, createHash} from 'node:crypto';
 async function unit() {
   const {registerHooks} = await import('node:module');
   const {readFileSync} = await import('node:fs');
+  const {execFileSync} = await import('node:child_process');
   let captured, role = 'cashier';
   const stub = 'data:text/javascript,' + encodeURIComponent(`
     export const createOrder = (...args) => globalThis.channelTest.create(...args);
+    export const recordExternalPayment = (...args) => globalThis.channelTest.recordPayment(...args);
     export const hasStaffSession = async () => true;
     export const sessionFromRequest = async () => ({role:globalThis.channelTest.role(),username:'Sintético'});
     export const getOperationSnapshot = async () => globalThis.channelTest.snapshot;
@@ -19,7 +21,7 @@ async function unit() {
     export const accountVersion = () => {};
     export const snapshotRecipeCost = () => {};
     export const recognizeSale = () => {};
-    export const postSalePayment = () => {};
+    export const postSalePayment = (...args) => globalThis.channelTest.salePayment?.(...args);
     export const assertOrderApprover = () => {};
     export const requestHash = value => JSON.stringify(value);
   `);
@@ -28,14 +30,15 @@ async function unit() {
   const hook = registerHooks({resolve(specifier, context, next) {
     return specifier.startsWith('@/') ? {url:stub,shortCircuit:true} : next(specifier,context);
   }, load(url, context, next) {
-    if (url.endsWith('/lib/restaurant-repository.ts')) return {format:'module-typescript',source:readFileSync(new URL(url),'utf8')+'\nexport {deliveryPayment};',shortCircuit:true};
+    if (url.endsWith('/lib/restaurant-repository.ts')) return {format:'module-typescript',source:(process.argv.includes('--before-payment') ? execFileSync('git',['show','HEAD:lib/restaurant-repository.ts'],{encoding:'utf8'}) : readFileSync(new URL(url),'utf8'))+'\nexport {deliveryPayment};',shortCircuit:true};
     return next(url,context);
   }});
   try {
     const {POST} = await import('../app/api/operations/orders/route.ts');
     const {POST:publicPost} = await import('../app/api/public/orders/route.ts');
     const {GET} = await import('../app/api/operations/state/route.ts');
-    const {deliveryPayment, createOrder:realCreate, getOperationSnapshot:realSnapshot, updateRestaurantSettings:realSettings} = await import('../lib/restaurant-repository.ts');
+    const {deliveryPayment, createOrder:realCreate, getOperationSnapshot:realSnapshot, updateRestaurantSettings:realSettings, recordExternalPayment:realPayment} = await import('../lib/restaurant-repository.ts');
+    const {POST:paymentPost} = await import('../app/api/operations/orders/[orderId]/payment/route.ts');
     const {PATCH:settingsPatch} = await import('../app/api/operations/settings/route.ts');
     const items = [{productId:randomUUID(),variantId:randomUUID(),quantity:1}];
     const delivery = {fulfillment:'delivery',sendToKitchen:true,items,customer:{name:'Sintético',phone:'999999999'},delivery:{addressLine1:'Rua sintética 123'},expectedPaymentMethod:'cash',deliveryFeeCents:300,cashTenderedCents:10000};
@@ -101,6 +104,54 @@ async function unit() {
     };
     assert.equal((await realSettings({...settings,defaultDeliveryFeeCents:20000})).defaultDeliveryFeeCents,20000);
     assert.equal((await realSettings(settings)).defaultDeliveryFeeCents,300,'corpo antigo preserva a taxa');
+    const paymentWrites = [], ledgerAmounts = [];
+    let paidCents = 0;
+    globalThis.channelTest.recordPayment = realPayment;
+    globalThis.channelTest.salePayment = (...args) => ledgerAmounts.push(args[5]);
+    globalThis.channelTest.transaction = callback => callback({query:async(sql,values) => {
+      if(sql.startsWith('SELECT o.id')) {
+        assert(sql.includes('o.restaurant_id = $2 FOR UPDATE'));
+        assert.equal(values[1],'synthetic-tenant');
+        return {rows:[{id:'synthetic-cash',status:'confirmed',fulfillment:'delivery',total_cents:6300,paid_cents:paidCents}]};
+      }
+      paymentWrites.push({sql,values});
+      return {rows:sql.startsWith('INSERT INTO payments') ? [{id:'synthetic-payment'}] : []};
+    }});
+    role = 'delivery';
+    const receive = body => paymentPost(request(body),{params:Promise.resolve({orderId:'synthetic-cash'})});
+    for(const [body,message] of [
+      [{method:'Pix',receivedCents:10000},'Valor entregue só para pagamento em dinheiro.'],
+      [{method:'Dinheiro',receivedCents:5000},'maior ou igual ao total'],
+      [{method:'Dinheiro',receivedCents:1000001},'no máximo R$ 10.000,00'],
+      ...[1.5,-1,null,'10000'].map(receivedCents=>[{method:'Dinheiro',receivedCents},'']),
+    ]) {
+      paymentWrites.length=0;ledgerAmounts.length=0;
+      const response=await receive(body);
+      assert.equal(response.status,400);
+      assert((await response.json()).error.includes(message));
+      assert.equal(paymentWrites.length,0,'recusa não grava pagamento/evento');
+      assert.equal(ledgerAmounts.length,0,'recusa não lança no razão');
+    }
+    const cashResponse=await receive({method:'Dinheiro',receivedCents:10000});
+    assert.equal(cashResponse.status,200);
+    assert.equal((await cashResponse.json()).changeCents,3700);
+    assert.deepEqual(paymentWrites.find(row=>row.sql.startsWith('INSERT INTO payments')).values,['synthetic-cash','cash',6300,10000,3700]);
+    assert.deepEqual(ledgerAmounts,[6300],'razão recebe só o líquido');
+    const event=JSON.parse(paymentWrites.find(row=>row.sql.startsWith('INSERT INTO order_events')).values[2]);
+    assert.equal(event.receivedCents,10000);assert.equal(event.changeCents,3700);assert.equal(event.amountCents,6300);
+    for(const method of ['Dinheiro','Pix']) {
+      paymentWrites.length=0;ledgerAmounts.length=0;
+      assert.equal((await receive({method})).status,200);
+      assert.deepEqual(paymentWrites.find(row=>row.sql.startsWith('INSERT INTO payments')).values.slice(2),[6300,6300,0]);
+    }
+    paymentWrites.length=0;paidCents=6300;
+    const duplicate=await receive({method:'Dinheiro',receivedCents:10000});
+    assert.equal(duplicate.status,400);assert.equal((await duplicate.json()).error,'Este pedido já está pago.');assert.equal(paymentWrites.length,0);
+    paidCents=800;paymentWrites.length=0;ledgerAmounts.length=0;
+    assert.equal((await receive({method:'Dinheiro',receivedCents:10000})).status,200);
+    assert.deepEqual(paymentWrites.find(row=>row.sql.startsWith('INSERT INTO payments')).values.slice(2),[5500,10000,4500]);
+    assert.deepEqual(ledgerAmounts,[5500]);
+    console.log('PASS GF-028d unit: dinheiro 100/63/37; líquido no razão; eventos; Pix/menor/teto/tipos recusados sem escrita; corpo antigo; já pago; saldo parcial (sem banco).');
     console.log('PASS unit: discriminated channels, legacy body, required fields, caps, cash validation, default fee, persisted fees/payment intent, service by channel, public stripping, role visibility, settings cap/legacy settings and nonnegative change (no database).');
   } finally {hook.deregister(); delete globalThis.channelTest;}
 }
@@ -122,6 +173,8 @@ async function integration() {
     assert.equal(columns.length,3,'0019 não aplicada'); // No writes before preflight.
     const current = (await db.query("SELECT id,default_delivery_fee_cents,service_rate_basis_points FROM restaurants WHERE slug='cantina-modelo'")).rows[0];
     assert.ok(current,'Cantina Modelo ausente'); rid=current.id;
+    const shift=(await db.query('SELECT id FROM cash_shifts WHERE restaurant_id=$1 AND closed_at IS NULL',[rid])).rows[0];
+    assert.ok(shift,'GF-028d exige caixa já aberto; o teste não cria turno.');
     await db.query("INSERT INTO menu_products(id,restaurant_id,name,category,kitchen_sector) VALUES($1,$2,$3,'QA','Cozinha')",[ids.product,rid,prefix]);
     await db.query("INSERT INTO menu_variants(id,product_id,name,price_cents,packaging_cost_cents,recipe_cost_complete) VALUES($1,$2,'Sintético',6000,0,true)",[ids.variant,ids.product]);
     const number = (await db.query('SELECT n FROM generate_series(150,200) n WHERE NOT EXISTS(SELECT 1 FROM dining_tables WHERE restaurant_id=$1 AND number=n) ORDER BY (n=199) DESC,n LIMIT 1',[rid])).rows[0]?.n;
@@ -198,6 +251,25 @@ async function integration() {
     const settingsResponse=await call('/api/operations/settings',{name:'Configuração sintética',whatsapp:'',serviceRate:10,defaultDeliveryFeeCents:20001},'manager',null,'PATCH');
     assert.equal(settingsResponse.status,400);assert.ok(settingsResponse.body.error.includes('R$ 200,00'));
     assert.equal((await db.query('SELECT default_delivery_fee_cents FROM restaurants WHERE id=$1',[rid])).rows[0].default_delivery_fee_cents,beforeFee);
+    const paymentPath=`/api/operations/orders/${cash.id}/payment`;
+    for(const body of [{method:'Pix',receivedCents:10000},{method:'Dinheiro',receivedCents:5000},{method:'Dinheiro',receivedCents:1000001}]) {
+      assert.equal((await call(paymentPath,body,'delivery')).status,400);
+      assert.equal((await db.query('SELECT count(*)::int AS n FROM payments WHERE order_id=$1',[cash.id])).rows[0].n,0);
+    }
+    const expectedCash=async()=>Number((await db.query("SELECT s.opening_cents+COALESCE((SELECT sum(l.debit_cents-l.credit_cents) FROM finance_lines l JOIN finance_entries e ON e.id=l.entry_id JOIN finance_accounts a ON a.id=l.account_id WHERE e.cash_shift_id=s.id AND a.code='cash' AND e.source_type<>'shift_open'),0) AS expected FROM cash_shifts s WHERE s.id=$1",[shift.id])).rows[0].expected);
+    const beforeCash=await expectedCash();
+    const paid=await call(paymentPath,{method:'Dinheiro',receivedCents:10000},'delivery');
+    assert.equal(paid.status,200);assert.equal(paid.body.changeCents,3700);
+    const payment=(await db.query('SELECT id,amount_cents,received_cents,change_cents,cash_shift_id FROM payments WHERE order_id=$1',[cash.id])).rows[0];
+    assert.deepEqual([payment.amount_cents,payment.received_cents,payment.change_cents].map(Number),[6300,10000,3700]);
+    assert.equal(payment.cash_shift_id,shift.id);assert.equal(await expectedCash()-beforeCash,6300);
+    const alreadyPaid=await call(paymentPath,{method:'Dinheiro',receivedCents:10000},'delivery');
+    assert.equal(alreadyPaid.status,400);assert.equal(alreadyPaid.body.error,'Este pedido já está pago.');
+    const legacy=await create({...delivery,expectedPaymentMethod:'cash',cashTenderedCents:10000});
+    assert.equal((await call(`/api/operations/orders/${legacy.id}/payment`,{method:'Dinheiro'},'delivery')).status,200);
+    const legacyPayment=(await db.query('SELECT amount_cents,received_cents,change_cents FROM payments WHERE order_id=$1',[legacy.id])).rows[0];
+    assert.deepEqual(Object.values(legacyPayment).map(Number),[6300,6300,0]);
+    console.log('PASS GF-028d integração: 100/63/37 persistido, caixa líquido +6300, recusas sem pagamento, corpo antigo e já pago.');
     console.log('PASS channel-orders: T-DB-1..6; API channels, totals, cash, caps, idempotency, roles and public compatibility. courier lifecycle; T-API-16 settings cap.');
   } finally {
     // Also recover fixture orders after a response/transport failure, by exact product id.
@@ -205,8 +277,10 @@ async function integration() {
       const found=(await db.query('SELECT DISTINCT order_id FROM order_items WHERE product_id=$1',[ids.product])).rows.map(row=>row.order_id);
       const all=[...new Set([...orders,...found])];
       if(all.length) {
+        const entries=(await db.query('SELECT finance_entry_id FROM payments WHERE order_id=ANY($1::uuid[]) AND finance_entry_id IS NOT NULL',[all])).rows.map(row=>row.finance_entry_id);
         await db.query('DELETE FROM inventory_movements WHERE order_id=ANY($1::uuid[])',[all]);
         await db.query('DELETE FROM orders WHERE id=ANY($1::uuid[])',[all]);
+        if(entries.length) await db.query('DELETE FROM finance_entries WHERE id=ANY($1::uuid[]) AND restaurant_id=$2',[entries,rid]);
       }
       await db.query('DELETE FROM menu_products WHERE id=$1',[ids.product]);
       await db.query('DELETE FROM dining_tables WHERE id=$1',[ids.table]);
