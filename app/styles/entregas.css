@@ -1,6 +1,7 @@
-﻿.deliveries-page .delivery-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 24px; }
-.deliveries-page .delivery-tabs button { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 10px 14px; border: 1px solid var(--core-border, #d4d4d4); border-radius: 12px; background: var(--core-surface, #fff); font-weight: 600; }
-.deliveries-page .delivery-tabs button[aria-pressed="true"] { background: var(--core-text, #171717); color: #fff; }
+.deliveries-page { --delivery-ok: #1f7a4d; --delivery-warn: #8a5300; }
+.deliveries-page .delivery-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 24px; }
+.deliveries-page .delivery-tabs button { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 10px 14px; border: 1px solid var(--core-border, #d4d4d4); border-radius: 12px; background: var(--core-canvas); font-weight: 600; }
+.deliveries-page .delivery-tabs button[aria-pressed="true"] { background: var(--core-ink); color: #fff; }
 .deliveries-page .delivery-tabs span { min-width: 20px; font-variant-numeric: tabular-nums; }
 .deliveries-page .delivery-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
 .deliveries-page .delivery-card { min-width: 0; padding: 20px; overflow-wrap: anywhere; }
@@ -15,11 +16,11 @@
 .deliveries-page .delivery-links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
 .deliveries-page .delivery-links a { flex: 1; text-align: center; justify-content: center; }
 .deliveries-page .delivery-payment { display: grid; gap: 12px; margin-top: 20px; }
-.deliveries-page .delivery-paid { color: #166534; font-size: 18px; font-weight: 700; }
-.deliveries-page .delivery-due { color: #92400e; font-size: 20px; font-weight: 700; }
+.deliveries-page .delivery-paid { color: var(--delivery-ok); font-size: 18px; font-weight: 700; }
+.deliveries-page .delivery-due { color: var(--delivery-warn); font-size: 20px; font-weight: 700; }
 .deliveries-page .delivery-action { width: 100%; justify-content: center; margin-top: 20px; }
 .deliveries-page button, .deliveries-page a { min-height: 44px; }
 .deliveries-page button:disabled { opacity: .6; cursor: wait; }
-.deliveries-page :is(button, a):focus-visible { outline: 3px solid var(--core-text, #171717); outline-offset: 3px; }
+.deliveries-page :is(button, a):focus-visible { outline: 3px solid var(--core-ink); outline-offset: 3px; }
 .deliveries-page .delivery-empty { grid-column: 1 / -1; }
 @media (min-width: 768px) { .deliveries-page .delivery-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useRef, useState } from "react";
 import { Bike, Check, MapPin, Phone } from "lucide-react";
@@ -7,7 +7,6 @@ import { Topbar } from "@/components/shared/blocos";
 import { ExternalPaymentAction } from "@/components/external-payment";
 import { useRestaurant } from "@/lib/restaurant-store";
 import { money, orderTotal, type Order } from "@/lib/domain";
-import "@/app/styles/entregas.css";
 
 const tabs = [
   { id: "ready", label: "Prontos", empty: "Nenhuma entrega pronta.", statuses: ["ready"] },
@@ -25,7 +24,7 @@ function DeliveryPayment({ order }: { order: Order }) {
 }
 
 function DeliveryAddress({ order }: { order: Order }) {
-  if (!order.delivery) return <p className="delivery-private">Endereço visível só para o entregador</p>;
+  if (!order.delivery) return <p className="delivery-private">Endereço visível só para quem faz a entrega</p>;
   const address = [order.delivery.addressLine1, order.delivery.neighborhood].filter(Boolean).join(", ");
   const phone = order.customerPhone?.replace(/[^+\d]/g, "");
   return <div className="delivery-address"><MapPin size={20} aria-hidden="true" />
