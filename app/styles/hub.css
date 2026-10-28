@@ -1,0 +1,40 @@
+.access-hub .access-hub-card { border-radius: var(--radius-card); min-height: 44px; }
+.access-hub .access-hub-card h2 { font-size: 18px; font-weight: 650; color: var(--core-ink); }
+.access-hub .access-hub-card p { font-size: 13px; color: var(--core-muted); line-height: 1.5; }
+.access-hub .access-hub-icon { border-radius: var(--radius-control); background: var(--core-accent-soft); color: var(--core-ink); }
+.access-hub .access-hub-actions { min-width: 0; }
+.access-hub .access-hub-actions > a, .access-hub .access-hub-actions > button { min-height: 44px; justify-content: center; }
+.access-hub .access-hub-brand p { color: var(--core-ink); }
+.access-hub .access-hub-card:hover { border-color: var(--core-muted); }
+.access-hub .access-hub-card:focus-visible { outline: 3px solid var(--core-ink); outline-offset: 3px; }
+.login-preparo { display: grid; grid-template-columns: minmax(0, 1fr); min-height: 100svh; background: var(--core-canvas); color: var(--core-ink); }
+.login-preparo .login-form-wrap { min-width: 0; padding: 32px 20px; align-items: center; }
+.login-preparo .login-card { width: min(100%, 440px); padding: 28px; border: 1px solid var(--core-border); border-radius: var(--radius-card); box-shadow: none; }
+.login-preparo .login-back { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; color: var(--core-muted); font-size: 13px; }
+.login-preparo .login-restaurant { display: flex; align-items: center; gap: 12px; margin: 16px 0 24px; }
+.login-preparo .login-restaurant img { width: 56px; height: 56px; object-fit: contain; border-radius: var(--radius-control); flex-shrink: 0; }
+.login-preparo .login-restaurant p { font-size: 18px; font-weight: 650; color: var(--core-ink); overflow-wrap: anywhere; }
+.login-preparo .login-card h1 { font-size: 24px; font-weight: 650; line-height: 1.25; }
+.login-preparo .login-card > p { color: var(--core-muted); font-size: 15px; line-height: 1.5; margin: 8px 0 24px; }
+.login-preparo .login-modes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; padding: 4px; border-radius: var(--radius-control); background: var(--core-surface-muted); }
+.login-preparo .login-modes button { min-height: 44px; border-radius: var(--radius-chip); font-weight: 600; color: var(--core-muted); }
+.login-preparo .login-modes button[aria-pressed="true"] { background: var(--core-canvas); color: var(--core-ink); box-shadow: 0 1px 2px var(--core-border); }
+.login-preparo .login-card label > span { color: var(--core-ink); font-size: 13px; }
+.login-preparo .login-card input { min-height: 48px; font-size: 16px; border-radius: var(--radius-control); border-color: var(--core-border); background: var(--core-canvas); color: var(--core-ink); }
+.login-preparo .login-card input:focus-visible, .login-preparo :is(button, a):focus-visible { outline: 3px solid var(--core-accent); outline-offset: 3px; }
+.login-preparo .login-submit { display: flex; width: 100%; min-height: 48px; justify-content: center; gap: 8px; margin-top: 24px; }
+.login-preparo .login-feedback { display: flex; align-items: flex-start; gap: 8px; padding: 12px; margin-top: 20px; border: 1px solid currentColor; border-radius: var(--radius-control); font-size: 14px; line-height: 1.5; }
+.login-preparo .login-feedback svg { flex-shrink: 0; margin-top: 1px; }
+.login-preparo .login-feedback-error { color: var(--danger); background: var(--danger-soft); }
+.login-preparo .login-feedback-warn { color: var(--warn); background: var(--warn-soft); }
+.login-preparo .login-card > .login-help { margin: 16px 0 0; font-size: 13px; }
+.login-preparo button:disabled { opacity: .65; cursor: wait; }
+@media (max-width: 430px) {
+  .access-hub { padding: 20px; }
+  .access-hub .access-hub-header { align-items: stretch; }
+  .access-hub .access-hub-actions > a, .access-hub .access-hub-actions > button { flex: 1; }
+  .login-preparo .login-form-wrap { padding: 20px 16px; }
+  .login-preparo .login-card { padding: 20px; }
+  .login-preparo .login-card h1 { font-size: 22px; }
+}
+@media (prefers-reduced-motion: reduce) { .access-hub .access-hub-card { transition: none; } }

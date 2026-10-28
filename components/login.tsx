@@ -1,11 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import { ArrowLeft, ArrowRight, LockKeyhole, Sparkles } from "lucide-react";
-import { toast } from "sonner";
-import { Brand } from "@/components/shared/blocos";
+import { useEffect, useRef, useState } from "react";
+import { ArrowLeft, ArrowRight, CircleAlert, LockKeyhole } from "lucide-react";
 import { type StaffRole, useRestaurant } from "@/lib/restaurant-store";
 
 export function destinationForRole(role: StaffRole) {
@@ -30,22 +29,44 @@ export function StaffGate({ children, roles }: { children: React.ReactNode; role
 
 export function ServerLogin() {
   const router = useRouter();
-  const { login } = useRestaurant();
+  const { login, state, branding } = useRestaurant();
   const [user, setUser] = useState("");
   const [password, setPassword] = useState("");
   const [mode, setMode] = useState<"owner" | "staff">("owner");
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<{ message: string; warning: boolean } | null>(null);
+  const submitting = useRef(false);
   useEffect(() => { if (sessionStorage.getItem("restaurante-return-to")?.startsWith("/operacao")) requestAnimationFrame(() => setMode("staff")); }, []);
   const submit = async (event: React.FormEvent) => {
-    event.preventDefault(); setBusy(true);
-    const result = await login(user, password);
-    setBusy(false);
-    if (!result.ok) { toast.error(result.message); return; }
-    const requested = sessionStorage.getItem("restaurante-return-to");
-    const destination = requested || destinationForRole(result.role ?? "admin");
-    sessionStorage.removeItem("restaurante-return-to");
-    router.push(destination);
+    event.preventDefault();
+    if (submitting.current) return;
+    submitting.current = true; setBusy(true); setError(null);
+    try {
+      const result = await login(user, password);
+      if (!result.ok) {
+        const warning = result.message.startsWith("Muitas tentativas.");
+        const message = warning ? "Muitas tentativas. Espere alguns minutos e tente de novo." : mode === "staff" ? "Nome ou PIN inválido. Confira com o gerente." : "Usuário ou senha inválidos. Confira seus dados.";
+        setError({ message, warning });
+        return;
+      }
+      const requested = sessionStorage.getItem("restaurante-return-to");
+      const destination = requested || destinationForRole(result.role ?? "admin");
+      sessionStorage.removeItem("restaurante-return-to");
+      router.push(destination);
+    } catch { setError({ message: "Não foi possível entrar. Confira a conexão e tente novamente.", warning: false }); }
+    finally { submitting.current = false; setBusy(false); }
   };
   const owner = mode === "owner";
-  return <main className="login-page"><section className="login-brand"><Brand dark /><div><span className="live-pill"><Sparkles size={13} /> Operação conectada</span><h1>Uma fila.<br />Uma operação.</h1><p>Pedidos, cozinha e caixa trabalham sobre a mesma base em tempo real.</p></div></section><section className="login-form-wrap"><form onSubmit={submit} className="login-card"><LoginBackLink /><div className="login-lock"><LockKeyhole size={22} /></div><h2>{owner ? "Entrar na Gestão" : "Iniciar turno"}</h2><p>{owner ? "Acesse como responsável para configurar o restaurante e a equipe." : "Digite seu nome como o responsável cadastrou e o seu PIN"}</p><div className="mb-5 grid grid-cols-2 gap-2"><button type="button" onClick={() => setMode("owner")} className={owner ? "category-chip active" : "category-chip"}>Responsável</button><button type="button" onClick={() => setMode("staff")} className={!owner ? "category-chip active" : "category-chip"}>Equipe</button></div><label><span>{owner ? "Usuário administrador" : "Nome"}</span><input value={user} onChange={event => setUser(event.target.value)} autoComplete="username" autoCapitalize={owner ? "none" : "words"} placeholder={owner ? "Seu usuário" : "Seu nome"} required /></label><label><span>{owner ? "Senha" : "PIN"}</span><input value={password} onChange={event => setPassword(owner ? event.target.value : event.target.value.replace(/\D/g, "").slice(0, 6))} inputMode={owner ? "text" : "numeric"} type="password" autoComplete="current-password" placeholder={owner ? "Sua senha" : "4 a 6 números"} required /></label><button className="primary-button w-full justify-center" type="submit" disabled={busy}>{busy ? "Entrando…" : owner ? "Entrar na gestão" : "Entrar no turno"} <ArrowRight size={18} /></button><p className="mt-4 text-center text-xs text-neutral-400">{owner ? "Use o usuário e a senha administrativos configurados no deploy." : "O PIN é criado pelo responsável ao cadastrar cada pessoa da equipe."}</p></form></section></main>;
+  return <main className="login-page login-preparo"><section className="login-form-wrap"><form onSubmit={submit} className="login-card" aria-busy={busy}>
+    <LoginBackLink />
+    <div className="login-restaurant"><Image src={branding.logoUrl || "/restio-mark.svg"} alt={`Logo de ${state.settings.name}`} width={56} height={56} unoptimized={Boolean(branding.logoUrl)} priority /><p>{state.settings.name}</p></div>
+    <h1>{owner ? "Entrar na gestão" : "Iniciar turno"}</h1>
+    <p>{owner ? "Acesse como responsável para cuidar do restaurante." : "Digite seu nome como o responsável cadastrou e o seu PIN."}</p>
+    <div className="login-modes" role="group" aria-label="Tipo de acesso">{(["owner", "staff"] as const).map(value => <button key={value} type="button" disabled={busy} aria-pressed={mode === value} onClick={() => { setMode(value); setError(null); }}>{value === "owner" ? "Responsável" : "Equipe"}</button>)}</div>
+    <label><span>{owner ? "Usuário administrador" : "Nome"}</span><input value={user} onChange={event => setUser(event.target.value)} disabled={busy} autoComplete="username" autoCapitalize={owner ? "none" : "words"} placeholder={owner ? "Seu usuário" : "Seu nome"} required /></label>
+    <label><span>{owner ? "Senha" : "PIN"}</span><input value={password} onChange={event => setPassword(owner ? event.target.value : event.target.value.replace(/\D/g, "").slice(0, 6))} disabled={busy} inputMode={owner ? "text" : "numeric"} type="password" autoComplete="current-password" placeholder={owner ? "Sua senha" : "4 a 6 números"} required /></label>
+    {error && <div className={`login-feedback ${error.warning ? "login-feedback-warn" : "login-feedback-error"}`} role="alert"><CircleAlert size={20} aria-hidden="true" /><p>{error.message}</p></div>}
+    <button className="primary-button login-submit" type="submit" disabled={busy}>{busy ? "Entrando…" : "Entrar"}<ArrowRight size={18} aria-hidden="true" /></button>
+    <p className="login-help">{owner ? "Use o usuário e a senha administrativos configurados no deploy." : "O PIN é criado pelo responsável ao cadastrar cada pessoa da equipe."}</p>
+  </form></section></main>;
 }
