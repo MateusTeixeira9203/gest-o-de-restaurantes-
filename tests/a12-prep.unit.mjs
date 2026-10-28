@@ -42,6 +42,10 @@ test('orderCode identifica entrega, balcão e mesa, preenchendo NN sem truncar m
   assert.equal(orderCode({ fulfillment: 'dine_in', orderNumber: 45, tableNumber: 123 }), 'Mesa 123 · #45');
 });
 
+test('mesa sem número usa marcador desconhecido', () => {
+  assert.equal(orderCode({fulfillment:'dine_in',orderNumber:46,tableNumber:null}), 'Mesa ? · #46');
+});
+
 test('fila inclui confirmedAt e projeta somente o contrato da cozinha, sem endereço/telefone', async () => {
   const confirmed = '2026-10-28T12:01:00.000Z';
   configure({ query: async (sql, params) => {

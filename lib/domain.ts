@@ -83,7 +83,7 @@ export const money = (value: number) => value.toLocaleString("pt-BR", { style: "
 export function orderCode(order: { orderNumber: number; fulfillment: "dine_in" | "pickup" | "delivery"; tableNumber: number | null }) {
   if (order.fulfillment === "delivery") return `E-${order.orderNumber}`;
   if (order.fulfillment === "pickup") return `B-${order.orderNumber}`;
-  return `Mesa ${String(order.tableNumber).padStart(2, "0")} · #${order.orderNumber}`;
+  return `Mesa ${order.tableNumber == null ? "?" : String(order.tableNumber).padStart(2, "0")} · #${order.orderNumber}`;
 }
 export const orderTotal = (order: Order) => order.items.reduce((sum, item) => sum + item.quantity * (item.unitPrice + item.addons.reduce((a, b) => a + b.price, 0)), 0);
 export const tableTotal = (state: RestaurantState, tableId: string) => state.orders.filter(o => o.tableId === tableId && !["cancelled", "completed"].includes(o.status)).reduce((sum, order) => sum + Math.max(0, (order.totalCents ?? Math.round(orderTotal(order) * 100)) - (order.paidCents ?? 0)) / 100, 0);
