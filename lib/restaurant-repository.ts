@@ -131,6 +131,7 @@ export type KitchenTicket = {
   customerName: string | null;
   estimatedMinutes: number | null;
   createdAt: string;
+  confirmedAt: string | null;
   notes: string | null;
   items: Array<{
     productName: string;
@@ -856,10 +857,11 @@ export async function getKitchenQueue(sector?: string) {
     customer_name: string | null;
     estimated_minutes: number | null;
     created_at: string;
+    confirmed_at: string | null;
     notes: string | null;
     items: KitchenTicket["items"];
   }>(
-    `SELECT kt.id AS ticket_id, o.id AS order_id, o.order_number, kt.queue_number, kt.kitchen_sector, kt.status AS ticket_status, o.fulfillment, t.number AS table_number, o.customer_name, o.estimated_minutes, o.created_at, o.notes,
+    `SELECT kt.id AS ticket_id, o.id AS order_id, o.order_number, kt.queue_number, kt.kitchen_sector, kt.status AS ticket_status, o.fulfillment, t.number AS table_number, o.customer_name, o.estimated_minutes, o.created_at, o.confirmed_at, o.notes,
       COALESCE(json_agg(json_build_object('productName', oi.product_name, 'variantName', oi.variant_name, 'quantity', oi.quantity, 'addons', oi.addons, 'note', oi.note) ORDER BY oi.created_at) FILTER (WHERE oi.kitchen_sector = kt.kitchen_sector), '[]'::json) AS items
      FROM kitchen_tickets kt JOIN orders o ON o.id = kt.order_id LEFT JOIN dining_tables t ON t.id = o.table_id LEFT JOIN order_items oi ON oi.order_id = o.id
      WHERE kt.restaurant_id = $1 AND kt.status <> 'cancelled' AND o.status IN ('confirmed','preparing','ready') AND ($2::text IS NULL OR kt.kitchen_sector = $2)
@@ -879,6 +881,7 @@ export async function getKitchenQueue(sector?: string) {
     customerName: ticket.customer_name,
     estimatedMinutes: ticket.estimated_minutes,
     createdAt: ticket.created_at,
+    confirmedAt: ticket.confirmed_at,
     notes: ticket.notes,
     items: ticket.items,
   }));
@@ -1419,8 +1422,8 @@ export async function updateDeliveryStatus(
       [orderId, nextStatus, status],
     );
     await client.query(
-      "UPDATE delivery_details SET departed_at = CASE WHEN $2 = 'out_for_delivery' THEN now() ELSE departed_at END, delivered_at = CASE WHEN $2 = 'delivered' THEN now() ELSE delivered_at END WHERE order_id = $1",
-      [orderId, status],
+      "UPDATE delivery_details SET departed_at = CASE WHEN $2 = 'out_for_delivery' THEN now() ELSE departed_at END, courier_name = CASE WHEN $2 = 'out_for_delivery' THEN $3 ELSE courier_name END, delivered_at = CASE WHEN $2 = 'delivered' THEN now() ELSE delivered_at END WHERE order_id = $1",
+      [orderId, status, actor.name],
     );
     await client.query(
       "INSERT INTO order_events (order_id, event_type, actor_role, detail) VALUES ($1,$2,$3,$4::jsonb)",
