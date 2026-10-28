@@ -1,8 +1,5 @@
-import { listStaffMembers } from "@/lib/restaurant-repository";
-
-export const dynamic = "force-dynamic";
-
-export async function GET() {
-  const team = await listStaffMembers(true);
-  return Response.json({ team: team.map(member => ({ id: member.id, name: member.name, role: member.role })) }, { headers: { "Cache-Control": "no-store" } });
+export function GET() {
+  return Response.json({ error: 'Nao encontrado.' }, { status: 404 });
 }
+
+export { GET as POST, GET as PUT, GET as PATCH, GET as DELETE };

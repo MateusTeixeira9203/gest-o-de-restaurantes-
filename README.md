@@ -1,4 +1,4 @@
-# Gestor Food
+# Restrio
 
 MVP local 0.2: operação, aprovação de pedidos, caixa, financeiro gerencial, custos e personalização por restaurante.
 
@@ -27,7 +27,7 @@ pnpm build
 pnpm test:integration
 ```
 
-O contexto vem de `restaurant_domains.hostname`. Localhost usa `RESTAURANT_SLUG` (padrão `patos-lanches`); previews oficiais usam `VERCEL_URL`. A sessão é vinculada ao restaurante. A expansão comercial ainda exige concluir os itens de segurança/onboarding do manual.
+O contexto vem de `restaurant_domains.hostname`. Localhost usa `RESTAURANT_SLUG` (padrão `cantina-modelo`); previews oficiais usam `VERCEL_URL`. A sessão é vinculada ao restaurante. A expansão comercial ainda exige concluir os itens de segurança/onboarding do manual.
 
 ---
 

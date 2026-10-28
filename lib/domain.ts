@@ -40,6 +40,9 @@ export interface Order {
   serviceCents?: number;
   totalCents?: number;
   paidCents?: number;
+  expectedPaymentMethod?: ExpectedPaymentMethod | null;
+  cashTenderedCents?: number | null;
+  changeCents?: number | null;
   servedAt?: string | null;
   id: string;
   number: number;
@@ -48,6 +51,7 @@ export interface Order {
   source: "waiter" | "qr";
   fulfillment?: "dine_in" | "pickup" | "delivery";
   customerName?: string;
+  customerPhone?: string;
   delivery?: { addressLine1: string; neighborhood?: string; reference?: string };
   paid?: boolean;
   createdAt: string;
@@ -58,7 +62,7 @@ export interface StockItem { id: string; name: string; category: string; quantit
 export interface StockMovement { id: string; stockId: string; type: "Entrada" | "Venda" | "Ajuste" | "Perda" | "Estorno"; quantity: number; createdAt: string; reference: string }
 export interface Payment { id: string; method: PaymentMethod; amount: number }
 export interface Sale { id: string; tableId: string; orderIds: string[]; subtotal: number; service: number; total: number; payments: Payment[]; createdAt: string }
-export interface RestaurantSettings { name: string; whatsapp: string; serviceRate: number; tableCount: number }
+export interface RestaurantSettings { defaultDeliveryFeeCents?: number; name: string; whatsapp: string; serviceRate: number; tableCount: number }
 export interface RestaurantState {
   settings: RestaurantSettings;
   tables: Table[];
@@ -79,6 +83,19 @@ export interface CartItem {
   note?: string;
 }
 
+export type ExpectedPaymentMethod = "pix" | "cash" | "debit" | "credit" | "prepaid";
+export type ChannelOrderInput = { items: CartItem[]; notes?: string } & (
+  { fulfillment: "pickup"; customer: { name: string } } |
+  { fulfillment: "delivery"; customer: { name: string; phone: string };
+    delivery: { addressLine1: string; neighborhood?: string; reference?: string };
+    deliveryFeeCents?: number; expectedPaymentMethod: ExpectedPaymentMethod; cashTenderedCents?: number }
+);
+
 export const money = (value: number) => value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+export function orderCode(order: { orderNumber: number; fulfillment: "dine_in" | "pickup" | "delivery"; tableNumber: number | null }) {
+  if (order.fulfillment === "delivery") return `E-${order.orderNumber}`;
+  if (order.fulfillment === "pickup") return `B-${order.orderNumber}`;
+  return `Mesa ${order.tableNumber == null ? "?" : String(order.tableNumber).padStart(2, "0")} · #${order.orderNumber}`;
+}
 export const orderTotal = (order: Order) => order.items.reduce((sum, item) => sum + item.quantity * (item.unitPrice + item.addons.reduce((a, b) => a + b.price, 0)), 0);
 export const tableTotal = (state: RestaurantState, tableId: string) => state.orders.filter(o => o.tableId === tableId && !["cancelled", "completed"].includes(o.status)).reduce((sum, order) => sum + Math.max(0, (order.totalCents ?? Math.round(orderTotal(order) * 100)) - (order.paidCents ?? 0)) / 100, 0);

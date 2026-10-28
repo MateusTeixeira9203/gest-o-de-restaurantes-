@@ -1,0 +1,20 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "entry": [
+    "scripts/**/*.mjs",
+    "scripts/**/*.cjs",
+    "tests/**/*.mjs",
+    "eslint.quality.config.mjs"
+  ],
+  "ignore": [
+    "components/ui/**",
+    "vendor/**",
+    "examples/**",
+    "build/**",
+    ".maestri/**",
+    "hooks/use-mobile.ts"
+  ],
+  "ignoreBinaries": [
+    "flock"
+  ]
+}

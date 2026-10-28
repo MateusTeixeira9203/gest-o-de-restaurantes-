@@ -304,7 +304,7 @@ async function execute(
     const p=(await client.query("SELECT series_id,cancelled_at FROM purchases WHERE id=$1 AND restaurant_id=$2 FOR UPDATE",[c.purchaseId,rid])).rows[0];
     if(!p)throw new Error('Compra não encontrada.');if(p.cancelled_at)return {ok:true};
     if((await client.query("SELECT 1 FROM purchase_lines WHERE purchase_id=$1 AND received_quantity>0",[c.purchaseId])).rowCount)throw new Error('Compra com mercadoria recebida: exige devolução e conferência de estoque.');
-    if((await client.query("SELECT 1 FROM finance_documents d JOIN finance_settlements s ON s.document_id=d.id WHERE d.series_id=$1 AND s.reversed_at IS NULL",[p.series_id])).rowCount)throw new Error('Estorne as baixas antes de cancelar a compra.');
+    if((await client.query("SELECT 1 FROM finance_documents d JOIN finance_settlements s ON s.document_id=d.id WHERE d.series_id=$1 AND s.reversed_at IS NULL",[p.series_id])).rowCount)throw new Error('Estorne os pagamentos e recebimentos antes de cancelar a compra.');
     const docs=(await client.query("SELECT id,entry_id FROM finance_documents WHERE series_id=$1 AND cancelled_at IS NULL",[p.series_id])).rows;
     for(const d of docs){await reverseEntry(client,rid,d.entry_id,actor,c.reason);await client.query("UPDATE finance_documents SET cancelled_at=now(),cancellation_reason=$2 WHERE id=$1",[d.id,c.reason]);}
     await client.query("UPDATE purchases SET cancelled_at=now(),cancellation_reason=$2 WHERE id=$1",[c.purchaseId,c.reason]);return {ok:true};
@@ -468,7 +468,7 @@ async function execute(
   }
   if (c.action === "settle_document") {
     if (c.paidOn > businessDate())
-      throw new Error("Uma baixa efetiva não pode estar no futuro.");
+      throw new Error("Informe uma data de pagamento ou recebimento que não esteja no futuro.");
     const doc = (
       await client.query<{
         kind: string;
@@ -525,7 +525,7 @@ async function execute(
         [c.settlementId, rid],
       )
     ).rows[0];
-    if (!settlement) throw new Error("Baixa não encontrada ou já estornada.");
+    if (!settlement) throw new Error("Pagamento ou recebimento não encontrado ou já estornado.");
     const shift =
       settlement.account_code === "cash"
         ? await openShift(client, rid)
@@ -552,7 +552,7 @@ async function execute(
         [c.documentId, rid],
       )
     ).rows[0];
-    if (!doc) throw new Error("Estorne as baixas antes de cancelar a conta.");
+    if (!doc) throw new Error("Estorne os pagamentos e recebimentos antes de cancelar a conta.");
     await reverseEntry(client, rid, doc.entry_id, actor, c.reason, undefined, doc.competence_date > businessDate() ? doc.competence_date : businessDate());
     await client.query(
       "UPDATE finance_documents SET cancelled_at=now(),cancellation_reason=$2 WHERE id=$1",

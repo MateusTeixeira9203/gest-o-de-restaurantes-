@@ -34,7 +34,7 @@ try {
     throw new Error("Teste permitido somente contra servidor local.");
   const rid = (
     await db.query("SELECT id FROM restaurants WHERE slug=$1", [
-      process.env.RESTAURANT_SLUG || "patos-lanches",
+      process.env.RESTAURANT_SLUG || "cantina-modelo",
     ])
   ).rows[0].id;
   await db.query(
@@ -72,6 +72,8 @@ try {
       ],
     );
   }
+  // Neon runs ~0.94 s ahead of this machine; let updated_at precede session issuance.
+  await new Promise(resolve => setTimeout(resolve, 2500));
   const cashier = await call("/api/auth/login", {
     username: `${prefix}-cashier`,
     password: pin,
@@ -276,6 +278,7 @@ try {
   }
   await db.query("DELETE FROM menu_products WHERE id=$1", [ids.product]);
   await db.query("DELETE FROM inventory_items WHERE id=$1", [ids.ingredient]);
+  await db.query("DELETE FROM authentication_attempts WHERE restaurant_id=(SELECT restaurant_id FROM staff_members WHERE id=$1) AND identity_hash IN(SELECT encode(sha256(convert_to(n,'UTF8')),'hex') FROM unnest($2::text[]) n)",[ids.manager,['cashier','kitchen','manager'].map(role=>`${prefix}-${role}`.toLowerCase())]);
   await db.query("DELETE FROM staff_members WHERE id=ANY($1::uuid[])", [
     [ids.cashier, ids.kitchen, ids.manager],
   ]);

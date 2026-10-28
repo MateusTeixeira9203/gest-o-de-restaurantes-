@@ -36,10 +36,12 @@ export async function POST(request: Request) {
   try {
     const payload = orderSchema.parse(await request.json());
     const idempotencyKey = z.string().uuid().parse(request.headers.get("idempotency-key"));
+    // The public schema strips fee and payment intent; the repository uses the restaurant default.
     const order = await createOrder(payload, { idempotencyKey });
     return Response.json({ order }, { status: 201, headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     if (error instanceof z.ZodError) return Response.json({ error: "Dados do pedido inválidos.", details: error.flatten() }, { status: 400 });
+    if (error && typeof error === "object" && "code" in error && error.code === "22003") return Response.json({error: "Valor fora do limite."}, {status: 400});
     const message = error instanceof Error ? error.message : "Não foi possível registrar o pedido.";
     return Response.json({ error: message }, { status: 400 });
   }

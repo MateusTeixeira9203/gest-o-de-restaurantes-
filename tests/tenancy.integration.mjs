@@ -56,11 +56,12 @@ async function req(
 try {
   if (!["localhost", "127.0.0.1"].includes(new URL(base).hostname))
     throw new Error("Teste permitido somente contra servidor local.");
-  source = (
-    await db.query("SELECT id FROM restaurants WHERE slug=$1", [
-      process.env.RESTAURANT_SLUG || "patos-lanches",
+  const sourceRestaurant = (
+    await db.query("SELECT id,name FROM restaurants WHERE slug=$1", [
+      process.env.RESTAURANT_SLUG || "cantina-modelo",
     ])
-  ).rows[0].id;
+  ).rows[0];
+  source = sourceRestaurant.id;
   await db.query(
     "INSERT INTO restaurants(id,slug,name,plan) VALUES($1,$2,$2,'essential')",
     [id, prefix],
@@ -98,7 +99,7 @@ try {
     [variant, product],
   );
   const home = await req("/",null,host);
-  assert.equal(home.status,200);assert.ok(home.body.includes(prefix));assert.ok(!home.body.includes("Patos Lanches"));
+  assert.equal(home.status,200);assert.ok(home.body.includes(prefix));assert.ok(!home.body.includes(sourceRestaurant.name));
   const menu = await req("/api/public/menu", null, host);
   assert.equal(menu.status, 200);
   assert.equal(menu.body.restaurant.name, prefix);
@@ -108,6 +109,8 @@ try {
     (await req("/api/public/menu", null, "unknown-tenant.test")).status,
     503,
   );
+  // Neon runs ~0.94 s ahead of this machine; let updated_at precede session issuance.
+  await new Promise(resolve => setTimeout(resolve, 2500));
   const a = await req("/api/auth/login", { username: prefix, password: pinA });
   assert.equal(a.status, 200);
   assert.equal(
@@ -172,8 +175,8 @@ try {
   );
 } finally {
   await db.query(
-    "DELETE FROM authentication_attempts WHERE identity_hash=encode(sha256($1::bytea),'hex')",
-    [prefix.toLowerCase()],
+    "DELETE FROM authentication_attempts WHERE restaurant_id=ANY($2::uuid[]) AND identity_hash=encode(sha256($1::bytea),'hex')",
+    [prefix.toLowerCase(),[source,id].filter(Boolean)],
   );
   await db.query("DELETE FROM staff_members WHERE id=ANY($1::uuid[])", [
     [staffA, staffB],

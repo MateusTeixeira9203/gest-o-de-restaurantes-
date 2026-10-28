@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Restio — Gestão de restaurantes",
+  title: "Restrio — Gestão de restaurantes",
   description: "Gestão de restaurantes: salão, cozinha, caixa e financeiro.",
   icons: {
     icon: "/favicon.svg?v=restio-1",

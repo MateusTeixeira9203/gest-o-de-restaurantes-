@@ -46,7 +46,7 @@ try {
     throw new Error("Teste permitido somente contra servidor local.");
   rid = (
     await db.query("SELECT id FROM restaurants WHERE slug=$1", [
-      process.env.RESTAURANT_SLUG || "patos-lanches",
+      process.env.RESTAURANT_SLUG || "cantina-modelo",
     ])
   ).rows[0].id;
   assert.equal(
@@ -69,6 +69,8 @@ try {
     "INSERT INTO staff_members(id,restaurant_id,name,role,pin_salt,pin_hash) VALUES($1,$2,$3,'manager',$4,$5)",
     [staff, rid, prefix, salt, scryptSync(pin, salt, 64).toString("hex")],
   );
+  // Neon runs ~0.94 s ahead of this machine; let updated_at precede session issuance.
+  await new Promise(resolve => setTimeout(resolve, 2500));
   cookie = (await call("/api/auth/login", { username: prefix, password: pin }))
     .cookie;
   assert.ok(cookie);
@@ -389,6 +391,7 @@ try {
     await db.query("DELETE FROM cash_shifts WHERE opened_by=$1", [prefix]);
     await db.query("DELETE FROM menu_products WHERE id=$1", [product]);
     await db.query("DELETE FROM dining_tables WHERE id=$1", [table]);
+    await db.query("DELETE FROM authentication_attempts WHERE restaurant_id=$1 AND identity_hash=encode(sha256(convert_to($2,'UTF8')),'hex')",[rid,prefix.toLowerCase()]);
     await db.query("DELETE FROM staff_members WHERE id=$1", [staff]);
     await db.query("COMMIT");
   } catch (e) {
