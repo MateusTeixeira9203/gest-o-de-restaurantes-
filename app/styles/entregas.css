@@ -1,1 +1,25 @@
-/* Reserved for delivery styles (A2). */
+﻿.deliveries-page .delivery-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 24px; }
+.deliveries-page .delivery-tabs button { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 10px 14px; border: 1px solid var(--core-border, #d4d4d4); border-radius: 12px; background: var(--core-surface, #fff); font-weight: 600; }
+.deliveries-page .delivery-tabs button[aria-pressed="true"] { background: var(--core-text, #171717); color: #fff; }
+.deliveries-page .delivery-tabs span { min-width: 20px; font-variant-numeric: tabular-nums; }
+.deliveries-page .delivery-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
+.deliveries-page .delivery-card { min-width: 0; padding: 20px; overflow-wrap: anywhere; }
+.deliveries-page .delivery-card header { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px; }
+.deliveries-page .delivery-card h2 { margin: 8px 0 4px; font-size: 28px; line-height: 1.2; font-weight: 750; }
+.deliveries-page .delivery-address { display: flex; align-items: flex-start; gap: 12px; margin-top: 24px; }
+.deliveries-page .delivery-address > svg { flex-shrink: 0; margin-top: 4px; }
+.deliveries-page .delivery-address > div { min-width: 0; flex: 1; }
+.deliveries-page .delivery-address-text { font-size: 20px; line-height: 1.4; font-weight: 700; }
+.deliveries-page .delivery-reference { margin-top: 8px; font-size: 14px; }
+.deliveries-page .delivery-private { padding: 16px; margin-top: 20px; background: var(--core-surface-muted, #f5f5f5); border-radius: 12px; }
+.deliveries-page .delivery-links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+.deliveries-page .delivery-links a { flex: 1; text-align: center; justify-content: center; }
+.deliveries-page .delivery-payment { display: grid; gap: 12px; margin-top: 20px; }
+.deliveries-page .delivery-paid { color: #166534; font-size: 18px; font-weight: 700; }
+.deliveries-page .delivery-due { color: #92400e; font-size: 20px; font-weight: 700; }
+.deliveries-page .delivery-action { width: 100%; justify-content: center; margin-top: 20px; }
+.deliveries-page button, .deliveries-page a { min-height: 44px; }
+.deliveries-page button:disabled { opacity: .6; cursor: wait; }
+.deliveries-page :is(button, a):focus-visible { outline: 3px solid var(--core-text, #171717); outline-offset: 3px; }
+.deliveries-page .delivery-empty { grid-column: 1 / -1; }
+@media (min-width: 768px) { .deliveries-page .delivery-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

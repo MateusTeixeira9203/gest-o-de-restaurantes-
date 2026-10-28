@@ -48,6 +48,7 @@ export interface Order {
   source: "waiter" | "qr";
   fulfillment?: "dine_in" | "pickup" | "delivery";
   customerName?: string;
+  customerPhone?: string;
   delivery?: { addressLine1: string; neighborhood?: string; reference?: string };
   paid?: boolean;
   createdAt: string;
