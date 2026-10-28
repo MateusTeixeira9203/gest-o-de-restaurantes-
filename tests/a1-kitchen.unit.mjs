@@ -1,4 +1,4 @@
-﻿import assert from 'node:assert/strict';
+import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import {readFileSync} from 'node:fs';
 import {registerHooks} from 'node:module';
@@ -45,12 +45,12 @@ test('sem estimativa fica vermelho só acima de 20 min; nulo nunca usa criação
   assert.equal(ticketTime(ticket, at(-1)).minutes, 0);
   assert.equal(ticketTime({...ticket, status:'ready'}, at(90)).level, 0);
 });
-test('cartões dos três canais têm código, texto, uma ação e aviso de atraso', () => {
+test('cartões dos três canais têm código, texto, ação principal e atalho secundário de atraso', () => {
   for (const [fulfillment, code, label] of [['delivery','E-42','Entrega'],['pickup','B-42','Balcão'],['dine_in','Mesa 04 · #42','Mesa']]) {
     const html = renderToStaticMarkup(React.createElement(TicketCard, {ticket:{...ticket, fulfillment, tableNumber:4},now:at(16),busy:null,advance:async()=>{}}));
     assert.ok(html.includes(code)); assert.ok(html.includes(label));
     assert.ok(html.includes('Muito atrasado')); assert.ok(html.includes('2× Prato sintético'));
-    assert.equal((html.match(/<button/g)||[]).length, 1);
+    assert.equal((html.match(/<button/g)||[]).length, 2);
     assert.ok(html.includes('Começar preparo'));
   }
 });
@@ -74,7 +74,7 @@ test('filtro preserva canal, atrasados vêm antes e empate segue fila sem mutaç
   assert.equal(tickets[0].id, 'recent');
 });
 
-test('ação única mantém os destinos preparing/ready e bloqueia enquanto salva', async () => {
+test('ação principal mantém os destinos preparing/ready e bloqueia enquanto salva', async () => {
   function buttonIn(node) {
     if (!React.isValidElement(node)) return null;
     if (node.type === 'button') return node;
@@ -94,4 +94,27 @@ test('ação única mantém os destinos preparing/ready e bloqueia enquanto salv
   const button = buttonIn(TicketCard({ticket,now:at(16),busy:ticket.id,advance}));
   assert.equal(button.props.disabled, true);
   assert.equal(button.props.children, 'Salvando…');
+});
+
+ test('atalho secundário vai de new direto para ready; colunas móveis não têm altura mínima', () => {
+  const calls = [];
+  function buttons(node) {
+    if (!React.isValidElement(node)) return [];
+    return node.type === 'button' ? [node] : React.Children.toArray(node.props.children).flatMap(buttons);
+  }
+  const props = {ticket, now:at(16), busy:null, advance:(...args) => calls.push(args)};
+  const actions = buttons(TicketCard(props));
+  assert.equal(actions.length, 2);
+  assert.equal(actions[1].props.children, 'Já está pronto');
+  assert.ok(actions[1].props.className.includes('secondary-button'));
+  actions[0].props.onClick(); actions[1].props.onClick();
+  assert.deepEqual(calls, [[ticket.id, 'preparing'], [ticket.id, 'ready']]);
+  assert.ok(buttons(TicketCard({...props, busy:ticket.id})).every(button => button.props.disabled));
+  assert.equal(buttons(TicketCard({...props, ticket:{...ticket,status:'preparing'}})).length, 1);
+  const css = readFileSync(new URL('../app/styles/cozinha.css', import.meta.url), 'utf8');
+  assert.match(css, /@media\(max-width:900px\).*\.kitchen-page \.kanban-column\{min-height:0\}/s);
+  assert.ok(renderToStaticMarkup(React.createElement(TicketCard, props)).includes('<h3>'));
+  for (const file of ['../components/kitchen-board.tsx','../app/styles/cozinha.css','../tests/a1-kitchen.unit.mjs']) {
+    assert.ok(!readFileSync(new URL(file, import.meta.url), 'utf8').includes('\uFEFF'));
+  }
 });

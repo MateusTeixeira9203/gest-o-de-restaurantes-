@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import Link from 'next/link';
 import {useEffect, useState} from 'react';
@@ -6,13 +6,13 @@ import {toast} from 'sonner';
 import {orderCode} from '@/lib/domain';
 import {useRestaurant} from '@/lib/restaurant-store';
 
-type Ticket = ReturnType<typeof useRestaurant>['kitchen'][number];
+type Ticket = ReturnType<typeof useRestaurant>['kitchen'][number] & {confirmedAt?: string | null};
 const channels = {dine_in: 'Mesa', pickup: 'Balcão', delivery: 'Entrega'};
 const readyText = {dine_in: 'Aguardando o garçom levar à mesa', pickup: 'Aguardando retirada no balcão', delivery: 'Aguardando o entregador'};
 const columns = [{status: 'new', label: 'Na fila'}, {status: 'preparing', label: 'Em preparo'}, {status: 'ready', label: 'Prontos para entregar'}] as const;
 
 function ticketTime(ticket: Ticket, now: number) {
-  const confirmed = 'confirmedAt' in ticket && typeof ticket.confirmedAt === 'string' ? Date.parse(ticket.confirmedAt) : NaN;
+  const confirmed = typeof ticket.confirmedAt === 'string' ? Date.parse(ticket.confirmedAt) : NaN;
   if (!now || !Number.isFinite(confirmed)) return {minutes: null, level: 0};
   const elapsed = Math.max(0, (now - confirmed) / 60000);
   const estimate = ticket.estimatedMinutes && ticket.estimatedMinutes > 0 ? ticket.estimatedMinutes : null;
@@ -32,7 +32,7 @@ function TicketCard({ticket, now, busy, advance}: {
 }) {
   const time = ticketTime(ticket, now);
   return <article className={`kitchen-card kitchen-channel-${ticket.fulfillment}`}>
-    <header className="kitchen-channel-band"><span>{channels[ticket.fulfillment]}</span><h2>{orderCode(ticket)}</h2></header>
+    <header className="kitchen-channel-band"><span>{channels[ticket.fulfillment]}</span><h3>{orderCode(ticket)}</h3></header>
     <div className="kitchen-card-body">
       <p className="kitchen-ticket-meta">{ticket.sector}{ticket.customerName && ticket.fulfillment !== 'dine_in' ? ` · ${ticket.customerName}` : ''}</p>
       <p className={`kitchen-elapsed kitchen-delay-${time.level}`}>{time.minutes === null ? 'Horário de confirmação não informado' : `${time.minutes} min desde a confirmação`}{time.level > 0 && <strong> · {time.level === 2 ? 'Muito atrasado' : 'Atrasado'}</strong>}</p>
@@ -42,7 +42,7 @@ function TicketCard({ticket, now, busy, advance}: {
         {item.note && <p className="kitchen-item-note">Observação: {item.note}</p>}
       </div>)}</div>
       {ticket.notes && <p className="kitchen-item-note">Pedido: {ticket.notes}</p>}
-      {ticket.status === 'ready' ? <p className="kitchen-ready-message">{readyText[ticket.fulfillment]}</p> : <button disabled={busy !== null} onClick={() => void advance(ticket.id, ticket.status === 'new' ? 'preparing' : 'ready')} className="dark-button kitchen-advance">{busy === ticket.id ? 'Salvando…' : ticket.status === 'new' ? 'Começar preparo' : 'Marcar pronto'}</button>}
+      {ticket.status === 'ready' ? <p className="kitchen-ready-message">{readyText[ticket.fulfillment]}</p> : <><button disabled={busy !== null} onClick={() => void advance(ticket.id, ticket.status === 'new' ? 'preparing' : 'ready')} className="dark-button kitchen-advance">{busy === ticket.id ? 'Salvando…' : ticket.status === 'new' ? 'Começar preparo' : 'Marcar pronto'}</button>{ticket.status === 'new' && <button disabled={busy !== null} onClick={() => void advance(ticket.id, 'ready')} className="secondary-button kitchen-advance">Já está pronto</button>}</>}
     </div>
   </article>;
 }
