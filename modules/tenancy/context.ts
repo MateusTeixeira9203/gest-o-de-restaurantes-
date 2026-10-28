@@ -29,7 +29,7 @@ export const restaurantContext = cache(
         ? `SELECT ${columns} FROM restaurants r WHERE r.slug=$1`
         : `SELECT ${columns} FROM restaurants r JOIN restaurant_domains d ON d.restaurant_id=r.id WHERE d.hostname=$1`;
     const values = [
-      local || preview ? process.env.RESTAURANT_SLUG || "patos-lanches" : host,
+      local || preview ? process.env.RESTAURANT_SLUG || "cantina-modelo" : host,
     ];
     const row = (
       client

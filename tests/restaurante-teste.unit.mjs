@@ -80,7 +80,7 @@ test('destino, modo e slug incorretos recusados antes de conectar; URL não vaza
     assert.equal(constructed, false);
     assert.ok(!output.join('').includes('secret') && !output.join('').includes(host));
   }
-  assert.throws(() => validateTarget(url, 'limpar', 'patos-lanches'));
+  assert.throws(() => validateTarget(url, 'limpar', 'outro-sintetico'));
   assert.throws(() => validateTarget(url, 'outro', SLUG));
   assert.throws(() => validateTarget('invalid', 'criar', SLUG));
   validateTarget(url.replace('b6qhiaxp.', 'b6qhiaxp-pooler.'), 'criar', SLUG);

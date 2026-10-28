@@ -7,7 +7,7 @@ const bodySchema = z.object({ status: z.enum(["preparing", "ready"]) });
 
 async function hasInternalAccess(request: Request) {
   const secret = process.env.RESTAURANT_INTERNAL_API_KEY;
-  return (await hasStaffSession(request, ["kitchen", "manager"])) || Boolean(secret && request.headers.get("x-restaurant-internal-key") === secret && (await restaurantContext()).slug === (process.env.RESTAURANT_SLUG || "patos-lanches"));
+  return (await hasStaffSession(request, ["kitchen", "manager"])) || Boolean(secret && request.headers.get("x-restaurant-internal-key") === secret && (await restaurantContext()).slug === (process.env.RESTAURANT_SLUG || "cantina-modelo"));
 }
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ ticketId: string }> }) {

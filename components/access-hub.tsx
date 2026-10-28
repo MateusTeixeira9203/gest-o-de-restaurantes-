@@ -38,7 +38,7 @@ export function AccessHub({ name, logoUrl, areas, username, actions }: {
             ))}
           </nav>
         </section>
-        <footer className="access-hub-footer"><span>Restio</span><span>O acesso às áreas depende da sua permissão.</span></footer>
+        <footer className="access-hub-footer"><span>Restrio</span><span>O acesso às áreas depende da sua permissão.</span></footer>
       </div>
     </main>
   );

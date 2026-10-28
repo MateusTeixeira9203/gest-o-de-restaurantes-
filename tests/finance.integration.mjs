@@ -46,7 +46,7 @@ try {
     throw new Error("Teste permitido somente contra servidor local.");
   rid = (
     await db.query("SELECT id FROM restaurants WHERE slug=$1", [
-      process.env.RESTAURANT_SLUG || "patos-lanches",
+      process.env.RESTAURANT_SLUG || "cantina-modelo",
     ])
   ).rows[0].id;
   assert.equal(

@@ -6,16 +6,16 @@ const connectionString = process.env.DATABASE_URL?.replace(
   "$1sslmode=verify-full",
 );
 
-const globalForDatabase = globalThis as unknown as { patosPool?: Pool };
+const globalForDatabase = globalThis as unknown as { dbPool?: Pool };
 
-export const database = globalForDatabase.patosPool ?? new Pool({
+export const database = globalForDatabase.dbPool ?? new Pool({
   connectionString,
   max: 5,
   connectionTimeoutMillis: 8_000,
   idleTimeoutMillis: 20_000,
 });
 
-if (process.env.NODE_ENV !== "production") globalForDatabase.patosPool = database;
+if (process.env.NODE_ENV !== "production") globalForDatabase.dbPool = database;
 
 export const isDatabaseConfigured = () => Boolean(connectionString);
 

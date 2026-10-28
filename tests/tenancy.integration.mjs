@@ -58,7 +58,7 @@ try {
     throw new Error("Teste permitido somente contra servidor local.");
   source = (
     await db.query("SELECT id FROM restaurants WHERE slug=$1", [
-      process.env.RESTAURANT_SLUG || "patos-lanches",
+      process.env.RESTAURANT_SLUG || "cantina-modelo",
     ])
   ).rows[0].id;
   await db.query(
@@ -98,7 +98,7 @@ try {
     [variant, product],
   );
   const home = await req("/",null,host);
-  assert.equal(home.status,200);assert.ok(home.body.includes(prefix));assert.ok(!home.body.includes("Patos Lanches"));
+  assert.equal(home.status,200);assert.ok(home.body.includes(prefix));assert.ok(!home.body.includes("Cantina Modelo"));
   const menu = await req("/api/public/menu", null, host);
   assert.equal(menu.status, 200);
   assert.equal(menu.body.restaurant.name, prefix);
