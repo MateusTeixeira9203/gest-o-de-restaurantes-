@@ -69,6 +69,8 @@ try {
     "INSERT INTO staff_members(id,restaurant_id,name,role,pin_salt,pin_hash) VALUES($1,$2,$3,'manager',$4,$5)",
     [staff, rid, prefix, salt, scryptSync(pin, salt, 64).toString("hex")],
   );
+  // Neon runs ~0.94 s ahead of this machine; let updated_at precede session issuance.
+  await new Promise(resolve => setTimeout(resolve, 2500));
   cookie = (await call("/api/auth/login", { username: prefix, password: pin }))
     .cookie;
   assert.ok(cookie);

@@ -72,6 +72,8 @@ try {
       ],
     );
   }
+  // Neon runs ~0.94 s ahead of this machine; let updated_at precede session issuance.
+  await new Promise(resolve => setTimeout(resolve, 2500));
   const cashier = await call("/api/auth/login", {
     username: `${prefix}-cashier`,
     password: pin,
