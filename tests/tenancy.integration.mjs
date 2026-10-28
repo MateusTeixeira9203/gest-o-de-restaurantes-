@@ -175,8 +175,8 @@ try {
   );
 } finally {
   await db.query(
-    "DELETE FROM authentication_attempts WHERE identity_hash=encode(sha256($1::bytea),'hex')",
-    [prefix.toLowerCase()],
+    "DELETE FROM authentication_attempts WHERE restaurant_id=ANY($2::uuid[]) AND identity_hash=encode(sha256($1::bytea),'hex')",
+    [prefix.toLowerCase(),[source,id].filter(Boolean)],
   );
   await db.query("DELETE FROM staff_members WHERE id=ANY($1::uuid[])", [
     [staffA, staffB],

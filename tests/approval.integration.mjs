@@ -278,6 +278,7 @@ try {
   }
   await db.query("DELETE FROM menu_products WHERE id=$1", [ids.product]);
   await db.query("DELETE FROM inventory_items WHERE id=$1", [ids.ingredient]);
+  await db.query("DELETE FROM authentication_attempts WHERE restaurant_id=(SELECT restaurant_id FROM staff_members WHERE id=$1) AND identity_hash IN(SELECT encode(sha256(convert_to(n,'UTF8')),'hex') FROM unnest($2::text[]) n)",[ids.manager,['cashier','kitchen','manager'].map(role=>`${prefix}-${role}`.toLowerCase())]);
   await db.query("DELETE FROM staff_members WHERE id=ANY($1::uuid[])", [
     [ids.cashier, ids.kitchen, ids.manager],
   ]);

@@ -164,7 +164,8 @@ async function integration() {
   const db = await connect();
   const ids = {product:randomUUID(),variant:randomUUID(),table:randomUUID(),...Object.fromEntries(['waiter','cashier','kitchen','manager','delivery'].map(role=>[role,randomUUID()]))};
   const orders = [], prefix = `qa-channel-${randomUUID().slice(0,8)}`, cookies = {};
-  let rid;
+  let rid,shift;
+  const financeKeys=[];
   const call = async (path, body, role, key, method = 'POST') => {
     const response = await fetch(base+path,{method,headers:{'content-type':'application/json',...(cookies[role]?{cookie:cookies[role]}:{}),...(key?{'idempotency-key':key}:{})},...(body?{body:JSON.stringify(body)}:{})});
     return {status:response.status,body:await response.json(),cookie:response.headers.get('set-cookie')?.split(';')[0]};
@@ -174,8 +175,7 @@ async function integration() {
     assert.equal(columns.length,3,'0019 não aplicada'); // No writes before preflight.
     const current = (await db.query("SELECT id,default_delivery_fee_cents,service_rate_basis_points FROM restaurants WHERE slug='cantina-modelo'")).rows[0];
     assert.ok(current,'Cantina Modelo ausente'); rid=current.id;
-    const shift=(await db.query('SELECT id FROM cash_shifts WHERE restaurant_id=$1 AND closed_at IS NULL',[rid])).rows[0];
-    assert.ok(shift,'GF-028d exige caixa já aberto; o teste não cria turno.');
+    assert.equal((await db.query('SELECT id FROM cash_shifts WHERE restaurant_id=$1 AND closed_at IS NULL',[rid])).rowCount,0,'Recusa caixa alheio aberto; este teste cria somente seu turno.');
     await db.query("INSERT INTO menu_products(id,restaurant_id,name,category,kitchen_sector) VALUES($1,$2,$3,'QA','Cozinha')",[ids.product,rid,prefix]);
     await db.query("INSERT INTO menu_variants(id,product_id,name,price_cents,packaging_cost_cents,recipe_cost_complete) VALUES($1,$2,'Sintético',6000,0,true)",[ids.variant,ids.product]);
     const number = (await db.query('SELECT n FROM generate_series(150,200) n WHERE NOT EXISTS(SELECT 1 FROM dining_tables WHERE restaurant_id=$1 AND number=n) ORDER BY (n=199) DESC,n LIMIT 1',[rid])).rows[0]?.n;
@@ -190,6 +190,9 @@ async function integration() {
     for (const role of ['waiter','cashier','kitchen','manager','delivery']) {
       const response=await call('/api/auth/login',{username:`${prefix}-${role}`,password:pin}); assert.equal(response.status,200); cookies[role]=response.cookie;
     }
+    const openKey=randomUUID();financeKeys.push(openKey);
+    const opened=await call('/api/operations/finance',{action:'open_shift',openingCents:0},'manager',openKey);
+    assert.equal(opened.status,200,JSON.stringify(opened.body));shift={id:opened.body.id};
     const items=[{productId:ids.product,variantId:ids.variant,quantity:1}];
     const delivery={fulfillment:'delivery',customer:{name:prefix,phone:'31999990000'},delivery:{addressLine1:'Rua sintética 123',reference:prefix},deliveryFeeCents:300,expectedPaymentMethod:'pix',items,sendToKitchen:true};
     async function create(body,role='cashier',path='/api/operations/orders',key=randomUUID()) {
@@ -278,10 +281,18 @@ async function integration() {
       const found=(await db.query('SELECT DISTINCT order_id FROM order_items WHERE product_id=$1',[ids.product])).rows.map(row=>row.order_id);
       const all=[...new Set([...orders,...found])];
       if(all.length) {
-        const entries=(await db.query('SELECT finance_entry_id FROM payments WHERE order_id=ANY($1::uuid[]) AND finance_entry_id IS NOT NULL',[all])).rows.map(row=>row.finance_entry_id);
+        const entries=(await db.query('SELECT id FROM finance_entries WHERE restaurant_id=$1 AND (source_id=ANY($2::text[]) OR actor_name=ANY($3::text[]))',[rid,all,['waiter','cashier','kitchen','manager','delivery'].map(role=>`${prefix}-${role}`)])).rows.map(row=>row.id);
         await db.query('DELETE FROM inventory_movements WHERE order_id=ANY($1::uuid[])',[all]);
         await db.query('DELETE FROM orders WHERE id=ANY($1::uuid[])',[all]);
         if(entries.length) await db.query('DELETE FROM finance_entries WHERE id=ANY($1::uuid[]) AND restaurant_id=$2',[entries,rid]);
+      }
+      if(shift){
+        const attached=(await db.query('SELECT id,actor_name FROM finance_entries WHERE cash_shift_id=$1 AND restaurant_id=$2',[shift.id,rid])).rows;
+        assert.ok(attached.every(row=>['waiter','cashier','kitchen','manager','delivery'].some(role=>row.actor_name===`${prefix}-${role}`)),'Recusa dependência alheia no turno sintético');
+        const extra=attached.map(row=>row.id);
+        if(extra.length)await db.query('DELETE FROM finance_entries WHERE id=ANY($1::uuid[]) AND restaurant_id=$2',[extra,rid]);
+        await db.query('DELETE FROM finance_commands WHERE restaurant_id=$1 AND request_key=ANY($2::uuid[])',[rid,financeKeys]);
+        await db.query('DELETE FROM cash_shifts WHERE id=$1 AND restaurant_id=$2',[shift.id,rid]);
       }
       await db.query('DELETE FROM menu_products WHERE id=$1',[ids.product]);
       await db.query('DELETE FROM dining_tables WHERE id=$1',[ids.table]);
