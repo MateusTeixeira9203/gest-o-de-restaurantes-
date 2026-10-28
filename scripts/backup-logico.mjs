@@ -21,7 +21,6 @@ export async function sha256(file) {
 }
 
 export async function validateBackup(file, pending, endpoint, now = Date.now()) {
-  if (pending.length > 1) throw new Error("Aplique uma única migração pendente por vez.");
   if (!file) throw new Error("Informe --backup=<arquivo>.");
   if (!file.endsWith(".manifest.json")) {
     const handle = await open(file, "r");
@@ -32,6 +31,7 @@ export async function validateBackup(file, pending, endpoint, now = Date.now()) 
       return;
     } finally { await handle.close(); }
   }
+  if (pending.length > 1) throw new Error("Aplique uma única migração pendente por vez.");
   const manifest = JSON.parse(await readFile(file, "utf8"));
   const age = now - Date.parse(manifest.criado_em);
   if (manifest.formato !== "restrio-backup-logico-v1" || manifest.verificado !== true ||
@@ -46,7 +46,7 @@ export async function backupDirectory(dir) {
   const resolved = await realpath(dir);
   const normalized = resolved.toLowerCase().replaceAll("\\", "/");
   const repo = (await realpath(root)).toLowerCase().replaceAll("\\", "/");
-  if (normalized === repo || normalized.startsWith(repo + "/") || /\/nex lab(?:\/|$)/.test(normalized))
+  if (normalized === repo || normalized.startsWith(repo + "/") || normalized.includes("gest-o-de-restaurantes") || /\/nex lab(?:\/|$)/.test(normalized))
     throw new Error("Backup deve ficar fora do repositório e do cofre.");
   if (/onedrive|dropbox|google drive|icloud/.test(normalized))
     console.warn("Pasta sincronizada com a nuvem: o backup pode sair desta máquina.");
@@ -85,7 +85,8 @@ async function verifyCounts(file, tables) {
 export async function exportBackup(client, { dir, migracao, endpoint, now = new Date() }) {
   if (!/^\d{4}_[a-z0-9_]+\.sql$/.test(migracao)) throw new Error("Migração inválida.");
   const date = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-  const base = path.join(dir, `backup-pre-${migracao.slice(0, -4)}-${date}`);
+  const time = `${String(now.getHours()).padStart(2, "0")}${String(now.getMinutes()).padStart(2, "0")}`;
+  const base = path.join(dir, `backup-pre-${migracao.slice(0, -4)}-${date}-${time}`);
   const file = base + ".ndjson", manifestFile = base + ".manifest.json";
   const handles = [];
   const owned = [];
@@ -132,8 +133,8 @@ async function main() {
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  main().catch(() => {
-    console.error("Backup não concluído. Confira migração, pasta, endpoint e acesso ao banco; nenhum conteúdo será impresso.");
+  main().catch((error) => {
+    console.error(error.code);
     process.exitCode = 1;
   });
 }
