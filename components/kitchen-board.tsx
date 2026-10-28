@@ -3,7 +3,9 @@
 import Link from 'next/link';
 import {useEffect, useState} from 'react';
 import {toast} from 'sonner';
-import {orderCode} from '@/lib/domain';
+import {ArrowRight, ChefHat, X} from 'lucide-react';
+import {Carregando, ErroLeitura, Vazio} from '@/components/shared/estados';
+import {SeloCanal, SeloEstado} from '@/components/shared/selos';
 import {useRestaurant} from '@/lib/restaurant-store';
 
 type Ticket = ReturnType<typeof useRestaurant>['kitchen'][number] & {confirmedAt?: string | null};
@@ -32,12 +34,12 @@ function TicketCard({ticket, now, busy, advance}: {
 }) {
   const time = ticketTime(ticket, now);
   return <article className={`kitchen-card kitchen-channel-${ticket.fulfillment}`}>
-    <header className="kitchen-channel-band"><span>{channels[ticket.fulfillment]}</span><h3>{orderCode(ticket)}</h3></header>
+    <header className="kitchen-channel-band"><h3><SeloCanal pedido={ticket} /></h3></header>
     <div className="kitchen-card-body">
       <p className="kitchen-ticket-meta">{ticket.sector}{ticket.customerName && ticket.fulfillment !== 'dine_in' ? ` · ${ticket.customerName}` : ''}</p>
-      <p className={`kitchen-elapsed kitchen-delay-${time.level}`}>{time.minutes === null ? 'Horário de confirmação não informado' : `${time.minutes} min desde a confirmação`}{time.level > 0 && <strong> · {time.level === 2 ? 'Muito atrasado' : 'Atrasado'}</strong>}</p>
+      <div className={`kitchen-elapsed kitchen-delay-${time.level}`}><p>{time.minutes === null ? 'Horário de confirmação não informado' : `${time.minutes} min desde a confirmação`}</p>{time.level > 0 && <SeloEstado texto={time.level === 2 ? 'Muito atrasado' : 'Atrasado'} tom={time.level === 2 ? 'danger' : 'warn'} />}</div>
       <div className="kitchen-items">{ticket.items.map((item, index) => <div key={index}>
-        <p className="kitchen-item-name">{item.quantity}× {item.productName} · {item.variantName}</p>
+        <p className="kitchen-item-name">{item.quantity}<X size={16} aria-label="vezes" /> {item.productName} · {item.variantName}</p>
         {item.addons.map(addon => <p key={addon.id}>+ {addon.name}</p>)}
         {item.note && <p className="kitchen-item-note">Observação: {item.note}</p>}
       </div>)}</div>
@@ -85,15 +87,15 @@ export function KitchenBoard() {
     setLoading(false);
   }
   return <main className="kitchen-page"><div className="kitchen-shell">
-    <header className="topbar"><div><h1>Cozinha</h1><p>Na fila → Em preparo → Prontos para entregar</p></div><Link className="secondary-button" href="/operacao">Voltar</Link></header>
+    <header className="topbar"><div><h1>Cozinha</h1><p className="kitchen-flow">Na fila <ArrowRight size={16} aria-hidden="true" /> Em preparo <ArrowRight size={16} aria-hidden="true" /> Prontos para entregar</p></div><Link className="secondary-button" href="/operacao">Voltar</Link></header>
     <div className="sector-tabs" role="group" aria-label="Filtrar por setor">{['Todos', ...sectors].map(value => <button key={value} aria-pressed={sector === value} className={sector === value ? 'active' : ''} onClick={() => setSector(value)}>{value}</button>)}</div>
-    <div className="kitchen-channel-filters" role="group" aria-label="Filtrar por canal"><button aria-pressed={channel === 'all'} onClick={() => setChannel('all')}>Todos os canais · {sectorTickets.length}</button>{Object.entries(channels).map(([value, label]) => <button className={`kitchen-channel-${value}`} key={value} aria-pressed={channel === value} onClick={() => setChannel(value)}>{label} · {sectorTickets.filter(ticket => ticket.fulfillment === value).length}</button>)}</div>
-    {error && <div className="kitchen-error" role="alert"><p>{error}</p><button className="secondary-button" disabled={loading} onClick={() => void retry()}>{loading ? 'Atualizando…' : 'Tentar novamente'}</button></div>}
-    {(!ready || loading) && <p className="kitchen-load-state" role="status">Atualizando fila da cozinha…</p>}
+    <div className="kitchen-channel-filters" role="group" aria-label="Filtrar por canal"><button aria-pressed={channel === 'all'} onClick={() => setChannel('all')}>Todos os canais <b>{sectorTickets.length}</b></button>{Object.entries(channels).map(([value, label]) => <button className={`kitchen-channel-${value}`} key={value} aria-pressed={channel === value} onClick={() => setChannel(value)}>{label} <b>{sectorTickets.filter(ticket => ticket.fulfillment === value).length}</b></button>)}</div>
+    {error && <ErroLeitura mensagem={error} aoTentarNovamente={() => void retry()} tentando={loading} />}
+    {(!ready || loading) && <Carregando quantidade={3} mensagem="Atualizando fila da cozinha…" />}
     <div className="kanban" aria-busy={!ready || loading}>{columns.map(column => <section className="kanban-column" key={column.status} aria-label={column.label}>
       <h2 className="kanban-title"><span>{column.label}</span><b>{tickets.filter(ticket => ticket.status === column.status).length}</b></h2>
       <div className="kitchen-ticket-list">{tickets.filter(ticket => ticket.status === column.status).map(ticket => <TicketCard key={ticket.id} ticket={ticket} now={now} busy={busy} advance={advance}/>)}
-        {ready && !loading && !error && !tickets.some(ticket => ticket.status === column.status) && <p className="kanban-empty">Nenhum pedido nesta etapa. {column.status === 'new' ? 'Os pedidos confirmados aparecem aqui; confira os filtros.' : 'Acompanhe os pedidos na etapa anterior.'}</p>}
+        {ready && !loading && !error && !tickets.some(ticket => ticket.status === column.status) && <Vazio icone={ChefHat} titulo={column.status === 'new' ? 'Nenhum pedido na fila.' : 'Nenhum pedido nesta etapa.'} descricao={column.status === 'new' ? 'Os pedidos novos aparecem aqui sozinhos' : 'Acompanhe os pedidos na etapa anterior.'} />}
       </div>
     </section>)}</div>
   </div></main>;

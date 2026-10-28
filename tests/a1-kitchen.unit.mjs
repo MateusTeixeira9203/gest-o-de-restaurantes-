@@ -15,11 +15,13 @@ const hook = registerHooks({
   resolve(specifier, context, next) {
     if (['next/link', 'sonner', '@/lib/restaurant-store'].includes(specifier)) return {url: mock, shortCircuit: true};
     if (specifier === '@/lib/domain') return {url: new URL('../lib/domain.ts', import.meta.url).href, shortCircuit: true};
+    if (['@/components/shared/estados', '@/components/shared/selos'].includes(specifier)) return {url: new URL(`../${specifier.slice(2)}.tsx`, import.meta.url).href, shortCircuit: true};
+    if (specifier === './selos-dados' && context.parentURL?.endsWith('/components/shared/selos.tsx')) return {url: new URL('../components/shared/selos-dados.ts', import.meta.url).href, shortCircuit: true};
     return next(specifier, context);
   },
   load(url, context, next) {
-    if (url.endsWith('/components/kitchen-board.tsx')) {
-      const source = readFileSync(new URL(url), 'utf8') + '\nexport {ticketTime, TicketCard, channelTickets};';
+    if (url.endsWith('/components/kitchen-board.tsx') || /\/components\/shared\/(estados|selos)\.tsx$/.test(url)) {
+      const source = readFileSync(new URL(url), 'utf8') + (url.endsWith('/components/kitchen-board.tsx') ? '\nexport {ticketTime, TicketCard, channelTickets};' : '');
       return {format: 'module', source: ts.transpileModule(source, {compilerOptions: {jsx: ts.JsxEmit.ReactJSX, module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022}}).outputText, shortCircuit: true};
     }
     return next(url, context);
@@ -49,7 +51,7 @@ test('cartões dos três canais têm código, texto, ação principal e atalho s
   for (const [fulfillment, code, label] of [['delivery','E-42','Entrega'],['pickup','B-42','Balcão'],['dine_in','Mesa 04 · #42','Mesa']]) {
     const html = renderToStaticMarkup(React.createElement(TicketCard, {ticket:{...ticket, fulfillment, tableNumber:4},now:at(16),busy:null,advance:async()=>{}}));
     assert.ok(html.includes(code)); assert.ok(html.includes(label));
-    assert.ok(html.includes('Muito atrasado')); assert.ok(html.includes('2× Prato sintético'));
+    assert.ok(html.includes('Muito atrasado')); assert.match(html, /2<svg(?=[^>]*\blucide-x\b)(?=[^>]*aria-label="vezes")[^>]*>.*?<\/svg> Prato sintético/s);
     assert.equal((html.match(/<button/g)||[]).length, 2);
     assert.ok(html.includes('Começar preparo'));
   }
