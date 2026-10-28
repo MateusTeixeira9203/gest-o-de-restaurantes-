@@ -1063,7 +1063,7 @@ export async function getOperationSnapshot() {
       paidCents: order.paid_cents,
       expectedPaymentMethod: order.expected_payment_method,
       cashTenderedCents: order.cash_tendered_cents,
-      changeCents: order.cash_tendered_cents === null ? null : order.cash_tendered_cents - order.total_cents,
+      changeCents: order.cash_tendered_cents === null ? null : Math.max(0, order.cash_tendered_cents - order.total_cents),
       delivery: order.delivery_address_line1
         ? {
             addressLine1: order.delivery_address_line1,
@@ -1509,6 +1509,7 @@ export async function updateRestaurantSettings(input: {
   name: string;
   whatsapp: string;
   serviceRate: number;
+  defaultDeliveryFeeCents?: number;
 }) {
   if (
     !Number.isFinite(input.serviceRate) ||
@@ -1516,18 +1517,22 @@ export async function updateRestaurantSettings(input: {
     input.serviceRate > 100
   )
     throw new Error("Taxa de serviço inválida.");
+  if (input.defaultDeliveryFeeCents !== undefined && (!Number.isInteger(input.defaultDeliveryFeeCents) || input.defaultDeliveryFeeCents < 0 || input.defaultDeliveryFeeCents > 20000))
+    throw new Error("A taxa de entrega deve ser um valor inteiro entre R$ 0,00 e R$ 200,00.");
   const current = await restaurant();
-  const updated = await query<RestaurantRow>(
-    "UPDATE restaurants SET name = $2, whatsapp = NULLIF($3,''), service_rate_basis_points = $4, updated_at = now() WHERE id = $1 RETURNING id, name, whatsapp, service_rate_basis_points",
+  const updated = await query<RestaurantRow & {default_delivery_fee_cents: number}>(
+    "UPDATE restaurants SET name = $2, whatsapp = NULLIF($3,''), service_rate_basis_points = $4, default_delivery_fee_cents = COALESCE($5,default_delivery_fee_cents), updated_at = now() WHERE id = $1 RETURNING id, name, whatsapp, service_rate_basis_points, default_delivery_fee_cents",
     [
       current.id,
       input.name.trim(),
       input.whatsapp.trim(),
       Math.round(input.serviceRate * 100),
+      input.defaultDeliveryFeeCents ?? null,
     ],
   );
   if (!updated.rows[0]) throw new Error("Restaurante não encontrado.");
   return {
+    defaultDeliveryFeeCents: updated.rows[0].default_delivery_fee_cents,
     name: updated.rows[0].name,
     whatsapp: updated.rows[0].whatsapp ?? "",
     serviceRate: updated.rows[0].service_rate_basis_points / 100,

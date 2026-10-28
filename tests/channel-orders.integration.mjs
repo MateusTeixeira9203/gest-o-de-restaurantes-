@@ -1,3 +1,4 @@
+// Só rode integração com o banco confirmado: ep-square-dawn-b6qhiaxp. --unit não acessa banco.
 import assert from 'node:assert/strict';
 import {randomUUID, randomBytes, scryptSync, createHash} from 'node:crypto';
 
@@ -11,7 +12,8 @@ async function unit() {
     export const hasStaffSession = async () => true;
     export const sessionFromRequest = async () => ({role:globalThis.channelTest.role(),username:'Sintético'});
     export const getOperationSnapshot = async () => globalThis.channelTest.snapshot;
-    export const query = async () => ({rows:[{default_delivery_fee_cents:300}]});
+    export const query = (...args) => globalThis.channelTest.query(...args);
+    export const updateRestaurantSettings = input => globalThis.channelTest.updateSettings(input);
     export const transaction = callback => globalThis.channelTest.transaction(callback);
     export const restaurantContext = () => ({id:'synthetic-tenant',service_rate_basis_points:1000});
     export const accountVersion = () => {};
@@ -33,7 +35,8 @@ async function unit() {
     const {POST} = await import('../app/api/operations/orders/route.ts');
     const {POST:publicPost} = await import('../app/api/public/orders/route.ts');
     const {GET} = await import('../app/api/operations/state/route.ts');
-    const {deliveryPayment, createOrder:realCreate} = await import('../lib/restaurant-repository.ts');
+    const {deliveryPayment, createOrder:realCreate, getOperationSnapshot:realSnapshot, updateRestaurantSettings:realSettings} = await import('../lib/restaurant-repository.ts');
+    const {PATCH:settingsPatch} = await import('../app/api/operations/settings/route.ts');
     const items = [{productId:randomUUID(),variantId:randomUUID(),quantity:1}];
     const delivery = {fulfillment:'delivery',sendToKitchen:true,items,customer:{name:'Sintético',phone:'999999999'},delivery:{addressLine1:'Rua sintética 123'},expectedPaymentMethod:'cash',deliveryFeeCents:300,cashTenderedCents:10000};
     const request = body => new Request('http://localhost/api/orders',{method:'POST',headers:{'content-type':'application/json','idempotency-key':randomUUID()},body:JSON.stringify(body)});
@@ -81,7 +84,24 @@ async function unit() {
         assert.equal(order.delivery === null,!['delivery','manager'].includes(role));
       }
     }
-    console.log('PASS unit: discriminated channels, legacy body, required fields, caps, cash validation, default fee, persisted fees/payment intent, service by channel, public stripping and role visibility (no database).');
+    let snapshotTendered = 5000;
+    globalThis.channelTest.query = async sql => {
+      if(sql.includes('SELECT default_delivery_fee_cents')) return {rows:[{default_delivery_fee_cents:300}]};
+      if(sql.includes('GROUP BY o.id, t.number')) return {rows:[{id:'synthetic',cash_tendered_cents:snapshotTendered,total_cents:6300,items:[],payments:[]}]};
+      return {rows:[]};
+    };
+    for(const [value,expected] of [[5000,0],[10000,3700],[null,null]]) {snapshotTendered=value;assert.equal((await realSnapshot()).orders[0].changeCents,expected,'troco não negativo; nulo permanece nulo');}
+    globalThis.channelTest.updateSettings = input => input;
+    const settings = {name:'Sintético',whatsapp:'',serviceRate:10};
+    for(const value of [20001,2147483648,1e20]) {const badSettings = await settingsPatch(request({...settings,defaultDeliveryFeeCents:value}));assert.equal(badSettings.status,400,'configuração rejeita taxa acima do teto');assert.ok((await badSettings.json()).error.includes('R$ 200,00'));}
+    for(const value of [20001,2147483648,1e20,-1,1.5]) await assert.rejects(realSettings({...settings,defaultDeliveryFeeCents:value}),/taxa de entrega/);
+    globalThis.channelTest.query = async (sql,values) => {
+      assert.ok(sql.includes('default_delivery_fee_cents = COALESCE($5,default_delivery_fee_cents)'));
+      return {rows:[{name:values[1],whatsapp:values[2],service_rate_basis_points:values[3],default_delivery_fee_cents:values[4] ?? 300}]};
+    };
+    assert.equal((await realSettings({...settings,defaultDeliveryFeeCents:20000})).defaultDeliveryFeeCents,20000);
+    assert.equal((await realSettings(settings)).defaultDeliveryFeeCents,300,'corpo antigo preserva a taxa');
+    console.log('PASS unit: discriminated channels, legacy body, required fields, caps, cash validation, default fee, persisted fees/payment intent, service by channel, public stripping, role visibility, settings cap/legacy settings and nonnegative change (no database).');
   } finally {hook.deregister(); delete globalThis.channelTest;}
 }
 
@@ -174,8 +194,11 @@ async function integration() {
     for(const ticket of tickets) assert.equal((await call(`/api/internal/kitchen/${ticket.id}`,{status:'ready'},'kitchen',null,'PATCH')).status,200);
     assert.equal((await call(`/api/operations/deliveries/${pix.id}`,{status:'out_for_delivery'},'delivery',null,'PATCH')).status,200);
     assert.equal((await db.query('SELECT courier_name FROM delivery_details WHERE order_id=$1',[pix.id])).rows[0].courier_name,`${prefix}-delivery`);
-    // Settings configuration (T-API-16) belongs to GF-028b, outside backend C1.
-    console.log('PASS channel-orders: T-DB-1..6; API channels, totals, cash, caps, idempotency, roles and public compatibility. courier lifecycle; PENDING T-API-16 settings belongs to GF-028b.');
+    const beforeFee=(await db.query('SELECT default_delivery_fee_cents FROM restaurants WHERE id=$1',[rid])).rows[0].default_delivery_fee_cents;
+    const settingsResponse=await call('/api/operations/settings',{name:'Configuração sintética',whatsapp:'',serviceRate:10,defaultDeliveryFeeCents:20001},'manager',null,'PATCH');
+    assert.equal(settingsResponse.status,400);assert.ok(settingsResponse.body.error.includes('R$ 200,00'));
+    assert.equal((await db.query('SELECT default_delivery_fee_cents FROM restaurants WHERE id=$1',[rid])).rows[0].default_delivery_fee_cents,beforeFee);
+    console.log('PASS channel-orders: T-DB-1..6; API channels, totals, cash, caps, idempotency, roles and public compatibility. courier lifecycle; T-API-16 settings cap.');
   } finally {
     // Also recover fixture orders after a response/transport failure, by exact product id.
     if(rid) {

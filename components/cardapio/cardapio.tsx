@@ -7,14 +7,17 @@ import { Check, CookingPot, Minus, Plus, Search, ShoppingBag, Sparkles } from "l
 import { toast } from "sonner";
 import { Brand, Topbar } from "@/components/shared/blocos";
 import { useRestaurant } from "@/lib/restaurant-store";
-import type { CartItem, Product, RestaurantState } from "@/lib/domain";
-import { money } from "@/lib/domain";
+import type { CartItem, ChannelOrderInput, ExpectedPaymentMethod, Product, RestaurantState } from "@/lib/domain";
+import { money, orderCode } from "@/lib/domain";
 import { CustomerCheckoutDialog, type CustomerCheckoutValue } from "@/components/customer-checkout-dialog";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 
-export function MenuBuilder({ tableId, source, publicMenu = false, deliveryLink = false, onBack, onSent }: { tableId?: string; source: "waiter" | "qr"; publicMenu?: boolean; deliveryLink?: boolean; onBack?: () => void; onSent?: (number: number) => void }) {
+export function MenuBuilder({ tableId, source, publicMenu = false, deliveryLink = false, initialChannel = "pickup", onBack, onSent }: { initialChannel?: "pickup" | "delivery"; tableId?: string; source: "waiter" | "qr"; publicMenu?: boolean; deliveryLink?: boolean; onBack?: () => void; onSent?: (number: number) => void }) {
   const { state, branding, createOrder, createPublicOrder } = useRestaurant(); const [category, setCategory] = useState("Todos"); const [search, setSearch] = useState(""); const [selected, setSelected] = useState<Product | null>(null); const [cart, setCart] = useState<CartItem[]>([]); const [cartOpen, setCartOpen] = useState(false); const [checkoutOpen, setCheckoutOpen] = useState(false); const [success, setSuccess] = useState<number | null>(null);
+  const [channel, setChannel] = useState(initialChannel);
+  const [changeCents, setChangeCents] = useState<number | null>(null);
+  const channelOrder = source === "waiter" && !tableId && !publicMenu;
   const categories = ["Todos", ...new Set(state.products.map(product => product.category))];
   const filtered = state.products.filter(p => (category === "Todos" || p.category === category) && p.name.toLowerCase().includes(search.toLowerCase()));
   const total = cart.reduce((sum, item) => { const p = state.products.find(x => x.id === item.productId)!; const variant = p.variants.find(v => v.id === item.variantId)!; return sum + item.quantity * (variant.price + p.addons.filter(a => item.addonIds.includes(a.id)).reduce((a, b) => a + b.price, 0)); }, 0);
@@ -34,12 +37,12 @@ export function MenuBuilder({ tableId, source, publicMenu = false, deliveryLink 
     if (publicMenu) {
       setCartOpen(false); setCheckoutOpen(true); return;
     }
+    if (channelOrder) { setCartOpen(false); setCheckoutOpen(true); return; }
     if (!tableId || submitting.current) return; submitting.current=true; setSending(true); const result = await createOrder(tableId, cart, source).finally(()=>{submitting.current=false; setSending(false);}); if (!result.ok) { toast.error(result.message); return; } setCart([]); setCartOpen(false); setSuccess(result.number); onSent?.(result.number);
   };
-  if (success) return <main className="customer-page"><div className="success-card"><span className="success-icon"><Check size={30} /></span><p className="text-sm font-semibold uppercase tracking-widest text-emerald-700">Pedido enviado</p><h1 className="mt-2 text-4xl font-semibold tracking-tight">Pedido #{success}</h1><p className="mt-3 text-neutral-500">{publicMenu ? "Recebemos sua solicitação. A equipe vai conferir e aprovar antes de enviar para a cozinha." : "Pedido aprovado e enviado para a cozinha."}</p><Link href={tableId ? `/menu/mesa/${tableId}` : deliveryLink ? "/menu/entrega" : "/menu"} className="primary-button mt-7">Voltar ao cardápio</Link></div></main>;
+  if (success) return <MenuSuccess number={success} channel={channelOrder ? channel : undefined} changeCents={changeCents} publicMenu={publicMenu} tableId={tableId} deliveryLink={deliveryLink} onBack={onBack} />;
   return <main className={publicMenu ? "customer-page" : "app-page"}><div className={publicMenu ? "customer-shell" : "page-container"}>
-    {publicMenu ? <CustomerHeader tableId={tableId} deliveryLink={deliveryLink} /> : <Topbar title="Novo pedido" subtitle={`Mesa / comanda ${tableId}`} back="#" action={<button onClick={onBack} className="text-button">Cancelar</button>} />}
-    {publicMenu && <div className="menu-hero"><Image src={branding.coverUrl || "/menu-hero.png"} fill sizes="(max-width: 768px) 100vw, 720px" alt={branding.coverUrl ? `Foto de capa de ${state.settings.name}` : "Pizza de calabresa artesanal"} className="object-cover" priority unoptimized={Boolean(branding.coverUrl)} /><div className="menu-hero-overlay"><span className="live-pill"><Sparkles size={13} /> Feito na hora</span><h1>Seu pedido,<br />do seu jeito.</h1></div></div>}
+    <MenuHeading publicMenu={publicMenu} tableId={tableId} deliveryLink={deliveryLink} channelOrder={channelOrder} channel={channel} onChannel={setChannel} onBack={onBack} branding={branding} name={state.settings.name} />
     <div className="menu-toolbar"><div className="search-box"><Search size={18} /><input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar no cardápio" aria-label="Buscar produtos" /></div><div className="category-scroll">{categories.map(c => <button key={c} onClick={() => setCategory(c)} className={category === c ? "category-chip active" : "category-chip"}>{c}</button>)}</div></div>
     <section className="product-grid">{filtered.map(product => { const unavailable = !product.available || !isProductStockAvailable(state, product); return <button key={product.id} onClick={() => !unavailable && setSelected(product)} disabled={unavailable} className="product-card text-left">
       {product.imageUrl ? <div className="customer-product-photo"><Image src={product.imageUrl} alt={product.name} fill sizes="(max-width: 720px) 100vw, 320px" unoptimized /></div> : <div className="flex items-start justify-between gap-3"><div className="product-symbol">{product.category === "Pizzas" ? "🍕" : product.category === "Bebidas" ? "🥤" : product.category === "Açaí" ? "🫐" : product.category === "Sorvetes" ? "🍨" : product.category === "Pastéis" ? "🥟" : "🍽️"}</div></div>}
@@ -47,9 +50,63 @@ export function MenuBuilder({ tableId, source, publicMenu = false, deliveryLink 
     </button>; })}</section>
     {cart.length > 0 && <button onClick={() => setCartOpen(true)} className="cart-dock"><span className="cart-count">{cart.reduce((s, i) => s + i.quantity, 0)}</span><span>Ver pedido</span><strong>{money(total)}</strong></button>}
     <ProductDialog product={selected} open={!!selected} onOpenChange={open => !open && setSelected(null)} onAdd={item => { setCart(c => [...c, item]); setSelected(null); toast.success("Item adicionado"); }} />
-    <CartSheet open={cartOpen} onOpenChange={setCartOpen} cart={cart} setCart={setCart} state={state} total={total} submit={submit} sending={sending} whatsapp={false} submitLabel={publicMenu?"Continuar pedido":"Enviar para cozinha"} />
+    <CartSheet open={cartOpen} onOpenChange={setCartOpen} cart={cart} setCart={setCart} state={state} total={total} submit={submit} sending={sending} whatsapp={false} submitLabel={publicMenu || channelOrder ? "Continuar pedido" : "Enviar para cozinha"} />
+    {channelOrder && <StaffChannelCheckout open={checkoutOpen} onOpenChange={setCheckoutOpen} channel={channel} cart={cart} total={total} defaultFeeCents={state.settings.defaultDeliveryFeeCents} onSuccess={(number, change) => {setCheckoutOpen(false); setCart([]); setSuccess(number); setChangeCents(change);}} />}
     {publicMenu && <CustomerCheckoutDialog open={checkoutOpen} onOpenChange={setCheckoutOpen} tableId={tableId} deliveryOnly={deliveryLink} total={total} onConfirm={confirmPublic} />}
   </div></main>;
+}
+
+type Channel = "pickup" | "delivery";
+
+
+function MenuSuccess({number, channel, changeCents, publicMenu, tableId, deliveryLink, onBack}: {
+  number: number; channel?: Channel; changeCents: number | null; publicMenu: boolean; tableId?: string; deliveryLink: boolean; onBack?: () => void;
+}) {
+  return <main className="customer-page"><div className="success-card"><span className="success-icon"><Check size={30} /></span><p className="text-sm font-semibold uppercase tracking-widest text-emerald-700">Pedido enviado</p><h1 className="mt-2 text-4xl font-semibold tracking-tight">{channel ? orderCode({orderNumber:number,fulfillment:channel,tableNumber:null}) : `Pedido #${number}`}</h1><p className="mt-3 text-neutral-500">{publicMenu ? "Recebemos sua solicitação. A equipe vai conferir e aprovar antes de enviar para a cozinha." : "Pedido aprovado e enviado para a cozinha."}</p>{changeCents !== null && <p className="mt-3 text-xl font-semibold">Troco: {money(changeCents / 100)}</p>}{channel ? <button className="primary-button mt-7" onClick={onBack}>Voltar ao salão</button> : <Link href={tableId ? `/menu/mesa/${tableId}` : deliveryLink ? "/menu/entrega" : "/menu"} className="primary-button mt-7">Voltar ao cardápio</Link>}</div></main>;
+}
+
+function MenuHeading({publicMenu, tableId, deliveryLink, channelOrder, channel, onChannel, onBack, branding, name}: {
+  publicMenu: boolean; tableId?: string; deliveryLink: boolean; channelOrder: boolean; channel: Channel; onChannel: (channel: Channel) => void; onBack?: () => void; branding: {coverUrl: string | null}; name: string;
+}) {
+  if (publicMenu) return <><CustomerHeader tableId={tableId} deliveryLink={deliveryLink} /><div className="menu-hero"><Image src={branding.coverUrl || "/menu-hero.png"} fill sizes="(max-width: 768px) 100vw, 720px" alt={branding.coverUrl ? `Foto de capa de ${name}` : "Pizza de calabresa artesanal"} className="object-cover" priority unoptimized={Boolean(branding.coverUrl)} /><div className="menu-hero-overlay"><span className="live-pill"><Sparkles size={13} /> Feito na hora</span><h1>Seu pedido,<br />do seu jeito.</h1></div></div></>;
+  return <><Topbar title="Novo pedido" subtitle={tableId ? `Mesa / comanda ${tableId}` : "Escolha o canal e os itens do pedido"} back="#" action={<button onClick={onBack} className="text-button">Cancelar</button>} />{channelOrder && <div role="group" aria-label="Canal do pedido" className="mb-5 flex flex-wrap gap-3"><button className="secondary-button" aria-pressed={channel === "pickup"} onClick={() => onChannel("pickup")}>Balcão{channel === "pickup" ? " · selecionado" : ""}</button><button className="secondary-button" aria-pressed={channel === "delivery"} onClick={() => onChannel("delivery")}>Entrega{channel === "delivery" ? " · selecionado" : ""}</button></div>}</>;
+}
+
+function StaffChannelCheckout({open, onOpenChange, channel, cart, total, defaultFeeCents = 0, onSuccess}: {
+  open: boolean; onOpenChange: (open: boolean) => void; channel: Channel; cart: CartItem[]; total: number; defaultFeeCents?: number; onSuccess: (number: number, changeCents: number | null) => void;
+}) {
+  const {createChannelOrder} = useRestaurant();
+  const [fee, setFee] = useState(String(defaultFeeCents / 100));
+  const [method, setMethod] = useState<ExpectedPaymentMethod>("pix");
+  const [tendered, setTendered] = useState("");
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const submitting = useRef(false);
+  const feeCents = channel === "delivery" ? Math.round(Number(fee) * 100) : 0;
+  const totalCents = Math.round(total * 100) + feeCents;
+  const change = Math.round(Number(tendered) * 100) - totalCents;
+  async function submit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (submitting.current) return;
+    submitting.current = true; setBusy(true); setError("");
+    const data = new FormData(event.currentTarget);
+    const name = String(data.get("name") ?? "").trim();
+    const input: ChannelOrderInput = channel === "pickup" ? {fulfillment:channel,customer:{name},items:cart} : {
+      fulfillment:channel,customer:{name,phone:String(data.get("phone") ?? "").trim()},items:cart,
+      delivery:{addressLine1:String(data.get("addressLine1") ?? "").trim(),neighborhood:String(data.get("neighborhood") ?? "").trim(),reference:String(data.get("reference") ?? "").trim()},
+      deliveryFeeCents:feeCents,expectedPaymentMethod:method,cashTenderedCents:method === "cash" && tendered !== "" ? Math.round(Number(tendered) * 100) : undefined,
+    };
+    try {
+      const result = await createChannelOrder(input);
+      if (!result.ok) {setError(result.message); return;}
+      onSuccess(result.number, result.changeCents);
+    } finally {submitting.current = false; setBusy(false);}
+  }
+  return <Dialog open={open} onOpenChange={value => !busy && onOpenChange(value)}><DialogContent className="customer-checkout-dialog"><DialogHeader><DialogTitle>{channel === "delivery" ? "Pedido de entrega" : "Pedido de balcão"}</DialogTitle><DialogDescription>Confira os dados antes de enviar para a cozinha.</DialogDescription></DialogHeader><form onSubmit={event => void submit(event)} className="customer-checkout-form"><fieldset disabled={busy} className="space-y-4"><label className="field-label">Nome do cliente<input name="name" className="form-input text-base" autoComplete="name" required minLength={2} maxLength={100} /></label>{channel === "delivery" && <><label className="field-label">Telefone<input name="phone" className="form-input text-base" type="tel" autoComplete="tel" required minLength={8} maxLength={24} /></label><label className="field-label">Rua e número<input name="addressLine1" className="form-input text-base" autoComplete="street-address" required minLength={4} maxLength={180} /></label><div className="grid gap-3 sm:grid-cols-2"><label className="field-label">Bairro<input name="neighborhood" className="form-input text-base" maxLength={100} /></label><label className="field-label">Referência<input name="reference" className="form-input text-base" maxLength={180} /></label></div><label className="field-label">Taxa de entrega (R$)<input className="form-input text-base" type="number" inputMode="decimal" min="0" max="200" step="0.01" value={fee} onChange={event => setFee(event.target.value)} required /></label><label className="field-label">Forma prevista<select className="form-input text-base" value={method} onChange={event => setMethod(event.target.value as ExpectedPaymentMethod)}><option value="pix">Pix</option><option value="cash">Dinheiro</option><option value="debit">Débito</option><option value="credit">Crédito</option><option value="prepaid">Já pago</option></select></label>{method === "cash" && <label className="field-label">Troco para (R$)<input className="form-input text-base" type="number" inputMode="decimal" min="0" max="10000" step="0.01" value={tendered} onChange={event => setTendered(event.target.value)} /></label>}</>}</fieldset><StaffOrderTotal totalCents={totalCents} showChange={channel === "delivery" && method === "cash" && tendered !== ""} change={change} />{error && <p role="alert" className="text-base text-red-700">{error}</p>}<button type="submit" disabled={busy || !cart.length} aria-busy={busy} className="primary-button w-full justify-center">{busy ? "Enviando pedido…" : "Enviar pedido"}</button></form></DialogContent></Dialog>;
+}
+
+function StaffOrderTotal({totalCents, showChange, change}: {totalCents:number; showChange:boolean; change:number}) {
+  return <div className="text-base"><p>Total: <strong>{money(totalCents / 100)}</strong></p>{showChange && <p>{change >= 0 ? `Troco previsto: ${money(change / 100)}` : "O valor para troco é menor que o total."}</p>}<p className="mt-2 text-sm text-neutral-500">O total e o troco serão confirmados pelo servidor ao enviar.</p></div>;
 }
 
 function CustomerHeader({ tableId, deliveryLink }: { tableId?: string; deliveryLink?: boolean }) { return <header className="customer-header"><Brand subtitle="Cardápio" /><div className="text-right"><p className="text-xs uppercase tracking-wider text-neutral-400">{tableId ? "Você está na" : deliveryLink ? "Cardápio para entrega" : "Cardápio online"}</p><strong>{tableId ? `Mesa / comanda ${tableId}` : deliveryLink ? "Receba em casa" : "Peça online"}</strong></div></header>; }
