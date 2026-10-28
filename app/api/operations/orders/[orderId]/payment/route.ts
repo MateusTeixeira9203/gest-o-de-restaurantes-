@@ -10,7 +10,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ ord
     return Response.json(await recordExternalPayment((await params).orderId, method, { role: actor.role, name: actor.username }, receivedCents));
   } catch (error) {
     const message = error instanceof z.ZodError && error.issues.some(issue => issue.path[0] === "receivedCents")
-      ? "Informe um valor entregue valido"
+      ? "Informe um valor entregue válido"
       : error instanceof Error ? error.message : "Não foi possível registrar o pagamento.";
     return Response.json({ error: message }, { status: 400 });
   }

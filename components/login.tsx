@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, ArrowRight, CircleAlert, LockKeyhole } from "lucide-react";
 import { type StaffRole, useRestaurant } from "@/lib/restaurant-store";
+import { Carregando } from "@/components/shared/estados";
 
 export function destinationForRole(role: StaffRole) {
   if (role === "waiter") return "/operacao/garcom";
@@ -21,7 +22,7 @@ function LoginBackLink() {
 
 export function StaffGate({ children, roles }: { children: React.ReactNode; roles?: StaffRole[] }) {
   const router = useRouter(); const { authenticated, ready, session, logout } = useRestaurant();
-  if (!ready) return <main className="app-page min-h-screen" aria-busy="true" />;
+  if (!ready) return <main className="app-page min-h-screen" aria-busy="true"><Carregando mensagem="Carregando suas áreas…" /></main>;
   if (authenticated && session && (!roles || session.role === "admin" || roles.includes(session.role))) return <>{children}</>;
   if (authenticated && session) return <main className="login-page"><section className="login-form-wrap"><div className="login-card text-center"><LoginBackLink /><div className="login-lock mx-auto"><LockKeyhole size={22} /></div><h2>Área não liberada</h2><p className="mt-2">{session.username} está em {session.role === "waiter" ? "Garçom" : session.role === "kitchen" ? "Cozinha" : session.role === "cashier" ? "Caixa" : session.role === "delivery" ? "Entrega" : "Gestão"}. Escolha a área correta ou troque o usuário.</p><Link href={destinationForRole(session.role)} className="primary-button mt-6 justify-center">Ir para minha área <ArrowRight size={18} /></Link><button onClick={() => { void logout().then(() => router.push("/gestao")); }} className="secondary-button mt-3">Trocar usuário</button></div></section></main>;
   return <main className="login-page"><section className="login-form-wrap"><div className="login-card text-center"><LoginBackLink /><div className="login-lock mx-auto"><LockKeyhole size={22} /></div><h2>Confirme seu acesso</h2><p className="mt-2">Você selecionou esta área. Entre para continuar no papel escolhido.</p><Link href="/gestao" onClick={() => sessionStorage.setItem("restaurante-return-to", window.location.pathname)} className="primary-button mt-6 justify-center">Entrar <ArrowRight size={18} /></Link></div></section></main>;

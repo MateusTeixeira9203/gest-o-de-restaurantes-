@@ -124,7 +124,7 @@ async function unit() {
       [{method:'Dinheiro',receivedCents:5000},'maior ou igual ao total'],
       [{method:'Dinheiro',receivedCents:1000001},'no máximo R$ 10.000,00'],
       ...[1.5,-1].map(receivedCents=>[{method:'Dinheiro',receivedCents},'']),
-      ...[null,'10000'].map(receivedCents=>[{method:'Dinheiro',receivedCents},'Informe um valor entregue valido']),
+      ...[null,'10000'].map(receivedCents=>[{method:'Dinheiro',receivedCents},'Informe um valor entregue válido']),
     ]) {
       paymentWrites.length=0;ledgerAmounts.length=0;
       const response=await receive(body);
