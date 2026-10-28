@@ -27,8 +27,8 @@ export function WaiterTables() {
   if (channel) return <MenuBuilder source="waiter" initialChannel={channel} onBack={() => setChannel(null)} />;
   const tables = state.tables.filter(table => table.active);
   const summary = [
-    ["Livres", state.tables.filter(t => t.status === "available").length], ["Em atendimento", state.tables.filter(t => ["occupied", "preparing"].includes(t.status)).length],
-    ["Prontos", state.tables.filter(t => t.status === "ready").length], ["Pediram a conta", state.tables.filter(t => t.status === "closing").length],
+    ["Livres", tables.filter(t => t.status === "available").length], ["Em atendimento", tables.filter(t => ["occupied", "preparing"].includes(t.status)).length],
+    ["Prontos", tables.filter(t => t.status === "ready").length], ["Pediram a conta", tables.filter(t => t.status === "closing").length],
   ];
   return <main className="app-page salao-page"><div className="page-container">
     <Topbar title="Salão" subtitle="Escolha a mesa ou comanda" action={<div className="hidden items-center gap-2 sm:flex"><span className="sync-dot" /><span className="salao-context">Ao vivo</span></div>} />
