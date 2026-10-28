@@ -16,7 +16,7 @@
     "db:inspect": "node scripts/database.mjs inspect",
     "db:migrate": "node scripts/database.mjs apply",
     "typecheck": "tsc --noEmit",
-    "test:integration": "node tests/approval.integration.mjs && node tests/finance.integration.mjs && node tests/tenancy.integration.mjs",
+    "test:integration": "node tests/approval.integration.mjs && node tests/finance.integration.mjs && node tests/tenancy.integration.mjs && node tests/channel-orders.integration.mjs",
     "test:fiscal": "node tests/fiscal.unit.mjs && node tests/fiscal.integration.mjs && node tests/fiscal-processing.integration.mjs && node tests/fiscal-readiness.unit.mjs && node tests/fiscal-readiness.integration.mjs",
     "test:payment-settlement": "node tests/payment-settlement.integration.mjs",
     "test:integrations-base": "node tests/integrations-base.mjs",

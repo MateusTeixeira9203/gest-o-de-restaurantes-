@@ -96,6 +96,9 @@ export type PublicMenuProduct = {
 export type CreateOrderInput = {
   source: "waiter" | "public_menu" | "qr_menu";
   fulfillment: "dine_in" | "pickup" | "delivery";
+  deliveryFeeCents?: number;
+  expectedPaymentMethod?: "pix" | "cash" | "debit" | "credit" | "prepaid";
+  cashTenderedCents?: number;
   tableNumber?: number;
   customer?: { name?: string; phone?: string };
   notes?: string;
@@ -430,6 +433,174 @@ export async function getCurrentEstimate() {
   return estimatedMinutes(Number(active.rows[0].count), 1);
 }
 
+async function defaultDeliveryFee(restaurantId: string, client?: PoolClient) {
+  const sql = "SELECT default_delivery_fee_cents FROM restaurants WHERE id=$1";
+  const result = client ? await client.query<{default_delivery_fee_cents: number}>(sql, [restaurantId])
+    : await query<{default_delivery_fee_cents: number}>(sql, [restaurantId]);
+  return result.rows[0].default_delivery_fee_cents;
+}
+
+function validateCashTendered(method: string | null, tendered: number | null, total: number) {
+  if (tendered !== null) {
+    if (!Number.isInteger(tendered) || tendered < 0 || tendered > 1000000) throw new Error("O valor para troco pode ser de no máximo R$ 10.000,00.");
+    if (method !== "cash") throw new Error("Troco só para pagamento em dinheiro.");
+    if (tendered < total) throw new Error(`O valor para troco precisa ser maior ou igual ao total (${(total / 100).toLocaleString("pt-BR", {style: "currency", currency: "BRL"})}).`);
+  }
+}
+
+async function deliveryPayment(input: CreateOrderInput, currentId: string, total: number, client: PoolClient) {
+  if (input.fulfillment !== "delivery") return {fee: 0, method: null, tendered: null};
+  const internal = input.source === "waiter";
+  const fee = internal && input.deliveryFeeCents !== undefined ? input.deliveryFeeCents : await defaultDeliveryFee(currentId, client);
+  const method = internal ? input.expectedPaymentMethod ?? null : null;
+  const tendered = internal ? input.cashTenderedCents ?? null : null;
+  if (!Number.isInteger(fee) || fee < 0 || fee > 20000) throw new Error("A taxa de entrega pode ser de no máximo R$ 200,00.");
+  validateCashTendered(method, tendered, total + fee);
+  return {fee, method, tendered};
+}
+
+async function normalizeOrderItems(client: PoolClient, restaurantId: string, items: CreateOrderInput["items"]) {
+  const variants = await client.query<
+    VariantRow & {
+      product_name: string;
+      kitchen_sector: string;
+      available: boolean;
+    }
+  >(
+    "SELECT v.id, v.product_id, v.name, v.price_cents, p.name AS product_name, p.kitchen_sector, p.available FROM menu_variants v JOIN menu_products p ON p.id = v.product_id WHERE p.restaurant_id = $1 AND v.active",
+    [restaurantId],
+  );
+  const variantsById = new Map(
+    variants.rows.map((variant) => [variant.id, variant]),
+  );
+  const addonIds = [
+    ...new Set(items.flatMap((item) => item.addonIds ?? [])),
+  ];
+  const addonResult = addonIds.length
+    ? await client.query<AddonRow>(
+        "SELECT a.id, a.product_id, a.name, a.price_cents FROM product_addons a JOIN menu_products p ON p.id = a.product_id WHERE p.restaurant_id = $1 AND a.id = ANY($2::uuid[]) AND a.active",
+        [restaurantId, addonIds],
+      )
+    : { rows: [] as AddonRow[] };
+  const addonsById = new Map(
+    addonResult.rows.map((addon) => [addon.id, addon]),
+  );
+
+  const normalizedItems = items.map((item) => {
+    const variant = variantsById.get(item.variantId);
+    if (
+      !variant ||
+      variant.product_id !== item.productId ||
+      !variant.available
+    )
+      throw new Error("Um item selecionado não está mais disponível.");
+    if (
+      !Number.isInteger(item.quantity) ||
+      item.quantity < 1 ||
+      item.quantity > 50
+    )
+      throw new Error("Quantidade inválida.");
+    const selectedAddons = (item.addonIds ?? []).map((id) => {
+      const addon = addonsById.get(id);
+      if (!addon || addon.product_id !== item.productId)
+        throw new Error("Adicional inválido.");
+      return addon;
+    });
+    return {
+      ...item,
+      variant,
+      selectedAddons,
+      lineTotal:
+        item.quantity *
+        (variant.price_cents +
+          selectedAddons.reduce((sum, addon) => sum + addon.price_cents, 0)),
+    };
+  });
+  return normalizedItems;
+}
+
+async function insertOrderItems(client: PoolClient, orderId: string, normalizedItems: Awaited<ReturnType<typeof normalizeOrderItems>>) {
+  for (const item of normalizedItems) {
+    await client.query(
+      "INSERT INTO order_items (order_id, product_id, variant_id, product_name, variant_name, kitchen_sector, quantity, unit_price_cents, addons, note) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9::jsonb,$10)",
+      [
+        orderId,
+        item.productId,
+        item.variantId,
+        item.variant.product_name,
+        item.variant.name,
+        item.variant.kitchen_sector,
+        item.quantity,
+        item.variant.price_cents,
+        JSON.stringify(
+          item.selectedAddons.map((addon) => ({
+            id: addon.id,
+            name: addon.name,
+            priceCents: addon.price_cents,
+          })),
+        ),
+        item.note ?? null,
+      ],
+    );
+  }
+}
+
+async function insertOrderDelivery(client: PoolClient, orderId: string, input: CreateOrderInput, payment: Awaited<ReturnType<typeof deliveryPayment>>) {
+  if (input.fulfillment === "delivery" && input.delivery) {
+    const delivery = input.delivery;
+    await client.query(
+      "INSERT INTO delivery_details (order_id, address_line1, address_line2, neighborhood, city, state, postal_code, reference, latitude, longitude, delivery_contact_name, delivery_contact_phone, expected_payment_method, cash_tendered_cents) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)",
+      [
+        orderId,
+        delivery.addressLine1,
+        delivery.addressLine2 ?? null,
+        delivery.neighborhood ?? null,
+        delivery.city ?? null,
+        delivery.state ?? null,
+        delivery.postalCode ?? null,
+        delivery.reference ?? null,
+        delivery.latitude ?? null,
+        delivery.longitude ?? null,
+        input.customer?.name ?? null,
+        input.customer?.phone ?? null,
+        payment.method,
+        payment.tendered,
+      ],
+    );
+  }
+}
+
+async function insertOrderHeader(client: PoolClient, restaurantId: string, input: CreateOrderInput,
+  tableId: string | null, subtotal: number, service: number, payment: Awaited<ReturnType<typeof deliveryPayment>>,
+  idempotencyKey: string, fingerprint: string) {
+  const counter = await client.query<{ order_number: string }>(
+    "UPDATE restaurant_counters SET next_order_number=next_order_number+1, updated_at=now() WHERE restaurant_id=$1 RETURNING next_order_number-1 AS order_number",
+    [restaurantId],
+  );
+  const orderNumber = Number(counter.rows[0].order_number);
+  const insertedOrder = await client.query<{ id: string }>(
+    "INSERT INTO orders (restaurant_id,order_number,queue_number,source,fulfillment,status,table_id,customer_name,customer_phone,notes,subtotal_cents,service_cents,total_cents,approval_origin,request_key,request_hash,delivery_fee_cents) VALUES ($1,$2,NULL,$3,$4,'pending',$5,$6,$7,$8,$9,$10,$11,'pending',$12,$13,$14) RETURNING id",
+    [
+      restaurantId,
+      orderNumber,
+      input.source,
+      input.fulfillment,
+      tableId,
+      input.customer?.name ?? null,
+      input.customer?.phone ?? null,
+      input.notes ?? null,
+      subtotal,
+      service,
+      subtotal + service + payment.fee,
+      idempotencyKey,
+      fingerprint,
+      payment.fee,
+    ],
+  );
+  const orderId = insertedOrder.rows[0].id;
+  return orderId;
+}
+
 export async function createOrder(
   input: CreateOrderInput,
   options: {
@@ -481,62 +652,7 @@ export async function createOrder(
       tableId = table.rows[0].id;
     }
 
-    const variants = await client.query<
-      VariantRow & {
-        product_name: string;
-        kitchen_sector: string;
-        available: boolean;
-      }
-    >(
-      "SELECT v.id, v.product_id, v.name, v.price_cents, p.name AS product_name, p.kitchen_sector, p.available FROM menu_variants v JOIN menu_products p ON p.id = v.product_id WHERE p.restaurant_id = $1 AND v.active",
-      [current.id],
-    );
-    const variantsById = new Map(
-      variants.rows.map((variant) => [variant.id, variant]),
-    );
-    const addonIds = [
-      ...new Set(input.items.flatMap((item) => item.addonIds ?? [])),
-    ];
-    const addonResult = addonIds.length
-      ? await client.query<AddonRow>(
-          "SELECT a.id, a.product_id, a.name, a.price_cents FROM product_addons a JOIN menu_products p ON p.id = a.product_id WHERE p.restaurant_id = $1 AND a.id = ANY($2::uuid[]) AND a.active",
-          [current.id, addonIds],
-        )
-      : { rows: [] as AddonRow[] };
-    const addonsById = new Map(
-      addonResult.rows.map((addon) => [addon.id, addon]),
-    );
-
-    const normalizedItems = input.items.map((item) => {
-      const variant = variantsById.get(item.variantId);
-      if (
-        !variant ||
-        variant.product_id !== item.productId ||
-        !variant.available
-      )
-        throw new Error("Um item selecionado não está mais disponível.");
-      if (
-        !Number.isInteger(item.quantity) ||
-        item.quantity < 1 ||
-        item.quantity > 50
-      )
-        throw new Error("Quantidade inválida.");
-      const selectedAddons = (item.addonIds ?? []).map((id) => {
-        const addon = addonsById.get(id);
-        if (!addon || addon.product_id !== item.productId)
-          throw new Error("Adicional inválido.");
-        return addon;
-      });
-      return {
-        ...item,
-        variant,
-        selectedAddons,
-        lineTotal:
-          item.quantity *
-          (variant.price_cents +
-            selectedAddons.reduce((sum, addon) => sum + addon.price_cents, 0)),
-      };
-    });
+    const normalizedItems = await normalizeOrderItems(client, current.id, input.items);
     const subtotal = normalizedItems.reduce(
       (sum, item) => sum + item.lineTotal,
       0,
@@ -545,73 +661,10 @@ export async function createOrder(
       input.fulfillment === "dine_in"
         ? Math.round((subtotal * current.service_rate_basis_points) / 10_000)
         : 0;
-    const counter = await client.query<{ order_number: string }>(
-      "UPDATE restaurant_counters SET next_order_number=next_order_number+1, updated_at=now() WHERE restaurant_id=$1 RETURNING next_order_number-1 AS order_number",
-      [current.id],
-    );
-    const orderNumber = Number(counter.rows[0].order_number);
-    const insertedOrder = await client.query<{ id: string }>(
-      "INSERT INTO orders (restaurant_id,order_number,queue_number,source,fulfillment,status,table_id,customer_name,customer_phone,notes,subtotal_cents,service_cents,total_cents,approval_origin,request_key,request_hash) VALUES ($1,$2,NULL,$3,$4,'pending',$5,$6,$7,$8,$9,$10,$11,'pending',$12,$13) RETURNING id",
-      [
-        current.id,
-        orderNumber,
-        input.source,
-        input.fulfillment,
-        tableId,
-        input.customer?.name ?? null,
-        input.customer?.phone ?? null,
-        input.notes ?? null,
-        subtotal,
-        service,
-        subtotal + service,
-        options.idempotencyKey,
-        fingerprint,
-      ],
-    );
-    const orderId = insertedOrder.rows[0].id;
-    for (const item of normalizedItems) {
-      await client.query(
-        "INSERT INTO order_items (order_id, product_id, variant_id, product_name, variant_name, kitchen_sector, quantity, unit_price_cents, addons, note) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9::jsonb,$10)",
-        [
-          orderId,
-          item.productId,
-          item.variantId,
-          item.variant.product_name,
-          item.variant.name,
-          item.variant.kitchen_sector,
-          item.quantity,
-          item.variant.price_cents,
-          JSON.stringify(
-            item.selectedAddons.map((addon) => ({
-              id: addon.id,
-              name: addon.name,
-              priceCents: addon.price_cents,
-            })),
-          ),
-          item.note ?? null,
-        ],
-      );
-    }
-    if (input.fulfillment === "delivery" && input.delivery) {
-      const delivery = input.delivery;
-      await client.query(
-        "INSERT INTO delivery_details (order_id, address_line1, address_line2, neighborhood, city, state, postal_code, reference, latitude, longitude, delivery_contact_name, delivery_contact_phone) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)",
-        [
-          orderId,
-          delivery.addressLine1,
-          delivery.addressLine2 ?? null,
-          delivery.neighborhood ?? null,
-          delivery.city ?? null,
-          delivery.state ?? null,
-          delivery.postalCode ?? null,
-          delivery.reference ?? null,
-          delivery.latitude ?? null,
-          delivery.longitude ?? null,
-          input.customer?.name ?? null,
-          input.customer?.phone ?? null,
-        ],
-      );
-    }
+    const payment = await deliveryPayment(input, current.id, subtotal + service, client);
+    const orderId = await insertOrderHeader(client, current.id, input, tableId, subtotal, service, payment, options.idempotencyKey, fingerprint);
+    await insertOrderItems(client, orderId, normalizedItems);
+    await insertOrderDelivery(client, orderId, input, payment);
     await client.query(
       "INSERT INTO order_events(order_id,event_type,actor_role,detail) VALUES($1,'order_registered',$2,$3::jsonb)",
       [
@@ -624,13 +677,7 @@ export async function createOrder(
       ],
     );
     if (options.sendToKitchen && options.actor)
-      await approveOrderInTransaction(
-        client,
-        current.id,
-        orderId,
-        1,
-        options.actor,
-      );
+      await approveOrderInTransaction(client, current.id, orderId, 1, options.actor);
     return orderReceipt(client, orderId, current.id);
   });
 }
@@ -945,6 +992,8 @@ type SnapshotOrderRow = {
   total_cents: number;
   paid_cents: number;
   payments: Array<{ method: string; amountCents: number }>;
+  expected_payment_method: string | null;
+  cash_tendered_cents: number | null;
   delivery_address_line1: string | null;
   delivery_neighborhood: string | null;
   delivery_reference: string | null;
@@ -965,14 +1014,14 @@ type SnapshotOrderRow = {
 
 export async function getOperationSnapshot() {
   const current = await restaurant();
-  const [menu, tables, orders, kitchen, inventory] = await Promise.all([
+  const [menu, tables, orders, kitchen, inventory, deliveryFee] = await Promise.all([
     getPublicMenu(),
     query<{ number: number; label: string | null; active: boolean }>(
       "SELECT number, label, active FROM dining_tables WHERE restaurant_id = $1 ORDER BY number",
       [current.id],
     ),
     query<SnapshotOrderRow>(
-      `SELECT o.id, o.revision, o.served_at, o.order_number, o.queue_number, o.source, o.fulfillment, o.status, t.number AS table_number, o.customer_name, o.customer_phone, o.notes, o.estimated_minutes, o.subtotal_cents, o.service_cents, o.total_cents, COALESCE((SELECT sum(p.amount_cents) FROM payments p WHERE p.order_id = o.id AND p.status = 'paid'), 0)::int AS paid_cents, COALESCE((SELECT json_agg(json_build_object('method', p.method, 'amountCents', p.amount_cents)) FROM payments p WHERE p.order_id = o.id AND p.status = 'paid'), '[]'::json) AS payments, max(d.address_line1) AS delivery_address_line1, max(d.neighborhood) AS delivery_neighborhood, max(d.reference) AS delivery_reference, o.created_at,
+      `SELECT o.id, o.revision, o.served_at, o.order_number, o.queue_number, o.source, o.fulfillment, o.status, t.number AS table_number, o.customer_name, o.customer_phone, o.notes, o.estimated_minutes, o.subtotal_cents, o.service_cents, o.total_cents, COALESCE((SELECT sum(p.amount_cents) FROM payments p WHERE p.order_id = o.id AND p.status = 'paid'), 0)::int AS paid_cents, COALESCE((SELECT json_agg(json_build_object('method', p.method, 'amountCents', p.amount_cents)) FROM payments p WHERE p.order_id = o.id AND p.status = 'paid'), '[]'::json) AS payments, max(d.expected_payment_method) AS expected_payment_method, max(d.cash_tendered_cents) AS cash_tendered_cents, max(d.address_line1) AS delivery_address_line1, max(d.neighborhood) AS delivery_neighborhood, max(d.reference) AS delivery_reference, o.created_at,
         COALESCE(json_agg(json_build_object('id', oi.id, 'product_id', oi.product_id, 'variant_id', oi.variant_id, 'product_name', oi.product_name, 'variant_name', oi.variant_name, 'kitchen_sector', oi.kitchen_sector, 'quantity', oi.quantity, 'unit_price_cents', oi.unit_price_cents, 'addons', oi.addons, 'note', oi.note) ORDER BY oi.created_at) FILTER (WHERE oi.id IS NOT NULL), '[]'::json) AS items
        FROM orders o LEFT JOIN dining_tables t ON t.id = o.table_id LEFT JOIN delivery_details d ON d.order_id = o.id LEFT JOIN order_items oi ON oi.order_id = o.id
        WHERE o.restaurant_id = $1 AND (o.status NOT IN ('completed','cancelled') OR o.id IN (SELECT id FROM orders WHERE restaurant_id=$1 AND status IN ('completed','cancelled') ORDER BY created_at DESC LIMIT 200))
@@ -982,6 +1031,7 @@ export async function getOperationSnapshot() {
     ),
     getKitchenQueue(),
     inventorySnapshot(current.id),
+    defaultDeliveryFee(current.id),
   ]);
   return {
     restaurant: {
@@ -990,6 +1040,7 @@ export async function getOperationSnapshot() {
       accentColor: current.accent_color,
       whatsapp: current.whatsapp ?? "",
       serviceRate: current.service_rate_basis_points / 100,
+      defaultDeliveryFeeCents: deliveryFee,
     },
     branding: menu.branding,
     products: menu.products,
@@ -1010,6 +1061,9 @@ export async function getOperationSnapshot() {
       notes: order.notes,
       estimatedMinutes: order.estimated_minutes,
       paidCents: order.paid_cents,
+      expectedPaymentMethod: order.expected_payment_method,
+      cashTenderedCents: order.cash_tendered_cents,
+      changeCents: order.cash_tendered_cents === null ? null : order.cash_tendered_cents - order.total_cents,
       delivery: order.delivery_address_line1
         ? {
             addressLine1: order.delivery_address_line1,
