@@ -23,7 +23,7 @@ Leitura estática do checkout `4e02411`, realizada em 07/10/2026. Não equivale 
 | `inventory_movements.unit_cost_cents` nem sempre preenchido na baixa por venda | Preservar custo no momento da movimentação |
 | `drizzle.config.ts` aponta para SQLite, schema TypeScript vazio e SQL existente é PostgreSQL | Regularizar migrações sem gerar baseline vazio nem reaplicar SQL existente às cegas |
 | Home e metadados ainda contêm marca fixa | Aplicar a identidade por restaurante em toda a experiência |
-| Listagem de equipe em `/api/auth/team` é pública | Restringir identificação da equipe a dispositivo autorizado ou login adequado |
+| Listagem pública em `/api/auth/team` removida (GF-027, A8) | Resolvido: equipe entra digitando nome e PIN; listagem restrita à gestão autenticada |
 | Não há suíte de domínio/integração identificada nos arquivos do projeto | Criar testes de invariantes financeiros, concorrência e isolamento junto da implementação |
 
 ## 2 Estrutura geral
