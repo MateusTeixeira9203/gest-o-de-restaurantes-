@@ -15,7 +15,19 @@ import { InventoryManagement } from "@/components/inventory-management";
 
 export function ManagementSection({ section }: { section: string }) {
   const {plan}=useRestaurant();
-  if(plan==='essential' && ['custos','fiscal','configuracoes-fiscal'].includes(section))return <p>Este recurso está disponível no plano Profissional.</p>;
+  if(plan==='essential' && ['custos','fiscal','configuracoes-fiscal'].includes(section))return (
+    <section className="settings-card" aria-labelledby="professional-plan-title">
+      <h3 id="professional-plan-title">Recurso do plano Profissional</h3>
+      <p className="mt-3 text-sm">
+        {section === 'custos'
+          ? 'Acompanhe os custos dos ingredientes e das receitas para entender quanto custa cada prato.'
+          : section === 'fiscal'
+            ? 'Acompanhe os documentos fiscais do restaurante e suas pendências.'
+            : 'Configure os dados fiscais do restaurante para preparar a emissão de notas.'}
+      </p>
+      <p className="mt-3 text-sm">Para conhecer o plano Profissional e liberar este recurso, fale com o suporte.</p>
+    </section>
+  );
   if(plan==='essential' && section==='dashboard')return <Dashboard />;
   if(plan==='essential' && section==='relatorios')return <Reports />;
   if(plan==='essential' && ['caixa','financeiro'].includes(section))return <CashShiftPanel />;

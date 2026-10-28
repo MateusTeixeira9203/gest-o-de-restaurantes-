@@ -372,12 +372,12 @@ function DocumentCard({
       {!doc.cancelled_at && remaining > 0 && (
         <details className="mt-3">
           <summary className="cursor-pointer text-sm font-semibold">
-            Registrar baixa parcial ou total
+            Registrar {doc.kind === "payable" ? "pagamento" : "recebimento"} parcial ou total
           </summary>
           <div className="mt-3">
             <Form
               busy={busy}
-              label="Confirmar baixa"
+              label={doc.kind === "payable" ? "Confirmar pagamento" : "Confirmar recebimento"}
               submit={(form) =>
                 run({
                   action: "settle_document",
@@ -389,7 +389,7 @@ function DocumentCard({
               }
             >
               <Field
-                label="Valor da baixa (R$)"
+                label={doc.kind === "payable" ? "Valor do pagamento (R$)" : "Valor do recebimento (R$)"}
                 name="amount"
                 type="number"
                 value={(remaining / 100).toFixed(2)}
@@ -416,14 +416,14 @@ function DocumentCard({
         .map((s) => (
           <details key={s.id} className="mt-3 border-t pt-3 text-sm">
             <summary className="cursor-pointer">
-              {s.reversed_at ? "Estornada" : "Baixa"} de {brl(s.amount_cents)}{" "}
+              {doc.kind === "payable" ? "Pagamento" : "Recebimento"}{s.reversed_at ? " estornado" : ""} de {brl(s.amount_cents)}{" "}
               em {s.paid_on}
             </summary>
             {!s.reversed_at && (
               <div className="mt-3">
                 <Form
                   busy={busy}
-                  label="Estornar esta baixa"
+                  label={doc.kind === "payable" ? "Estornar este pagamento" : "Estornar este recebimento"}
                   submit={(form) =>
                     run({
                       action: "reverse_settlement",
@@ -575,7 +575,7 @@ function Documents({
               type="number"
             />
             <Field
-              label="Competência"
+              label="Mês da despesa"
               name="competence"
               type="date"
               value={data.today}
@@ -589,8 +589,8 @@ function Documents({
           </div>
           <p className="text-xs text-neutral-500">
             Vendas já entram automaticamente. Para vincular mercadoria e
-            obrigação, use Compras. Parcelas dividem o total e mantêm a
-            competência; recorrências repetem o valor e avançam competência e
+            obrigação, use Compras. Parcelas dividem o total e mantêm o
+            mês da despesa; recorrências repetem o valor e avançam o mês da despesa e o
             vencimento, por até 60 meses. Em mês curto, usamos o último dia. Não
             há renovação automática além do período informado.
           </p>
@@ -811,10 +811,10 @@ function Results({ data }: { data: FinancialSnapshot }) {
         {[
           ["Custos de receitas registrados", cost],
           [
-            "Despesas e tributos por competência",
+            "Despesas e tributos por mês da despesa",
             Number(data.metrics.expenses_cents),
           ],
-          ["Taxas conciliadas", Number(data.metrics.fees_cents)],
+          ["Taxas de cartões conferidos", Number(data.metrics.fees_cents)],
         ].map(([label, value]) => (
           <div className="command-card p-5" key={label}>
             <p className="text-sm text-neutral-500">{label}</p>
@@ -831,7 +831,7 @@ function Results({ data }: { data: FinancialSnapshot }) {
         </p>
         <p className="mt-2 text-sm text-neutral-500">
           Receitas e estornos do período menos custos registrados de produção,
-          taxas conciliadas e despesas por competência.{" "}
+          taxas de cartões conferidos e despesas por mês da despesa.{" "}
           {incomplete
             ? "Há custos ou taxas de cartão pendentes; este valor não representa lucro líquido."
             : "Depende do cadastro completo das despesas, tributos e custos."}
@@ -905,7 +905,7 @@ export function FinanceWorkspace({
     ["purchases", "Compras"],
     ["flow", "Fluxo de caixa"],
     ["results", "Resultados"],
-    ["reconcile", "Conciliação"],
+    ["reconcile", "Conferir cartões"],
     ["export", "Contabilidade"],
   ];
   return (
@@ -1022,7 +1022,7 @@ export function FinanceWorkspace({
           {tab === "reconcile" && (
             <section className="space-y-4">
               <IntegratedPayments />
-              <h2 className="section-title">Conciliação manual de cartões</h2>
+              <h2 className="section-title">Conferir cartões manualmente</h2>
               <p className="text-sm text-neutral-500">
                 Confira o crédito no extrato da adquirente e informe o líquido
                 recebido. A taxa é a diferença entre bruto e líquido.
@@ -1066,7 +1066,7 @@ export function FinanceWorkspace({
               ))}
               {!data.cards.length && (
                 <p className="command-card p-5">
-                  Nenhum cartão aguardando conciliação.
+                  Nenhum cartão aguardando conferência.
                 </p>
               )}
             </section>
@@ -1075,7 +1075,7 @@ export function FinanceWorkspace({
             <section className="command-card p-5">
               <h2 className="section-title">Exportação para contabilidade</h2>
               <p className="my-3 text-sm text-neutral-500">
-                CSV de lançamentos gerenciais por competência, com conta,
+                CSV de lançamentos gerenciais por mês da despesa, com conta,
                 débito, crédito, origem e responsável. Valores em centavos; não
                 substitui arquivos fiscais.
               </p>
@@ -1083,7 +1083,7 @@ export function FinanceWorkspace({
                 className="primary-button"
                 href={`/api/operations/finance/export?from=${from}&to=${to}`}
               >
-                Baixar lançamentos do período
+                Exportar lançamentos do período
               </a>
               <p className="mt-4 text-sm text-amber-800">
                 XML e DANFE estarão disponíveis após configurar e homologar a
